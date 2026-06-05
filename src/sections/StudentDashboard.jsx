@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
+import DownloadProgressBar from '../components/DownloadProgressBar';
 
 const getCleanStatusText = (status) => {
   if (!status) return '';
@@ -18,26 +19,26 @@ const getCleanStatusText = (status) => {
 
 function CourseSkeleton() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
       {[1, 2, 3, 4].map((i) => (
         <div 
           key={i} 
-          className="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between h-[230px] animate-pulse"
+          className="bg-slate-900/30 border border-slate-800/80 rounded-xl md:rounded-2xl p-4 md:p-6 flex flex-col justify-between h-[190px] md:h-[230px] animate-pulse"
         >
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             <div className="flex items-center justify-between">
-              <div className="h-4 w-16 bg-slate-800 rounded-md"></div>
-              <div className="h-4 w-12 bg-slate-800 rounded-md"></div>
+              <div className="h-3.5 md:h-4 w-14 md:w-16 bg-slate-800 rounded-md"></div>
+              <div className="h-3.5 md:h-4 w-10 md:w-12 bg-slate-800 rounded-md"></div>
             </div>
-            <div className="space-y-2">
-              <div className="h-4 w-3/4 bg-slate-800 rounded-md"></div>
-              <div className="h-3 w-1/2 bg-slate-800 rounded-md"></div>
+            <div className="space-y-1.5 md:space-y-2">
+              <div className="h-3.5 md:h-4 w-3/4 bg-slate-800 rounded-md"></div>
+              <div className="h-3 md:h-3 w-1/2 bg-slate-800 rounded-md"></div>
             </div>
-            <div className="h-8 w-full bg-slate-950/60 rounded-xl border border-slate-900/50 mt-1"></div>
+            <div className="h-7 md:h-8 w-full bg-slate-950/60 rounded-lg md:rounded-xl border border-slate-900/50 mt-1"></div>
           </div>
-          <div className="pt-4 border-t border-slate-850/60 flex items-center justify-between gap-4">
-            <div className="h-4 w-20 bg-slate-800 rounded-full"></div>
-            <div className="h-7 w-28 bg-slate-800 rounded-xl"></div>
+          <div className="pt-3 md:pt-4 border-t border-slate-850/60 flex items-center justify-between gap-3 md:gap-4">
+            <div className="h-3.5 md:h-4 w-16 md:w-20 bg-slate-800 rounded-full"></div>
+            <div className="h-6 md:h-7 w-24 md:w-28 bg-slate-800 rounded-lg md:rounded-xl"></div>
           </div>
         </div>
       ))}
@@ -154,7 +155,32 @@ export default function StudentDashboard({ user }) {
 
   async function handleDownload(courseId, courseName) {
     console.log(`[handleDownload] Initiated download process for courseId: ${courseId}, courseName: ${courseName}`);
-    setDownloadingStatus(prev => ({ ...prev, [courseId]: 'Preparing secure download...' }));
+    setDownloadingStatus(prev => ({ 
+      ...prev, 
+      [courseId]: { step: 1, isDownloading: false, downloadPercent: 0 } 
+    }));
+
+    // Start progress polling interval every 800ms
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/courses/download-progress/${courseId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const step = data.step || 1;
+          console.log(`[Progress Polling] Polled step: ${step}`);
+          setDownloadingStatus(prev => ({ 
+            ...prev, 
+            [courseId]: { step, isDownloading: false, downloadPercent: 0 } 
+          }));
+        }
+      } catch (err) {
+        console.warn('Error polling progress:', err);
+      }
+    }, 800);
 
     try {
       // Bypass Vite dev server proxy for large PDF files to prevent proxy timeout/buffer issues
@@ -166,6 +192,9 @@ export default function StudentDashboard({ user }) {
         }
       });
       console.log(`[Main Fetch] Response received. Status: ${res.status} ${res.statusText}`);
+
+      // Stop polling progress once headers are received
+      clearInterval(pollInterval);
 
       if (!res.ok) {
         let errorMsg = 'Failed to download PDF';
@@ -187,7 +216,10 @@ export default function StudentDashboard({ user }) {
       let receivedBytes = 0;
       const chunks = [];
 
-      setDownloadingStatus(prev => ({ ...prev, [courseId]: 'Downloading (0%)...' }));
+      setDownloadingStatus(prev => ({ 
+        ...prev, 
+        [courseId]: { step: 9, isDownloading: true, downloadPercent: 0 } 
+      }));
 
       while (true) {
         const { done, value } = await reader.read();
@@ -203,18 +235,20 @@ export default function StudentDashboard({ user }) {
           const progressPercent = Math.round((receivedBytes * 100) / totalBytes);
           setDownloadingStatus(prev => ({ 
             ...prev, 
-            [courseId]: `Downloading (${progressPercent}%)...` 
+            [courseId]: { step: 9, isDownloading: true, downloadPercent: progressPercent } 
           }));
         } else {
-          const receivedKB = Math.round(receivedBytes / 1024);
           setDownloadingStatus(prev => ({ 
             ...prev, 
-            [courseId]: `Downloading (${receivedKB} KB)...` 
+            [courseId]: { step: 9, isDownloading: true, downloadPercent: 95 } 
           }));
         }
       }
 
-      setDownloadingStatus(prev => ({ ...prev, [courseId]: 'Saving file...' }));
+      setDownloadingStatus(prev => ({ 
+        ...prev, 
+        [courseId]: { step: 9, isDownloading: false, downloadPercent: 100, isSuccess: true } 
+      }));
       const blob = new Blob(chunks, { type: 'application/pdf' });
 
       const url = window.URL.createObjectURL(blob);
@@ -246,11 +280,13 @@ export default function StudentDashboard({ user }) {
         };
       });
 
-      setDownloadingStatus(prev => ({ ...prev, [courseId]: 'Success!' }));
-
     } catch (err) {
+      clearInterval(pollInterval);
       console.error(`[handleDownload] Fatal catch block error:`, err);
-      setDownloadingStatus(prev => ({ ...prev, [courseId]: `Error: ${err.message || 'Download failed'}` }));
+      setDownloadingStatus(prev => ({ 
+        ...prev, 
+        [courseId]: { isError: true, errorMsg: err.message || 'Download failed' } 
+      }));
     } finally {
       setTimeout(() => {
         setDownloadingStatus(prev => {
@@ -311,38 +347,38 @@ export default function StudentDashboard({ user }) {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-6 py-10 md:py-14">
+    <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-14">
       {/* Dashboard Header */}
-      <div className="mb-10 border-b border-slate-800/80 pb-6">
-        <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex flex-wrap items-center gap-x-2 gap-y-1">
+      <div className="mb-6 md:mb-10 border-b border-slate-800/80 pb-4 md:pb-6">
+        <h1 className="text-lg md:text-3xl font-extrabold text-white tracking-tight flex flex-wrap items-center gap-x-1.5 md:gap-x-2 gap-y-0.5 md:gap-y-1">
           <span>{getGreeting()},</span>
           <span className="bg-gradient-to-r from-indigo-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent capitalize">
             {currentUser?.fullName?.split(' ')[0] || currentUser?.name || 'Scholar'}
           </span>
         </h1>
-        <p className="text-slate-400 text-sm mt-1.5 font-medium">Access and download study materials matching your learning preferences.</p>
+        <p className="text-slate-400 text-xs md:text-sm mt-1 md:mt-1.5 font-medium">Access and download study materials matching your learning preferences.</p>
       </div>
 
       {/* Profile summary banner */}
-      <div className="bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-indigo-950/15 border border-slate-800/70 rounded-2xl p-6 shadow-xl mb-10 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-indigo-950/15 border border-slate-800/70 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-xl mb-6 md:mb-10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 bg-indigo-550/10 border border-indigo-900/40 text-indigo-400 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+            <div className="flex items-center gap-2 md:gap-2.5">
+              <div className="p-1 md:p-1.5 bg-indigo-550/10 border border-indigo-900/40 text-indigo-400 rounded-md md:rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 md:w-4 md:h-4"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
               </div>
-              <h2 className="text-xs font-bold text-slate-350 uppercase tracking-widest">My Taken Courses</h2>
+              <h2 className="text-[10px] md:text-xs font-bold text-slate-350 uppercase tracking-wider md:tracking-widest">My Enrolled Courses</h2>
             </div>
             {interestedList.length > 0 && (
-              <span className="text-[10px] px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5 self-start sm:self-auto">
+              <span className="text-[8px] md:text-[10px] px-2 md:px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 md:gap-1.5 self-start sm:self-auto">
                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
                 {interestedList.length} Active {interestedList.length === 1 ? 'Course' : 'Courses'}
               </span>
             )}
           </div>
           
-          <div className="flex flex-wrap gap-2.5">
+          <div className="flex flex-wrap gap-1.5 md:gap-2.5">
             {interestedList.length > 0 ? (
               interestedList.map((courseId, index) => {
                 const courseDetail = courses.find(c => c.courseId && typeof c.courseId === 'string' && c.courseId.toLowerCase() === courseId.toLowerCase());
@@ -351,12 +387,12 @@ export default function StudentDashboard({ user }) {
                 return (
                   <div 
                     key={index}
-                    className="group/pill relative flex items-center gap-2 px-3 py-1.5 bg-slate-950/60 hover:bg-indigo-950/20 border border-slate-850 hover:border-indigo-500/30 rounded-xl text-xs text-indigo-300 hover:text-indigo-250 font-bold shadow-sm transition-all duration-300 cursor-default hover:scale-[1.02]"
+                    className="group/pill relative flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-slate-950/60 hover:bg-indigo-950/20 border border-slate-850 hover:border-indigo-500/30 rounded-lg md:rounded-xl text-[10px] md:text-xs text-indigo-300 hover:text-indigo-250 font-bold shadow-sm transition-all duration-300 cursor-default hover:scale-[1.02]"
                   >
                     <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full group-hover/pill:bg-indigo-400 transition-colors"></span>
                     <span>{courseId}</span>
                     {courseDetail && (
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 hidden group-hover/pill:block bg-slate-950 border border-slate-800 text-[10px] text-slate-400 rounded-lg p-2.5 shadow-2xl z-30 leading-normal pointer-events-none text-center">
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 md:w-56 hidden group-hover/pill:block bg-slate-950 border border-slate-800 text-[9px] md:text-[10px] text-slate-400 rounded-lg p-2 md:p-2.5 shadow-2xl z-30 leading-normal pointer-events-none text-center">
                         <span className="font-bold text-slate-200 block truncate">{dispName}</span>
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1 border-4 border-transparent border-b-slate-950"></div>
                       </div>
@@ -381,23 +417,23 @@ export default function StudentDashboard({ user }) {
           <p className="text-xs text-slate-400 mt-1">{error}</p>
         </div>
       ) : matchedCourses.length === 0 ? (
-        <div className="py-16 text-center text-slate-555 border border-dashed border-slate-800/80 rounded-2xl bg-slate-900/30 p-8">
-          <div className="w-12 h-12 bg-slate-900/50 border border-slate-800/60 rounded-xl flex items-center justify-center mx-auto mb-4 text-slate-400">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="12" r="3"/></svg>
+        <div className="py-10 md:py-16 text-center text-slate-555 border border-dashed border-slate-800/80 rounded-xl md:rounded-2xl bg-slate-900/30 p-6 md:p-8">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-900/50 border border-slate-800/60 rounded-lg md:rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 md:w-6 md:h-6"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="12" r="3"/></svg>
           </div>
-          <h3 className="font-bold text-slate-300 text-sm">No matched courses found</h3>
-          <p className="text-xs text-slate-500 mt-1.5 max-w-md mx-auto font-medium">
+          <h3 className="font-bold text-slate-300 text-xs md:text-sm">No matched courses found</h3>
+          <p className="text-[11px] md:text-xs text-slate-500 mt-1 md:mt-1.5 max-w-md mx-auto font-medium">
             There are currently no uploaded courses matching your profile's taken courses ({interestedList.join(', ') || 'none'}).
           </p>
         </div>
       ) : (
         <div className="space-y-6">
           <div className="flex items-center justify-between pb-1">
-            <h2 className="text-base font-extrabold text-slate-200">Downloadable Resources</h2>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{matchedCourses.length} Courses Available</span>
+            <h2 className="text-sm md:text-base font-extrabold text-slate-200">Downloadable Resources</h2>
+            <span className="text-[9px] md:text-[11px] font-bold text-slate-500 uppercase tracking-wider md:tracking-widest">{matchedCourses.length} Courses Available</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {matchedCourses.map((course) => {
               const limitEntry = currentUser?.downloadLimits?.find(d => d.courseId === course.courseId);
               const downloadedCount = limitEntry ? limitEntry.downloadedCount : 0;
@@ -413,39 +449,39 @@ export default function StudentDashboard({ user }) {
                   key={course._id}
                   onMouseMove={handleMouseMove}
                   style={{ '--mouse-x': '0px', '--mouse-y': '0px' }}
-                  className="course-card relative overflow-hidden bg-slate-900/40 backdrop-blur-md border border-slate-800/80 hover:border-slate-700/60 rounded-2xl p-6 shadow-md flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.35)] hover:shadow-indigo-950/10 transition-all duration-300 transform hover:-translate-y-0.5 before:absolute before:inset-0 before:z-0 before:pointer-events-none before:rounded-2xl before:bg-[radial-gradient(400px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(99,102,241,0.06),transparent_60%)]"
+                  className="course-card relative overflow-hidden bg-slate-900/40 backdrop-blur-md border border-slate-800/80 hover:border-slate-700/60 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-md flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.35)] hover:shadow-indigo-950/10 transition-all duration-300 transform hover:-translate-y-0.5 before:absolute before:inset-0 before:z-0 before:pointer-events-none before:rounded-xl md:before:rounded-2xl before:bg-[radial-gradient(400px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(99,102,241,0.06),transparent_60%)]"
                 >
-                  <div className="relative z-10 flex-grow flex flex-col justify-between space-y-6">
+                  <div className="relative z-10 flex-grow flex flex-col justify-between space-y-4 md:space-y-6">
                     <div>
                       {/* Course Title */}
-                      <h3 className="text-xl md:text-2xl font-black text-slate-100 hover:text-white leading-tight tracking-wide transition-colors duration-200">
+                      <h3 className="text-base md:text-2xl font-black text-slate-100 hover:text-white leading-tight tracking-wide transition-colors duration-200">
                         {course.name}
                       </h3>
                       
                       {/* Downloads Tracker */}
-                      <p className="text-xs text-slate-400 mt-2 font-medium tracking-wide">
+                      <p className="text-[10px] md:text-xs text-slate-400 mt-1 md:mt-2 font-medium tracking-wide">
                         downloads : {downloadedCount} used of {allowedCount}
                       </p>
                     </div>
 
                     {/* Action Panel */}
-                    <div className="pt-4 border-t border-slate-850/60 flex items-center justify-between gap-4 mt-auto">
+                    <div className="pt-3 md:pt-4 border-t border-slate-850/60 flex items-center justify-between gap-3 md:gap-4 mt-auto">
                       {isLimitReached ? (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
-                          <span className="text-[11px] text-rose-500 font-bold whitespace-nowrap">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 md:gap-3 w-full">
+                          <span className="text-[9px] md:text-[11px] text-rose-500 font-bold whitespace-nowrap">
                             locked used {downloadedCount} out of {allowedCount}
                           </span>
                           {hasPendingRequest ? (
                             <button
                               disabled
-                              className="px-4 py-1.5 bg-slate-850 text-slate-500 rounded-xl text-xs font-bold cursor-not-allowed whitespace-nowrap"
+                              className="px-2.5 py-1.5 md:px-4 md:py-1.5 bg-slate-850 text-slate-500 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold cursor-not-allowed whitespace-nowrap"
                             >
                               request pending
                             </button>
                           ) : (
                             <button
                               onClick={() => handleOpenRequestModal(course.courseId, course.name)}
-                              className="px-4 py-1.5 bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-850/80 text-indigo-400 rounded-xl text-xs font-bold transition-all duration-300 shadow-sm cursor-pointer whitespace-nowrap"
+                              className="px-2.5 py-1.5 md:px-4 md:py-1.5 bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-850/80 text-indigo-400 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold transition-all duration-300 shadow-sm cursor-pointer whitespace-nowrap"
                             >
                               request download
                             </button>
@@ -454,48 +490,40 @@ export default function StudentDashboard({ user }) {
                       ) : (
                         downloadingStatus[course.courseId] ? (() => {
                           const status = downloadingStatus[course.courseId];
-                          const cleanText = getCleanStatusText(status);
-                          const isPreparing = status && 
-                            !status.includes('Downloading') && 
-                            !status.includes('Saving') && 
-                            !status.includes('Success') && 
-                            !status.includes('Error');
-                          const isDownloading = status && status.includes('Downloading');
-                          
-                          return (
-                            <div className="flex flex-col items-end gap-1.5 w-full">
-                              <span className="text-sm text-indigo-400 font-extrabold whitespace-nowrap flex items-center gap-2 animate-pulse">
-                                <span className="w-2 h-2 bg-indigo-500 rounded-full animate-ping"></span>
-                                {cleanText}
-                              </span>
-                              
-                              {isPreparing && (
-                                <span className="text-xs text-slate-300 font-medium text-right leading-relaxed block mt-1">
-                                  It may take up to a few minutes to prepare your file.
-                                </span>
-                              )}
 
-                              {isDownloading && (() => {
-                                 const match = status.match(/\((\d+)%\)/);
-                                 const percent = match ? parseInt(match[1], 10) : null;
-                                 if (percent !== null && percent > 0) {
-                                   return (
-                                     <div className="w-full bg-slate-950 rounded-full h-1 overflow-hidden mt-1">
-                                       <div 
-                                         className="bg-indigo-500 h-1 rounded-full transition-all duration-300" 
-                                         style={{ width: `${percent}%` }}
-                                       ></div>
-                                     </div>
-                                   );
-                                 }
-                                 return null;
-                               })()}
-                              
+                          if (status.isError) {
+                            return (
+                              <div className="flex flex-col gap-1 w-full">
+                                <span className="text-[10px] md:text-xs text-rose-500 font-bold text-center mb-1 animate-pulse">
+                                  {status.errorMsg}
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="flex flex-col gap-2 md:gap-3.5 w-full">
+                              {!status.isSuccess && (
+                                <div className="flex flex-col gap-1.5 md:gap-2 bg-rose-950/25 border border-rose-900/60 rounded-lg md:rounded-xl p-2.5 md:p-3 animate-pulse">
+                                  <div className="flex items-center gap-1.5 text-rose-400 font-black text-[8px] md:text-[10px] uppercase tracking-wider">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 md:w-3.5 md:h-3.5 text-rose-500"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                    <span>This process may take a few minutes -- Do Not Refresh or Close This Page</span>
+                                  </div>
+                                  <p className="text-[8px] md:text-[10px] text-rose-350 font-bold leading-normal">
+                                    The secure watermarking & encryption is in progress. Refreshing will abort the process.
+                                  </p>
+                                </div>
+                              )}
+                              <DownloadProgressBar 
+                                step={status.step || 0}
+                                isDownloading={status.isDownloading || false}
+                                downloadPercent={status.downloadPercent || 0}
+                              />
                               <button
                                 disabled
-                                className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-850/85 text-slate-500 rounded-xl text-xs font-bold cursor-wait mt-1"
+                                className="w-full inline-flex items-center justify-center gap-1 md:gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-slate-850/85 text-slate-500 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold cursor-wait"
                               >
-                                {isDownloading ? 'Downloading...' : 'Processing...'}
+                                {status.isSuccess ? 'completed' : 'processing...'}
                               </button>
                             </div>
                           );
@@ -505,9 +533,9 @@ export default function StudentDashboard({ user }) {
                               console.log(`[UI Click] Clicked download button for courseId: ${course.courseId}`);
                               handleDownload(course.courseId, course.name);
                             }}
-                            className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl text-xs font-bold transition-all duration-300 shadow-md hover:shadow-indigo-950/20 cursor-pointer"
+                            className="w-full inline-flex items-center justify-center gap-1 md:gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold transition-all duration-300 shadow-md hover:shadow-indigo-950/20 cursor-pointer"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3 md:w-3.5 md:h-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             Download PDF
                           </button>
                         )
@@ -524,20 +552,20 @@ export default function StudentDashboard({ user }) {
       {/* Request Additional Download Modal Overlay */}
       {showRequestModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-base font-extrabold text-white mb-2">Request Additional Download</h3>
-            <p className="text-xs text-slate-400 mb-4 font-medium">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl md:rounded-2xl w-full max-w-md p-4 md:p-6 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-sm md:text-base font-extrabold text-white mb-1.5 md:mb-2">Request Additional Download</h3>
+            <p className="text-[10px] md:text-xs text-slate-400 mb-3 md:mb-4 font-medium">
               Please specify a reason for requesting another download of <span className="text-indigo-400 font-bold">{requestModalCourseName}</span>.
             </p>
             
             {requestErrorMsg && (
-              <div className="p-2.5 bg-rose-950/20 border border-rose-900/30 text-rose-500 rounded-xl text-xs font-bold mb-4">
+              <div className="p-2 md:p-2.5 bg-rose-950/20 border border-rose-900/30 text-rose-500 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold mb-3 md:mb-4">
                 {requestErrorMsg}
               </div>
             )}
 
             <textarea
-              className="w-full h-24 bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-indigo-500 text-slate-100 rounded-xl p-3 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all duration-200 placeholder:text-slate-600 resize-none"
+              className="w-full h-20 md:h-24 bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-indigo-500 text-slate-100 rounded-lg md:rounded-xl p-2.5 md:p-3 text-[11px] md:text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all duration-200 placeholder:text-slate-600 resize-none"
               placeholder="Type your reason here... (reason cannot be empty)"
               value={requestReason}
               onChange={(e) => {
@@ -546,20 +574,20 @@ export default function StudentDashboard({ user }) {
               }}
             />
 
-            <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-slate-850/60">
+            <div className="flex items-center justify-end gap-2 md:gap-3 mt-4 md:mt-5 pt-3 md:pt-4 border-t border-slate-850/60">
               <button
                 onClick={() => {
                   setShowRequestModal(false);
                   setRequestReason('');
                   setRequestErrorMsg('');
                 }}
-                className="px-4 py-2 text-slate-400 hover:text-slate-200 text-xs font-bold transition cursor-pointer"
+                className="px-3 py-1.5 md:px-4 md:py-2 text-slate-400 hover:text-slate-200 text-[10px] md:text-xs font-bold transition cursor-pointer"
               >
                 cancel
               </button>
               <button
                 onClick={handleSubmitRequest}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-md hover:shadow-indigo-950/20 cursor-pointer"
+                className="px-3 py-1.5 md:px-4 md:py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold transition shadow-md hover:shadow-indigo-950/20 cursor-pointer"
               >
                 send
               </button>
