@@ -1,0 +1,102 @@
+import { useState, useEffect } from 'react';
+import Navbar from '../components/Navbar';
+import StudentDashboard from './StudentDashboard';
+import ProgressUpdater from './ProgressUpdater';
+import QuestionUploader from './QuestionUploader';
+import DisplayPYQ from './DisplayPYQ';
+import DisplayUPSCQuestions from './DisplayUPSCQuestions';
+import LoadingSpinner from '../components/LoadingSpinner';
+import BuyCourses from './BuyCourses';
+import UploadCourse from './UploadCourse';
+import PYQRecommender from './PYQRecommender';
+import PDFEditor from './PDFEditor';
+
+export default function DashboardSection({ user, onLogout, activeTab, setActiveTab }) {
+  const [syllabusData, setSyllabusData] = useState(null);
+  const [loadingSyllabus, setLoadingSyllabus] = useState(false);
+  const [error, setError] = useState('');
+  const [analysisCourseId, setAnalysisCourseId] = useState(null);
+
+  const fetchSyllabus = async (silent = false) => {
+    if (!silent) setLoadingSyllabus(true);
+    setError('');
+    try {
+      const res = await fetch('/api/user/syllabus', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!res.ok) {
+        throw new Error('Failed to retrieve syllabus details');
+      }
+      const data = await res.json();
+      setSyllabusData(data);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Error loading syllabus progress');
+    } finally {
+      if (!silent) setLoadingSyllabus(false);
+    }
+  };
+
+  useEffect(() => {
+    // Load syllabus whenever we log in and access student/updater/uploader tabs
+    if (activeTab === 'student' || activeTab === 'updater' || activeTab === 'uploader') {
+      fetchSyllabus();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    // Reset analysis course ID when navigating away from pyq_recommender
+    if (activeTab !== 'pyq_recommender') {
+      setAnalysisCourseId(null);
+    }
+  }, [activeTab]);
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      {/* Navbar Header */}
+      <Navbar user={user} onLogout={onLogout} activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      {/* Main Page Workspace Content */}
+      <main className="flex-grow">
+        {activeTab === 'student' && (
+          <StudentDashboard user={user} setActiveTab={setActiveTab} />
+        )}
+
+        {activeTab === 'manage_courses' && (
+          <UploadCourse />
+        )}
+
+
+
+        {activeTab === 'pyqs' && (
+          <DisplayPYQ />
+        )}
+
+        {activeTab === 'upsc_questions' && (
+          <DisplayUPSCQuestions />
+        )}
+
+        {activeTab === 'buy_pdfs' && (
+          <BuyCourses onRedirectToLogin={() => setActiveTab('login')} />
+        )}
+
+        {activeTab === 'upload_course' && (
+          <UploadCourse />
+        )}
+
+        {activeTab === 'pyq_recommender' && (
+          <PYQRecommender 
+            selectedCourseId={analysisCourseId} 
+            onRedirectToBuy={() => setActiveTab('buy_pdfs')} 
+          />
+        )}
+
+        {activeTab === 'pdf_editor' && (
+          <PDFEditor />
+        )}
+      </main>
+    </div>
+  );
+}
