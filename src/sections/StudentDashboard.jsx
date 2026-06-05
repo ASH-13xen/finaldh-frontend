@@ -17,6 +17,157 @@ const getCleanStatusText = (status) => {
   return status;
 };
 
+const wrapText = (text, maxWidth, font, fontSize) => {
+  const words = text.split(/\s+/);
+  const lines = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+    if (testWidth > maxWidth) {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+};
+
+const drawSecurityWarningPage = (page, user, course, font, boldFont, rgb) => {
+  const { width, height } = page.getSize();
+
+  // Draw a subtle border or background card
+  page.drawRectangle({
+    x: 40,
+    y: 40,
+    width: width - 80,
+    height: height - 80,
+    borderColor: rgb(0.8, 0.2, 0.2),
+    borderWidth: 2.5,
+    color: rgb(0.99, 0.98, 0.98),
+  });
+
+  // Top header red bar
+  page.drawRectangle({
+    x: 40,
+    y: height - 90,
+    width: width - 80,
+    height: 50,
+    color: rgb(0.75, 0.15, 0.15),
+  });
+
+  // Draw header text
+  const titleText = "SECURITY NOTICE & LICENSE AGREEMENT";
+  const titleWidth = boldFont.widthOfTextAtSize(titleText, 13);
+  page.drawText(titleText, {
+    x: (width - titleWidth) / 2,
+    y: height - 70,
+    size: 13,
+    font: boldFont,
+    color: rgb(1, 1, 1),
+  });
+
+  let currentY = height - 120;
+
+  // Draw License info box header
+  page.drawText("LICENSE REGISTRATION DETAILS", {
+    x: 60,
+    y: currentY,
+    size: 11,
+    font: boldFont,
+    color: rgb(0.2, 0.2, 0.2),
+  });
+
+  currentY -= 25;
+
+  // Draw licensee details
+  const details = [
+    { label: "Authorized Licensee:", value: user.fullName || user.name || "N/A" },
+    { label: "Registered Email:", value: user.email },
+    { label: "Mobile Number:", value: user.mobileNumber || "N/A" },
+    { label: "License Tracking ID:", value: user._id.toString() },
+    { label: "Document Name:", value: course.name || "N/A" }
+  ];
+
+  details.forEach(item => {
+    page.drawText(item.label, {
+      x: 70,
+      y: currentY,
+      size: 9.5,
+      font: boldFont,
+      color: rgb(0.35, 0.35, 0.35),
+    });
+    page.drawText(item.value, {
+      x: 210,
+      y: currentY,
+      size: 9.5,
+      font: font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    currentY -= 18;
+  });
+
+  currentY -= 15;
+
+  // Divider
+  page.drawLine({
+    start: { x: 60, y: currentY },
+    end: { x: width - 60, y: currentY },
+    color: rgb(0.85, 0.85, 0.85),
+    thickness: 1,
+  });
+
+  currentY -= 25;
+
+  // Draw warning details
+  page.drawText("LEGAL TERMS & SHARE RESTRICTIONS", {
+    x: 60,
+    y: currentY,
+    size: 11,
+    font: boldFont,
+    color: rgb(0.75, 0.15, 0.15),
+  });
+
+  currentY -= 20;
+
+  const warningParagraphs = [
+    "1. This textbook / e-book is a licensed publication of The Dark Horse UPSC. It is registered exclusively to the user specified in the registration details above. This copy is authorized only for their personal educational use.",
+    "2. PROHIBITED SHARING: It is strictly prohibited to share, publish, distribute, resell, or upload this PDF to any private/public forum, website, Telegram channel, Google Drive, WhatsApp group, or social media platform.",
+    "3. SECURITY TRACING: This document is embedded with active visible watermarks and dynamic, invisible steganographic tracking signatures. Any leaked copies found online will be auto-scanned to retrieve these tracking IDs.",
+    "4. LEGAL CONSEQUENCES: Sharing or distributing this material constitutes intellectual property theft and copyright infringement. Violations will result in immediate termination of account access without refund and legal prosecution under the Indian Copyright Act, 1957."
+  ];
+
+  warningParagraphs.forEach(p => {
+    const lines = wrapText(p, width - 120, font, 9);
+    lines.forEach(line => {
+      page.drawText(line, {
+        x: 65,
+        y: currentY,
+        size: 9,
+        font: font,
+        color: rgb(0.25, 0.25, 0.25),
+      });
+      currentY -= 14;
+    });
+    currentY -= 6; // gap between paragraphs
+  });
+
+  currentY -= 15;
+  // Footer message
+  const footerText = "Thank you for supporting honest learning and respecting authors' copy rights.";
+  const footerW = font.widthOfTextAtSize(footerText, 8.5);
+  page.drawText(footerText, {
+    x: (width - footerW) / 2,
+    y: currentY,
+    size: 8.5,
+    font: font,
+    color: rgb(0.5, 0.5, 0.5),
+  });
+};
+
 function CourseSkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -172,10 +323,13 @@ export default function StudentDashboard({ user }) {
           const data = await res.json();
           const step = data.step || 1;
           console.log(`[Progress Polling] Polled step: ${step}`);
-          setDownloadingStatus(prev => ({ 
-            ...prev, 
-            [courseId]: { step, isDownloading: false, downloadPercent: 0 } 
-          }));
+          setDownloadingStatus(prev => {
+            if (prev[courseId]?.isClientSideProcessing) return prev;
+            return {
+              ...prev,
+              [courseId]: { step, isDownloading: false, downloadPercent: 0 }
+            };
+          });
         }
       } catch (err) {
         console.warn('Error polling progress:', err);
@@ -208,6 +362,9 @@ export default function StudentDashboard({ user }) {
         throw new Error(errorMsg);
       }
 
+      const downloadMode = res.headers.get('x-download-mode');
+      console.log(`[Main Fetch] Download Mode from headers: ${downloadMode}`);
+
       const contentLength = res.headers.get('content-length');
       console.log(`[Main Fetch] Content-Length header: ${contentLength}`);
       const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
@@ -218,7 +375,7 @@ export default function StudentDashboard({ user }) {
 
       setDownloadingStatus(prev => ({ 
         ...prev, 
-        [courseId]: { step: 9, isDownloading: true, downloadPercent: 0 } 
+        [courseId]: { step: 5, isDownloading: true, downloadPercent: 0, isClientSideProcessing: downloadMode === 'client-side' } 
       }));
 
       while (true) {
@@ -235,23 +392,142 @@ export default function StudentDashboard({ user }) {
           const progressPercent = Math.round((receivedBytes * 100) / totalBytes);
           setDownloadingStatus(prev => ({ 
             ...prev, 
-            [courseId]: { step: 9, isDownloading: true, downloadPercent: progressPercent } 
+            [courseId]: { step: 5, isDownloading: true, downloadPercent: progressPercent, isClientSideProcessing: downloadMode === 'client-side' } 
           }));
         } else {
           setDownloadingStatus(prev => ({ 
             ...prev, 
-            [courseId]: { step: 9, isDownloading: true, downloadPercent: 95 } 
+            [courseId]: { step: 5, isDownloading: true, downloadPercent: 95, isClientSideProcessing: downloadMode === 'client-side' } 
           }));
         }
+      }
+
+      let finalBlob;
+
+      if (downloadMode === 'client-side') {
+        console.log(`[Client-Side Mode] Raw PDF downloaded. Starting watermarking and encryption...`);
+
+        // Step 6: Fetch barcode
+        setDownloadingStatus(prev => ({ 
+          ...prev, 
+          [courseId]: { step: 6, isDownloading: false, downloadPercent: 0, isClientSideProcessing: true } 
+        }));
+        const barcodeRes = await fetch('/api/user/barcode', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!barcodeRes.ok) {
+          throw new Error('Failed to generate user barcode for client-side stamping');
+        }
+        const barcodeBytes = await barcodeRes.arrayBuffer();
+        console.log(`[Client-Side Mode] Fetched user barcode (${barcodeBytes.byteLength} bytes)`);
+
+        // Step 7: Stamp watermark & barcode
+        setDownloadingStatus(prev => ({ 
+          ...prev, 
+          [courseId]: { step: 7, isDownloading: false, downloadPercent: 0, isClientSideProcessing: true } 
+        }));
+
+        // Lazy load pdf-lib and pdf-encrypt-lite dynamically
+        console.log(`[Client-Side Mode] Lazy loading pdf-lib and pdf-encrypt-lite...`);
+        const { PDFDocument, rgb } = await import('pdf-lib');
+        const { encryptPDF } = await import('@pdfsmaller/pdf-encrypt-lite');
+
+        // Combine chunks into single Uint8Array
+        const pdfBytes = new Uint8Array(receivedBytes);
+        let offset = 0;
+        for (const chunk of chunks) {
+          pdfBytes.set(chunk, offset);
+          offset += chunk.length;
+        }
+
+        const pdfDoc = await PDFDocument.load(pdfBytes);
+        const barcodeImage = await pdfDoc.embedPng(barcodeBytes);
+        const helveticaFont = await pdfDoc.embedFont('Helvetica');
+        const helveticaBoldFont = await pdfDoc.embedFont('Helvetica-Bold');
+
+        const currentCourse = courses.find(c => c.courseId === courseId) || {};
+
+        pdfDoc.setTitle(courseName || 'Secured Course PDF');
+        pdfDoc.setAuthor(currentUser.email);
+        pdfDoc.setSubject(currentCourse.subject || 'Syllabus Course Content');
+        pdfDoc.setProducer('The Dark Horse UPSC');
+        pdfDoc.setCreator('The Dark Horse UPSC');
+        pdfDoc.setKeywords([currentUser._id.toString(), currentUser.email]);
+
+        const pages = pdfDoc.getPages();
+        const watermarkText = `Name: ${currentUser.fullName || currentUser.name}  |  Email: ${currentUser.email}  |  Mobile: ${currentUser.mobileNumber || 'N/A'}`;
+
+        for (let i = 0; i < pages.length; i++) {
+          const page = pages[i];
+          const { width, height } = page.getSize();
+          page.drawText(watermarkText, {
+            x: 25,
+            y: height - 25,
+            size: 9,
+            font: helveticaFont,
+            color: rgb(0.6, 0.6, 0.6),
+          });
+
+          const barcodeWidth = 90;
+          const barcodeHeight = 20;
+          page.drawImage(barcodeImage, {
+            x: width - barcodeWidth - 25,
+            y: 15,
+            width: barcodeWidth,
+            height: barcodeHeight,
+          });
+        }
+
+        if (pages.length > 0) {
+          const firstPage = pages[0];
+          const { width, height } = firstPage.getSize();
+          const numPagesToAdd = Math.max(1, Math.floor(pages.length / 40));
+          const insertIndices = [];
+          let currentPagesCount = pages.length;
+          for (let j = 0; j < numPagesToAdd; j++) {
+            let maxIdx = currentPagesCount;
+            let minIdx = currentPagesCount > 1 ? 1 : 0;
+            insertIndices.push(Math.floor(Math.random() * (maxIdx - minIdx + 1)) + minIdx);
+            currentPagesCount++;
+          }
+          insertIndices.sort((a, b) => a - b);
+          for (const insertIdx of insertIndices) {
+            const newPage = pdfDoc.insertPage(insertIdx, [width, height]);
+            drawSecurityWarningPage(newPage, currentUser, currentCourse, helveticaFont, helveticaBoldFont, rgb);
+          }
+        }
+
+        // Step 8: Save modified PDF
+        setDownloadingStatus(prev => ({ 
+          ...prev, 
+          [courseId]: { step: 8, isDownloading: false, downloadPercent: 0, isClientSideProcessing: true } 
+        }));
+        const modifiedPdfBytes = await pdfDoc.save({
+          useObjectStreams: false,
+          updateFieldAppearances: false
+        });
+
+        // Step 9: Encrypt PDF
+        setDownloadingStatus(prev => ({ 
+          ...prev, 
+          [courseId]: { step: 9, isDownloading: false, downloadPercent: 0, isClientSideProcessing: true } 
+        }));
+        const userPassword = currentUser.email.trim().toLowerCase();
+        const encryptedPdfBytes = await encryptPDF(modifiedPdfBytes, userPassword);
+
+        finalBlob = new Blob([encryptedPdfBytes], { type: 'application/pdf' });
+      } else {
+        finalBlob = new Blob(chunks, { type: 'application/pdf' });
       }
 
       setDownloadingStatus(prev => ({ 
         ...prev, 
         [courseId]: { step: 9, isDownloading: false, downloadPercent: 100, isSuccess: true } 
       }));
-      const blob = new Blob(chunks, { type: 'application/pdf' });
 
-      const url = window.URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(finalBlob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `${courseName.replace(/\s+/g, '_')}_secured.pdf`;
