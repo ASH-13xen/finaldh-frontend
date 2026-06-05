@@ -211,18 +211,16 @@ export default function UploadCourse() {
     }
 
     try {
+      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
       const url = editCourse 
-        ? `/api/courses/${editCourse._id}` 
-        : '/api/courses/upload';
+        ? `${apiBaseUrl}/api/courses/${editCourse._id}` 
+        : `${apiBaseUrl}/api/courses/upload`;
       const method = editCourse ? 'PUT' : 'POST';
 
       const response = await axios({
         method,
         url,
         data: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -244,7 +242,20 @@ export default function UploadCourse() {
 
     } catch (err) {
       console.error(err);
-      const errorMessage = err.response?.data?.error || err.message || 'An error occurred while saving.';
+      let errorMessage = 'An error occurred while saving.';
+      if (err.response?.data) {
+        if (typeof err.response.data.error === 'string') {
+          errorMessage = err.response.data.error;
+        } else if (typeof err.response.data.error === 'object' && err.response.data.error !== null) {
+          errorMessage = err.response.data.error.message || JSON.stringify(err.response.data.error);
+        } else if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
+        } else {
+          errorMessage = JSON.stringify(err.response.data);
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
       setFormError(errorMessage);
       setShowProgress(false);
     } finally {
