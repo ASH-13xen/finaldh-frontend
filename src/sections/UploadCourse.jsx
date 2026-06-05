@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import Button from '../components/Button';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -63,6 +64,8 @@ export default function UploadCourse() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [showProgress, setShowProgress] = useState(false);
 
   // Download Requests state
   const [requests, setRequests] = useState([]);
@@ -160,6 +163,8 @@ export default function UploadCourse() {
     setFile(null);
     setFormError('');
     setSuccessMsg('');
+    setUploadProgress(0);
+    setShowProgress(false);
     setShowModal(true);
   };
 
@@ -173,6 +178,8 @@ export default function UploadCourse() {
     setFile(null); // file is optional on edit
     setFormError('');
     setSuccessMsg('');
+    setUploadProgress(0);
+    setShowProgress(false);
     setShowModal(true);
   };
 
@@ -191,6 +198,8 @@ export default function UploadCourse() {
     setSaving(true);
     setFormError('');
     setSuccessMsg('');
+    setUploadProgress(0);
+    setShowProgress(true);
 
     const formData = new FormData();
     formData.append('courseId', courseId);
@@ -207,22 +216,20 @@ export default function UploadCourse() {
         : '/api/courses/upload';
       const method = editCourse ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const response = await axios({
         method,
-        body: formData
+        url,
+        data: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+          }
+        }
       });
-
-      let data = {};
-      const contentType = res.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await res.json();
-      } else {
-        throw new Error(`Server returned error status ${res.status}`);
-      }
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save course');
-      }
 
       setSuccessMsg(editCourse ? 'Course updated successfully!' : 'Course added successfully!');
       
@@ -232,11 +239,14 @@ export default function UploadCourse() {
       // Close modal after brief delay
       setTimeout(() => {
         setShowModal(false);
+        setShowProgress(false);
       }, 1000);
 
     } catch (err) {
       console.error(err);
-      setFormError(err.message || 'An error occurred while saving.');
+      const errorMessage = err.response?.data?.error || err.message || 'An error occurred while saving.';
+      setFormError(errorMessage);
+      setShowProgress(false);
     } finally {
       setSaving(false);
     }
@@ -535,6 +545,22 @@ export default function UploadCourse() {
                   required={!editCourse}
                 />
               </div>
+
+              {/* Progress Bar */}
+              {showProgress && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span>Uploading file...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                    <div 
+                      className="bg-indigo-500 h-2.5 rounded-full transition-all duration-300 ease-out" 
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
 
               {/* Notification Boxes */}
               {formError && (
