@@ -110,18 +110,27 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
     script.onload = () => {
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
       if (activeCourse) {
-        loadPDFDoc(activeCourse.fileUrl);
+        loadPDFDoc(activeCourse);
       }
     };
     document.head.appendChild(script);
   }, []);
 
-  const loadPDFDoc = async (url) => {
+  const loadPDFDoc = async (course) => {
     setPdfLoading(true);
     setPdfDocument(null);
     setNumPages(0);
     try {
-      const loadingTask = window.pdfjsLib.getDocument(url);
+      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+      const url = `${apiBaseUrl}/api/courses/raw/${course._id}`;
+      const token = localStorage.getItem('token');
+
+      const loadingTask = window.pdfjsLib.getDocument({
+        url,
+        httpHeaders: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const pdf = await loadingTask.promise;
       setPdfDocument(pdf);
       setNumPages(pdf.numPages);
@@ -141,7 +150,7 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
     }
 
     if (window.pdfjsLib) {
-      loadPDFDoc(activeCourse.fileUrl);
+      loadPDFDoc(activeCourse);
     }
   }, [activeCourse]);
 

@@ -1,4 +1,4 @@
-export default function LoginSection({ error, googleButtonRef, onGuestAccess, onDevLogin }) {
+export default function LoginSection({ error, googleButtonRef }) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-950 text-slate-100 px-4">
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl flex flex-col">
@@ -7,7 +7,7 @@ export default function LoginSection({ error, googleButtonRef, onGuestAccess, on
         </div>
 
         <h1 className="text-2xl font-bold text-white leading-snug">Sign In</h1>
-        <p className="text-sm text-slate-400 mt-2 font-medium">Welcome back. Authenticate securely with your Google account or use the sandbox login to access the gateway.</p>
+        <p className="text-sm text-slate-400 mt-2 font-medium">Welcome back. Authenticate securely with your Google account to access the gateway.</p>
 
         {error && (
           <div className="mt-5 p-3.5 bg-rose-950/30 border border-rose-900/50 text-rose-400 text-xs font-medium rounded-xl flex items-start gap-2.5">
@@ -16,27 +16,8 @@ export default function LoginSection({ error, googleButtonRef, onGuestAccess, on
           </div>
         )}
 
-        <div className="my-7 space-y-4">
+        <div className="my-7">
           <div ref={googleButtonRef} className="w-full min-h-[44px] flex justify-center animate-pulse"></div>
-          
-          {onDevLogin && (
-            <>
-              <div className="relative flex items-center justify-center my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-800"></div>
-                </div>
-                <span className="relative px-3 bg-slate-900 text-xs text-slate-400 font-semibold uppercase tracking-wider">Or</span>
-              </div>
-
-              <button
-                onClick={onDevLogin}
-                className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition-all duration-300 flex items-center justify-center gap-2 border border-slate-700 shadow-sm cursor-pointer"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                Developer Sandbox Login
-              </button>
-            </>
-          )}
         </div>
 
         <div className="border-t border-slate-800 pt-5 flex items-center justify-center text-[11px] font-semibold text-slate-500 uppercase tracking-widest gap-2">

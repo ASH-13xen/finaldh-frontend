@@ -7,7 +7,14 @@ import App from './App.jsx'
 const originalFetch = window.fetch;
 window.fetch = async (input, init) => {
   let url = input;
-  const baseUrl = import.meta.env.VITE_API_URL || '';
+  let baseUrl = import.meta.env.VITE_API_URL || '';
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    if (window.location.port !== '5000') {
+      baseUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
+    } else {
+      baseUrl = '';
+    }
+  }
   if (baseUrl) {
     const cleanBaseUrl = baseUrl.replace(/\/$/, '');
     if (typeof url === 'string') {

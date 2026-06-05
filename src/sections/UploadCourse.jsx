@@ -221,6 +221,9 @@ export default function UploadCourse() {
         method,
         url,
         data: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -271,7 +274,10 @@ export default function UploadCourse() {
 
     try {
       const res = await fetch(`/api/courses/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
       const data = await res.json();
       if (!res.ok) {
@@ -360,7 +366,7 @@ export default function UploadCourse() {
                       <td className="px-6 py-4 font-bold text-slate-300">₹{course.price}</td>
                       <td className="px-6 py-4 text-slate-400 font-medium truncate max-w-xs">
                         <a 
-                          href={`${import.meta.env.VITE_API_URL || ''}${course.fileUrl}`} 
+                          href={`${import.meta.env.VITE_API_URL || ''}/api/courses/raw/${course._id}?token=${localStorage.getItem('token')}`} 
                           target="_blank" 
                           rel="noopener noreferrer" 
                           className="hover:text-indigo-400 hover:underline flex items-center gap-1"
@@ -422,6 +428,7 @@ export default function UploadCourse() {
                     <th className="px-6 py-4">Student</th>
                     <th className="px-6 py-4">Course ID</th>
                     <th className="px-6 py-4">Course Name</th>
+                    <th className="px-6 py-4">Reason</th>
                     <th className="px-6 py-4">Requested At</th>
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
@@ -439,6 +446,7 @@ export default function UploadCourse() {
                         </span>
                       </td>
                       <td className="px-6 py-4 font-semibold text-slate-200 truncate max-w-xs">{req.courseName}</td>
+                      <td className="px-6 py-4 font-medium text-slate-350 max-w-xs break-words">{req.reason || '-'}</td>
                       <td className="px-6 py-4 text-slate-400 font-medium">
                         {new Date(req.requestedAt || req.createdAt).toLocaleString()}
                       </td>
