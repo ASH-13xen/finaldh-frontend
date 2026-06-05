@@ -586,7 +586,7 @@ export default function UploadCourse() {
                 >
                   Cancel
                 </button>
-                <Button onClick={handleFormSubmit} variant="primary" disabled={saving}>
+                <Button variant="primary" disabled={saving}>
                   {saving ? 'Saving...' : 'Save Course'}
                 </Button>
               </div>
