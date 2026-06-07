@@ -311,7 +311,101 @@ export default function StudentDashboard({ user }) {
       [courseId]: { step: 1, isDownloading: false, downloadPercent: 0 } 
     }));
 
-    // Start progress polling interval every 800ms
+    const startStreaming = async () => {
+      try {
+        console.log(`[Stream Fetch] Triggering GET request to /api/courses/download/${courseId}`);
+        const res = await fetch(`/api/courses/download/${courseId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (!res.ok) {
+          let errorMsg = 'Failed to download PDF';
+          try {
+            const errData = await res.json();
+            errorMsg = errData.error || errorMsg;
+          } catch (jsonErr) {}
+          throw new Error(errorMsg);
+        }
+
+        const contentLength = res.headers.get('content-length');
+        const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+
+        const reader = res.body.getReader();
+        let receivedBytes = 0;
+        const chunks = [];
+
+        setDownloadingStatus(prev => ({ 
+          ...prev, 
+          [courseId]: { step: 9, isDownloading: true, downloadPercent: 0 } 
+        }));
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          receivedBytes += value.length;
+
+          if (totalBytes > 0) {
+            const progressPercent = Math.round((receivedBytes * 100) / totalBytes);
+            setDownloadingStatus(prev => ({ 
+              ...prev, 
+              [courseId]: { step: 9, isDownloading: true, downloadPercent: progressPercent } 
+            }));
+          }
+        }
+
+        const finalBlob = new Blob(chunks, { type: 'application/pdf' });
+        setDownloadingStatus(prev => ({ 
+          ...prev, 
+          [courseId]: { step: 9, isDownloading: false, downloadPercent: 100, isSuccess: true } 
+        }));
+
+        const url = window.URL.createObjectURL(finalBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${courseName.replace(/\s+/g, '_')}_secured.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        // Update UI limits locally
+        setCurrentUser(prev => {
+          const limits = [...(prev.downloadLimits || [])];
+          const entry = limits.find(d => d.courseId === courseId);
+          if (entry) {
+            entry.downloadedCount += 1;
+          } else {
+            limits.push({
+              courseId,
+              downloadedCount: 1,
+              allowedCount: 1
+            });
+          }
+          return { ...prev, downloadLimits: limits };
+        });
+
+      } catch (streamErr) {
+        console.error(`[Stream Error]`, streamErr);
+        setDownloadingStatus(prev => ({ 
+          ...prev, 
+          [courseId]: { isError: true, errorMsg: streamErr.message || 'Download failed' } 
+        }));
+      } finally {
+        setTimeout(() => {
+          setDownloadingStatus(prev => {
+            const next = { ...prev };
+            delete next[courseId];
+            return next;
+          });
+        }, 3500);
+      }
+    };
+
+    let hasTriggeredStream = false;
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/courses/download-progress/${courseId}`, {
@@ -322,9 +416,35 @@ export default function StudentDashboard({ user }) {
         if (res.ok) {
           const data = await res.json();
           const step = data.step || 1;
-          console.log(`[Progress Polling] Polled step: ${step}`);
+          const status = data.status || 'processing';
+          console.log(`[Progress Polling] Polled step: ${step}, status: ${status}`);
+
+          if (status === 'completed') {
+            clearInterval(pollInterval);
+            if (!hasTriggeredStream) {
+              hasTriggeredStream = true;
+              await startStreaming();
+            }
+            return;
+          }
+
+          if (status === 'failed') {
+            clearInterval(pollInterval);
+            setDownloadingStatus(prev => ({
+              ...prev,
+              [courseId]: { isError: true, errorMsg: data.error || 'Generation failed' }
+            }));
+            setTimeout(() => {
+              setDownloadingStatus(prev => {
+                const next = { ...prev };
+                delete next[courseId];
+                return next;
+              });
+            }, 3500);
+            return;
+          }
+
           setDownloadingStatus(prev => {
-            if (prev[courseId]?.isClientSideProcessing) return prev;
             return {
               ...prev,
               [courseId]: { step, isDownloading: false, downloadPercent: 0 }
@@ -337,7 +457,6 @@ export default function StudentDashboard({ user }) {
     }, 800);
 
     try {
-      // Bypass Vite dev server proxy for large PDF files to prevent proxy timeout/buffer issues
       console.log(`[Main Fetch] Triggering GET request to /api/courses/download/${courseId}`);
       const res = await fetch(`/api/courses/download/${courseId}`, {
         method: 'GET',
@@ -347,7 +466,12 @@ export default function StudentDashboard({ user }) {
       });
       console.log(`[Main Fetch] Response received. Status: ${res.status} ${res.statusText}`);
 
-      // Stop polling progress once headers are received
+      if (res.status === 202) {
+        console.log(`[Main Fetch] Background generation started (202). Polling will handle streaming once ready.`);
+        return;
+      }
+
+      // If it returned 200 OK directly (already processed or downloaded instantly)
       clearInterval(pollInterval);
 
       if (!res.ok) {
@@ -355,18 +479,11 @@ export default function StudentDashboard({ user }) {
         try {
           const errData = await res.json();
           errorMsg = errData.error || errorMsg;
-          console.error('[Main Fetch] Error response payload:', errData);
-        } catch (jsonErr) {
-          console.warn('[Main Fetch] Failed to parse JSON error response:', jsonErr);
-        }
+        } catch (jsonErr) {}
         throw new Error(errorMsg);
       }
 
-      const downloadMode = res.headers.get('x-download-mode');
-      console.log(`[Main Fetch] Download Mode from headers: ${downloadMode}`);
-
       const contentLength = res.headers.get('content-length');
-      console.log(`[Main Fetch] Content-Length header: ${contentLength}`);
       const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
 
       const reader = res.body.getReader();
@@ -375,16 +492,12 @@ export default function StudentDashboard({ user }) {
 
       setDownloadingStatus(prev => ({ 
         ...prev, 
-        [courseId]: { step: 5, isDownloading: true, downloadPercent: 0, isClientSideProcessing: downloadMode === 'client-side' } 
+        [courseId]: { step: 9, isDownloading: true, downloadPercent: 0 } 
       }));
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) {
-          console.log(`[Main Fetch] Body stream reader finished. Total received bytes: ${receivedBytes}`);
-          break;
-        }
-
+        if (done) break;
         chunks.push(value);
         receivedBytes += value.length;
 
@@ -392,136 +505,12 @@ export default function StudentDashboard({ user }) {
           const progressPercent = Math.round((receivedBytes * 100) / totalBytes);
           setDownloadingStatus(prev => ({ 
             ...prev, 
-            [courseId]: { step: 5, isDownloading: true, downloadPercent: progressPercent, isClientSideProcessing: downloadMode === 'client-side' } 
-          }));
-        } else {
-          setDownloadingStatus(prev => ({ 
-            ...prev, 
-            [courseId]: { step: 5, isDownloading: true, downloadPercent: 95, isClientSideProcessing: downloadMode === 'client-side' } 
+            [courseId]: { step: 9, isDownloading: true, downloadPercent: progressPercent } 
           }));
         }
       }
 
-      let finalBlob;
-
-      if (downloadMode === 'client-side') {
-        console.log(`[Client-Side Mode] Raw PDF downloaded. Starting watermarking and encryption...`);
-
-        // Step 6: Fetch barcode
-        setDownloadingStatus(prev => ({ 
-          ...prev, 
-          [courseId]: { step: 6, isDownloading: false, downloadPercent: 0, isClientSideProcessing: true } 
-        }));
-        const barcodeRes = await fetch('/api/user/barcode', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!barcodeRes.ok) {
-          throw new Error('Failed to generate user barcode for client-side stamping');
-        }
-        const barcodeBytes = await barcodeRes.arrayBuffer();
-        console.log(`[Client-Side Mode] Fetched user barcode (${barcodeBytes.byteLength} bytes)`);
-
-        // Step 7: Stamp watermark & barcode
-        setDownloadingStatus(prev => ({ 
-          ...prev, 
-          [courseId]: { step: 7, isDownloading: false, downloadPercent: 0, isClientSideProcessing: true } 
-        }));
-
-        // Lazy load pdf-lib and pdf-encrypt-lite dynamically
-        console.log(`[Client-Side Mode] Lazy loading pdf-lib and pdf-encrypt-lite...`);
-        const { PDFDocument, rgb } = await import('pdf-lib');
-        const { encryptPDF } = await import('@pdfsmaller/pdf-encrypt-lite');
-
-        // Combine chunks into single Uint8Array
-        const pdfBytes = new Uint8Array(receivedBytes);
-        let offset = 0;
-        for (const chunk of chunks) {
-          pdfBytes.set(chunk, offset);
-          offset += chunk.length;
-        }
-
-        const pdfDoc = await PDFDocument.load(pdfBytes);
-        const barcodeImage = await pdfDoc.embedPng(barcodeBytes);
-        const helveticaFont = await pdfDoc.embedFont('Helvetica');
-        const helveticaBoldFont = await pdfDoc.embedFont('Helvetica-Bold');
-
-        const currentCourse = courses.find(c => c.courseId === courseId) || {};
-
-        pdfDoc.setTitle(courseName || 'Secured Course PDF');
-        pdfDoc.setAuthor(currentUser.email);
-        pdfDoc.setSubject(currentCourse.subject || 'Syllabus Course Content');
-        pdfDoc.setProducer('The Dark Horse UPSC');
-        pdfDoc.setCreator('The Dark Horse UPSC');
-        pdfDoc.setKeywords([currentUser._id.toString(), currentUser.email]);
-
-        const pages = pdfDoc.getPages();
-        const watermarkText = `Name: ${currentUser.fullName || currentUser.name}  |  Email: ${currentUser.email}  |  Mobile: ${currentUser.mobileNumber || 'N/A'}`;
-
-        for (let i = 0; i < pages.length; i++) {
-          const page = pages[i];
-          const { width, height } = page.getSize();
-          page.drawText(watermarkText, {
-            x: 25,
-            y: height - 25,
-            size: 9,
-            font: helveticaFont,
-            color: rgb(0.6, 0.6, 0.6),
-          });
-
-          const barcodeWidth = 90;
-          const barcodeHeight = 20;
-          page.drawImage(barcodeImage, {
-            x: width - barcodeWidth - 25,
-            y: 15,
-            width: barcodeWidth,
-            height: barcodeHeight,
-          });
-        }
-
-        if (pages.length > 0) {
-          const firstPage = pages[0];
-          const { width, height } = firstPage.getSize();
-          const numPagesToAdd = Math.max(1, Math.floor(pages.length / 40));
-          const insertIndices = [];
-          let currentPagesCount = pages.length;
-          for (let j = 0; j < numPagesToAdd; j++) {
-            let maxIdx = currentPagesCount;
-            let minIdx = currentPagesCount > 1 ? 1 : 0;
-            insertIndices.push(Math.floor(Math.random() * (maxIdx - minIdx + 1)) + minIdx);
-            currentPagesCount++;
-          }
-          insertIndices.sort((a, b) => a - b);
-          for (const insertIdx of insertIndices) {
-            const newPage = pdfDoc.insertPage(insertIdx, [width, height]);
-            drawSecurityWarningPage(newPage, currentUser, currentCourse, helveticaFont, helveticaBoldFont, rgb);
-          }
-        }
-
-        // Step 8: Save modified PDF
-        setDownloadingStatus(prev => ({ 
-          ...prev, 
-          [courseId]: { step: 8, isDownloading: false, downloadPercent: 0, isClientSideProcessing: true } 
-        }));
-        const modifiedPdfBytes = await pdfDoc.save({
-          useObjectStreams: false,
-          updateFieldAppearances: false
-        });
-
-        // Step 9: Encrypt PDF
-        setDownloadingStatus(prev => ({ 
-          ...prev, 
-          [courseId]: { step: 9, isDownloading: false, downloadPercent: 0, isClientSideProcessing: true } 
-        }));
-        const userPassword = currentUser.email.trim().toLowerCase();
-        const encryptedPdfBytes = await encryptPDF(modifiedPdfBytes, userPassword);
-
-        finalBlob = new Blob([encryptedPdfBytes], { type: 'application/pdf' });
-      } else {
-        finalBlob = new Blob(chunks, { type: 'application/pdf' });
-      }
-
+      const finalBlob = new Blob(chunks, { type: 'application/pdf' });
       setDownloadingStatus(prev => ({ 
         ...prev, 
         [courseId]: { step: 9, isDownloading: false, downloadPercent: 100, isSuccess: true } 
@@ -535,7 +524,6 @@ export default function StudentDashboard({ user }) {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      console.log(`[Main Fetch] Saved PDF download object URL successfully.`);
 
       // Manually increment locally to update UI
       setCurrentUser(prev => {
@@ -550,10 +538,7 @@ export default function StudentDashboard({ user }) {
             allowedCount: 1
           });
         }
-        return {
-          ...prev,
-          downloadLimits: limits
-        };
+        return { ...prev, downloadLimits: limits };
       });
 
     } catch (err) {
@@ -563,7 +548,6 @@ export default function StudentDashboard({ user }) {
         ...prev, 
         [courseId]: { isError: true, errorMsg: err.message || 'Download failed' } 
       }));
-    } finally {
       setTimeout(() => {
         setDownloadingStatus(prev => {
           const next = { ...prev };
