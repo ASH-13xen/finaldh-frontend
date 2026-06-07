@@ -207,7 +207,7 @@ export default function UploadCourse() {
     formData.append('subject', subject);
     formData.append('price', price);
     if (file) {
-      formData.append('file', file);
+      formData.append('files', file);
     }
 
     try {
