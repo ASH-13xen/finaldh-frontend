@@ -132,7 +132,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
   };
 
   // Calculate cart total price
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price || 499), 0);
+  const cartTotal = cart.reduce((sum, item) => sum + ((item.useDiscount ? item.discountedPrice : item.price) || 499), 0);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-6 py-10 md:py-14 flex flex-col lg:flex-row gap-8">
@@ -175,7 +175,14 @@ export default function BuyCourses({ onRedirectToLogin }) {
                   <div className="border-t border-slate-100 pt-4 mt-5 flex items-center justify-between">
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 block uppercase">Price</span>
-                      <span className="text-base font-extrabold text-slate-900">₹{course.price || 499}</span>
+                      {course.useDiscount ? (
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-base font-extrabold text-indigo-600">₹{course.discountedPrice}</span>
+                          <span className="text-[10px] text-slate-405 line-through">₹{course.price}</span>
+                        </div>
+                      ) : (
+                        <span className="text-base font-extrabold text-slate-900">₹{course.price || 499}</span>
+                      )}
                     </div>
                     <button
                       onClick={() => addToCart(course)}
@@ -217,7 +224,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
                   <span className="text-[9px] text-indigo-650 font-bold uppercase">{item.subject.replace('OptionalSubject', '')}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-bold text-slate-800">₹{item.price || 499}</span>
+                  <span className="font-bold text-slate-800">₹{item.useDiscount ? item.discountedPrice : item.price || 499}</span>
                   <button
                     onClick={() => removeFromCart(item._id)}
                     className="text-slate-400 hover:text-rose-600 transition-all cursor-pointer"

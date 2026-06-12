@@ -13,6 +13,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
+  const [googleClientId, setGoogleClientId] = useState(null);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('login');
   const googleButtonRef = useRef(null);
@@ -24,117 +25,105 @@ function App() {
     }
   }, [user]);
 
-  // Check session token and load profile
+  // Unified Boot Sequence: Load configs & verify session
   useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
-    const fetchProfile = async () => {
+    const initializePortal = async () => {
       try {
-        const res = await fetch('/api/user/profile', {
-          headers: {
-            'Authorization': `Bearer ${token}`
+        // 1. Load Google Client ID config (holds loading page while backend wakes up / cold-starts)
+        const configRes = await fetch('/api/auth/config');
+        if (!configRes.ok) throw new Error('Failed to load portal configuration');
+        const config = await configRes.json();
+        setGoogleClientId(config.googleClientId);
+
+        // 2. Load profile info if token exists
+        if (token) {
+          const profileRes = await fetch('/api/user/profile', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (profileRes.ok) {
+            const profileData = await profileRes.json();
+            setUser(profileData);
+          } else {
+            // Clear invalid token session
+            localStorage.removeItem('token');
+            setToken(null);
           }
-        });
-        if (!res.ok) {
-          throw new Error('Session expired');
         }
-        const data = await res.json();
-        setUser(data);
       } catch (err) {
-        console.error(err);
-        handleLogout();
+        console.error('Initialization error:', err);
+        setError('Connection to server failed. Please reload the page.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProfile();
+    initializePortal();
   }, [token]);
 
-  // Load Google Client ID and initialize Google Button
+  // Initialize Google Sign-In button once configurations are fetched and loading is done
   useEffect(() => {
-    if (token || loading) return;
+    if (token || loading || !googleClientId) return;
 
-    const initGoogleAuth = async () => {
+    const handleCredentialResponse = async (response) => {
+      setLoading(true);
+      setError('');
       try {
-        const res = await fetch('/api/auth/config');
-        if (!res.ok) throw new Error('Failed to load Google Auth config');
-        const config = await res.json();
-        const googleClientId = config.googleClientId;
+        const authRes = await fetch('/api/auth/google', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ credential: response.credential })
+        });
 
-        if (!googleClientId) {
-          setError('Google Client ID is not configured in backend .env');
-          return;
+        if (!authRes.ok) {
+          const errData = await authRes.json();
+          throw new Error(errData.error || 'Authentication failed');
         }
 
-        // Setup the callback function for Google Identity Services
-        const handleCredentialResponse = async (response) => {
-          setLoading(true);
-          setError('');
-          try {
-            const authRes = await fetch('/api/auth/google', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ credential: response.credential })
-            });
-
-            if (!authRes.ok) {
-              const errData = await authRes.json();
-              throw new Error(errData.error || 'Authentication failed');
-            }
-
-            const data = await authRes.json();
-            localStorage.setItem('token', data.token);
-            setToken(data.token);
-            setUser(data.user);
-          } catch (err) {
-            console.error('Google Auth callback error:', err);
-            setError(err.message || 'Verification failed. Please try again.');
-          } finally {
-            setLoading(false);
-          }
-        };
-
-        // Render Google button once the script is available
-        const checkGoogleLoaded = setInterval(() => {
-          if (window.google?.accounts?.id) {
-            clearInterval(checkGoogleLoaded);
-            
-            window.google.accounts.id.initialize({
-              client_id: googleClientId,
-              callback: handleCredentialResponse
-            });
-
-            if (googleButtonRef.current) {
-              window.google.accounts.id.renderButton(
-                googleButtonRef.current,
-                { 
-                  theme: 'outline', 
-                  size: 'large', 
-                  width: '100%',
-                  shape: 'rectangular',
-                  text: 'signin_with'
-                }
-              );
-            }
-            
-            window.google.accounts.id.prompt(); // prompt Google One Tap
-          }
-        }, 100);
-
+        const data = await authRes.json();
+        localStorage.setItem('token', data.token);
+        setToken(data.token);
+        setUser(data.user);
       } catch (err) {
-        console.error('Failed to configure Google Auth:', err);
-        setError('Failed to load login configurations.');
+        console.error('Google Auth callback error:', err);
+        setError(err.message || 'Verification failed. Please try again.');
+      } finally {
+        setLoading(false);
       }
     };
 
-    initGoogleAuth();
-  }, [token, loading]);
+    // Render Google button once the script is available
+    const checkGoogleLoaded = setInterval(() => {
+      if (window.google?.accounts?.id) {
+        clearInterval(checkGoogleLoaded);
+        
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: handleCredentialResponse
+        });
+
+        if (googleButtonRef.current) {
+          window.google.accounts.id.renderButton(
+            googleButtonRef.current,
+            { 
+              theme: 'outline', 
+              size: 'large', 
+              width: '100%',
+              shape: 'rectangular',
+              text: 'signin_with'
+            }
+          );
+        }
+        
+        window.google.accounts.id.prompt(); // prompt Google One Tap
+      }
+    }, 100);
+
+    return () => clearInterval(checkGoogleLoaded);
+  }, [token, loading, googleClientId]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -168,7 +157,7 @@ function App() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-950 text-slate-100">
-        <LoadingSpinner text="Initializing Portal..." />
+        <LoadingSpinner text="Verifying user... (may take up to 30 sec)" />
       </div>
     );
   }

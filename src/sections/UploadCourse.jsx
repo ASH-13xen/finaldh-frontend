@@ -58,6 +58,8 @@ export default function UploadCourse() {
   const [name, setName] = useState('');
   const [subject, setSubject] = useState('');
   const [price, setPrice] = useState('499');
+  const [discountedPrice, setDiscountedPrice] = useState('499');
+  const [useDiscount, setUseDiscount] = useState(false);
   const [file, setFile] = useState(null);
 
   // Status states
@@ -160,6 +162,8 @@ export default function UploadCourse() {
     setName('');
     setSubject('');
     setPrice('499');
+    setDiscountedPrice('499');
+    setUseDiscount(false);
     setFile(null);
     setFormError('');
     setSuccessMsg('');
@@ -175,6 +179,8 @@ export default function UploadCourse() {
     setName(course.name || '');
     setSubject(course.subject || '');
     setPrice(String(course.price || 499));
+    setDiscountedPrice(String(course.discountedPrice !== undefined ? course.discountedPrice : (course.price || 499)));
+    setUseDiscount(!!course.useDiscount);
     setFile(null); // file is optional on edit
     setFormError('');
     setSuccessMsg('');
@@ -206,6 +212,8 @@ export default function UploadCourse() {
     formData.append('name', name);
     formData.append('subject', subject);
     formData.append('price', price);
+    formData.append('discountedPrice', discountedPrice);
+    formData.append('useDiscount', useDiscount);
     if (file) {
       formData.append('files', file);
     }
@@ -290,6 +298,32 @@ export default function UploadCourse() {
     }
   };
 
+  // Handle toggling course discount
+  const handleToggleDiscount = async (course) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/courses/${course._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          useDiscount: !course.useDiscount
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to toggle discount');
+      }
+      showToast('Discount status updated successfully!', 'success');
+      fetchCourses();
+    } catch (err) {
+      console.error('Error toggling discount:', err);
+      showToast(err.message || 'Error occurred while toggling discount.', 'error');
+    }
+  };
+
   return (
     <div className="w-full max-w-6xl mx-auto px-6 py-10 md:py-14">
       {/* Admin Mode active banner callout */}
@@ -347,6 +381,7 @@ export default function UploadCourse() {
                   <th className="px-6 py-4">Name</th>
                   <th className="px-6 py-4">Subject</th>
                   <th className="px-6 py-4">Price (₹)</th>
+                  <th className="px-6 py-4">Use Discount</th>
                   <th className="px-6 py-4">PDF File</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -363,7 +398,30 @@ export default function UploadCourse() {
                       </td>
                       <td className="px-6 py-4 font-semibold text-slate-200 max-w-xs truncate">{course.name}</td>
                       <td className="px-6 py-4 text-slate-400 font-medium">{subDisplayName}</td>
-                      <td className="px-6 py-4 font-bold text-slate-300">₹{course.price}</td>
+                      <td className="px-6 py-4">
+                        {course.useDiscount ? (
+                          <div className="flex flex-col">
+                            <span className="font-extrabold text-indigo-400">₹{course.discountedPrice}</span>
+                            <span className="text-[10px] text-slate-500 line-through">₹{course.price}</span>
+                          </div>
+                        ) : (
+                          <span className="font-extrabold text-slate-300">₹{course.price}</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDiscount(course)}
+                          className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${course.useDiscount ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                          role="switch"
+                          aria-checked={course.useDiscount}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${course.useDiscount ? 'translate-x-5' : 'translate-x-0'}`}
+                          />
+                        </button>
+                      </td>
                       <td className="px-6 py-4 text-slate-400 font-medium truncate max-w-xs">
                         <a 
                           href={`${import.meta.env.VITE_API_URL || ''}/api/courses/raw/${course._id}?token=${localStorage.getItem('token')}`} 
@@ -535,19 +593,51 @@ export default function UploadCourse() {
                 </select>
               </div>
 
-              {/* Price (INR) */}
-              <div>
-                <label htmlFor="modal-course-price" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Price (₹)</label>
+              {/* Pricing Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Original Price (INR) */}
+                <div>
+                  <label htmlFor="modal-course-price" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Original Price (₹)</label>
+                  <input
+                    id="modal-course-price"
+                    type="number"
+                    min="0"
+                    placeholder="e.g., 499"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+                    required
+                  />
+                </div>
+
+                {/* Discounted Price (INR) */}
+                <div>
+                  <label htmlFor="modal-course-discounted-price" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Discounted Price (₹)</label>
+                  <input
+                    id="modal-course-discounted-price"
+                    type="number"
+                    min="0"
+                    placeholder="e.g., 399"
+                    value={discountedPrice}
+                    onChange={(e) => setDiscountedPrice(e.target.value)}
+                    className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Active Discount Checkbox */}
+              <div className="flex items-center gap-2 bg-slate-950/40 border border-slate-800/80 rounded-xl p-3">
                 <input
-                  id="modal-course-price"
-                  type="number"
-                  min="0"
-                  placeholder="e.g., 499"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
-                  required
+                  id="modal-course-use-discount"
+                  type="checkbox"
+                  checked={useDiscount}
+                  onChange={(e) => setUseDiscount(e.target.checked)}
+                  className="w-4 h-4 text-indigo-650 bg-slate-950 border-slate-800 rounded focus:ring-indigo-500"
                 />
+                <label htmlFor="modal-course-use-discount" className="text-xs font-bold text-slate-350 cursor-pointer">
+                  Activate discount price by default for this course
+                </label>
               </div>
 
               {/* File Selector */}
