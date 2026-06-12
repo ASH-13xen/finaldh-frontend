@@ -405,57 +405,6 @@ export default function StudentDashboard({ user }) {
       }
     };
 
-    let hasTriggeredStream = false;
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/courses/download-progress/${courseId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const step = data.step || 1;
-          const status = data.status || 'processing';
-          console.log(`[Progress Polling] Polled step: ${step}, status: ${status}`);
-
-          if (status === 'completed') {
-            clearInterval(pollInterval);
-            if (!hasTriggeredStream) {
-              hasTriggeredStream = true;
-              await startStreaming();
-            }
-            return;
-          }
-
-          if (status === 'failed') {
-            clearInterval(pollInterval);
-            setDownloadingStatus(prev => ({
-              ...prev,
-              [courseId]: { isError: true, errorMsg: data.error || 'Generation failed' }
-            }));
-            setTimeout(() => {
-              setDownloadingStatus(prev => {
-                const next = { ...prev };
-                delete next[courseId];
-                return next;
-              });
-            }, 3500);
-            return;
-          }
-
-          setDownloadingStatus(prev => {
-            return {
-              ...prev,
-              [courseId]: { step, isDownloading: false, downloadPercent: 0 }
-            };
-          });
-        }
-      } catch (err) {
-        console.warn('Error polling progress:', err);
-      }
-    }, 800);
-
     try {
       console.log(`[Main Fetch] Triggering GET request to /api/courses/download/${courseId}`);
       const res = await fetch(`/api/courses/download/${courseId}`, {
@@ -467,13 +416,63 @@ export default function StudentDashboard({ user }) {
       console.log(`[Main Fetch] Response received. Status: ${res.status} ${res.statusText}`);
 
       if (res.status === 202) {
-        console.log(`[Main Fetch] Background generation started (202). Polling will handle streaming once ready.`);
+        console.log(`[Main Fetch] Background generation started (202). Starting polling interval.`);
+        
+        let hasTriggeredStream = false;
+        const pollInterval = setInterval(async () => {
+          try {
+            const progressRes = await fetch(`/api/courses/download-progress/${courseId}`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
+            if (progressRes.ok) {
+              const data = await progressRes.json();
+              const step = data.step || 1;
+              const status = data.status || 'processing';
+              console.log(`[Progress Polling] Polled step: ${step}, status: ${status}`);
+
+              if (status === 'completed') {
+                clearInterval(pollInterval);
+                if (!hasTriggeredStream) {
+                  hasTriggeredStream = true;
+                  await startStreaming();
+                }
+                return;
+              }
+
+              if (status === 'failed') {
+                clearInterval(pollInterval);
+                setDownloadingStatus(prev => ({
+                  ...prev,
+                  [courseId]: { isError: true, errorMsg: data.error || 'Generation failed' }
+                }));
+                setTimeout(() => {
+                  setDownloadingStatus(prev => {
+                    const next = { ...prev };
+                    delete next[courseId];
+                    return next;
+                  });
+                }, 3500);
+                return;
+              }
+
+              setDownloadingStatus(prev => {
+                return {
+                  ...prev,
+                  [courseId]: { step, isDownloading: false, downloadPercent: 0 }
+                };
+              });
+            }
+          } catch (err) {
+            console.warn('Error polling progress:', err);
+          }
+        }, 800);
+
         return;
       }
 
       // If it returned 200 OK directly (already processed or downloaded instantly)
-      clearInterval(pollInterval);
-
       if (!res.ok) {
         let errorMsg = 'Failed to download PDF';
         try {
@@ -542,7 +541,6 @@ export default function StudentDashboard({ user }) {
       });
 
     } catch (err) {
-      clearInterval(pollInterval);
       console.error(`[handleDownload] Fatal catch block error:`, err);
       setDownloadingStatus(prev => ({ 
         ...prev, 
