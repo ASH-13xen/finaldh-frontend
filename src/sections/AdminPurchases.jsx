@@ -13,6 +13,16 @@ export default function AdminPurchases() {
   // Lightbox Image Zoom
   const [lightboxImage, setLightboxImage] = useState(null);
 
+  // Get full image URL by prepending backend server URL if path is relative
+  const getImageUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+    return `${apiBaseUrl.replace(/\/$/, '')}${path}`;
+  };
+
   const fetchRequests = async () => {
     setLoading(true);
     setError('');
@@ -190,7 +200,7 @@ export default function AdminPurchases() {
                     className="relative group overflow-hidden border border-slate-800 hover:border-indigo-500/50 rounded-xl aspect-[16/9] bg-slate-950 flex items-center justify-center cursor-zoom-in"
                   >
                     <img 
-                      src={req.screenshotUrl} 
+                      src={getImageUrl(req.screenshotUrl)} 
                       alt="Payment Screenshot Receipt" 
                       className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
                       onError={(e) => {
@@ -262,7 +272,7 @@ export default function AdminPurchases() {
           </button>
           
           <img 
-            src={lightboxImage} 
+            src={getImageUrl(lightboxImage)} 
             alt="Expanded Receipt Zoom" 
             className="max-w-full max-h-[85vh] object-contain rounded-lg border border-slate-850 shadow-2xl scale-in-95 duration-200"
             onClick={(e) => e.stopPropagation()} // Stop propagation to prevent closing
