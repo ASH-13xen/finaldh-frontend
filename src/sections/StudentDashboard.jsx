@@ -358,6 +358,7 @@ export default function StudentDashboard({ user }) {
         }
 
         const finalBlob = new Blob(chunks, { type: 'application/pdf' });
+        console.log(`[Stream Fetch] Download complete. Blob size: ${finalBlob.size} bytes`);
         setDownloadingStatus(prev => ({ 
           ...prev, 
           [courseId]: { step: 9, isDownloading: false, downloadPercent: 100, isSuccess: true } 
@@ -368,9 +369,12 @@ export default function StudentDashboard({ user }) {
         a.href = url;
         a.download = `${courseName.replace(/\s+/g, '_')}_secured.pdf`;
         document.body.appendChild(a);
+        console.log('[Stream Fetch] Triggering browser file download link click');
         a.click();
         a.remove();
-        window.URL.revokeObjectURL(url);
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+        }, 1500);
 
         // Update UI limits locally
         setCurrentUser(prev => {
@@ -510,6 +514,7 @@ export default function StudentDashboard({ user }) {
       }
 
       const finalBlob = new Blob(chunks, { type: 'application/pdf' });
+      console.log(`[Main Fetch] Download complete. Blob size: ${finalBlob.size} bytes`);
       setDownloadingStatus(prev => ({ 
         ...prev, 
         [courseId]: { step: 9, isDownloading: false, downloadPercent: 100, isSuccess: true } 
@@ -520,9 +525,12 @@ export default function StudentDashboard({ user }) {
       a.href = url;
       a.download = `${courseName.replace(/\s+/g, '_')}_secured.pdf`;
       document.body.appendChild(a);
+      console.log('[Main Fetch] Triggering browser file download link click');
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url);
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 1500);
 
       // Manually increment locally to update UI
       setCurrentUser(prev => {
