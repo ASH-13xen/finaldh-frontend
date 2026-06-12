@@ -60,7 +60,7 @@ export default function UploadCourse() {
   const [price, setPrice] = useState('499');
   const [discountedPrice, setDiscountedPrice] = useState('499');
   const [useDiscount, setUseDiscount] = useState(false);
-  const [file, setFile] = useState(null);
+  const [courseFiles, setCourseFiles] = useState([]);
 
   // Status states
   const [saving, setSaving] = useState(false);
@@ -155,6 +155,19 @@ export default function UploadCourse() {
     fetchPendingRequests();
   }, []);
 
+  // PDF file slots helper methods
+  const handleAddFileSlot = () => {
+    setCourseFiles(prev => [...prev, { id: Date.now(), type: 'new', name: '', file: null }]);
+  };
+
+  const handleRemoveFileSlot = (id) => {
+    setCourseFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  const handleUpdateFileSlot = (id, updates) => {
+    setCourseFiles(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+  };
+
   // Open modal for adding
   const handleOpenAdd = () => {
     setEditCourse(null);
@@ -164,7 +177,7 @@ export default function UploadCourse() {
     setPrice('499');
     setDiscountedPrice('499');
     setUseDiscount(false);
-    setFile(null);
+    setCourseFiles([{ id: Date.now(), type: 'new', name: '', file: null }]);
     setFormError('');
     setSuccessMsg('');
     setUploadProgress(0);
@@ -181,7 +194,25 @@ export default function UploadCourse() {
     setPrice(String(course.price || 499));
     setDiscountedPrice(String(course.discountedPrice !== undefined ? course.discountedPrice : (course.price || 499)));
     setUseDiscount(!!course.useDiscount);
-    setFile(null); // file is optional on edit
+    
+    if (course.fileUrls && course.fileUrls.length > 0) {
+      setCourseFiles(course.fileUrls.map((url, idx) => ({
+        id: idx,
+        type: 'existing',
+        name: course.fileNames?.[idx] || `PDF ${idx + 1}`,
+        url,
+        pageCount: course.partPageCounts?.[idx] || 0
+      })));
+    } else {
+      setCourseFiles([{
+        id: 0,
+        type: 'existing',
+        name: course.fileName || 'PDF File',
+        url: course.fileUrl,
+        pageCount: course.partPageCounts?.[0] || 0
+      }]);
+    }
+
     setFormError('');
     setSuccessMsg('');
     setUploadProgress(0);
@@ -196,8 +227,16 @@ export default function UploadCourse() {
       setFormError('Please fill in all required fields.');
       return;
     }
-    if (!editCourse && !file) {
-      setFormError('Please select a PDF file for the new course.');
+
+    const hasValidFile = courseFiles.some(f => f.type === 'existing' || (f.type === 'new' && f.file));
+    if (!hasValidFile) {
+      setFormError('Please select at least one PDF file for the course.');
+      return;
+    }
+
+    const hasEmptyFileName = courseFiles.some(f => !f.name.trim());
+    if (hasEmptyFileName) {
+      setFormError('All PDF slots must have a display name.');
       return;
     }
 
@@ -214,9 +253,27 @@ export default function UploadCourse() {
     formData.append('price', price);
     formData.append('discountedPrice', discountedPrice);
     formData.append('useDiscount', useDiscount);
-    if (file) {
-      formData.append('files', file);
-    }
+
+    // Build the filesConfig array and append files
+    const filesConfig = [];
+    courseFiles.forEach(f => {
+      if (f.type === 'existing') {
+        filesConfig.push({
+          type: 'existing',
+          name: f.name.trim(),
+          url: f.url,
+          pageCount: f.pageCount
+        });
+      } else if (f.file) {
+        filesConfig.push({
+          type: 'new',
+          name: f.name.trim()
+        });
+        formData.append('files', f.file);
+      }
+    });
+
+    formData.append('filesConfig', JSON.stringify(filesConfig));
 
     try {
       const apiBaseUrl = import.meta.env.VITE_API_URL || '';
@@ -348,7 +405,7 @@ export default function UploadCourse() {
         <div>
           <button 
             onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md hover:shadow-indigo-900/30"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md hover:shadow-indigo-950/30"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add New Course
@@ -382,7 +439,7 @@ export default function UploadCourse() {
                   <th className="px-6 py-4">Subject</th>
                   <th className="px-6 py-4">Price (₹)</th>
                   <th className="px-6 py-4">Use Discount</th>
-                  <th className="px-6 py-4">PDF File</th>
+                  <th className="px-6 py-4">PDF Files</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -422,17 +479,21 @@ export default function UploadCourse() {
                           />
                         </button>
                       </td>
-                      <td className="px-6 py-4 text-slate-400 font-medium truncate max-w-xs">
-                        <a 
-                          href={`${import.meta.env.VITE_API_URL || ''}/api/courses/raw/${course._id}?token=${localStorage.getItem('token')}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="hover:text-indigo-400 hover:underline flex items-center gap-1"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-slate-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                          {course.fileName}
-                        </a>
-                      </td>
+                      <td className="px-6 py-4 text-slate-400 font-medium max-w-xs">
+                        <div className="flex flex-col gap-1.5">
+                          {(course.fileNames && course.fileNames.length > 0 ? course.fileNames : [course.fileName]).map((fname, idx) => (
+                            <a 
+                              key={idx}
+                              href={`${import.meta.env.VITE_API_URL || ''}/api/courses/raw/${course._id}?token=${localStorage.getItem('token')}&index=${idx}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="hover:text-indigo-400 hover:underline flex items-center gap-1 truncate"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-slate-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                              {fname}
+                            </a>
+                          ))}
+                        </div>   </td>
                       <td className="px-6 py-4 text-right space-x-2">
                         <button
                           onClick={() => handleOpenEdit(course)}
@@ -640,19 +701,93 @@ export default function UploadCourse() {
                 </label>
               </div>
 
-              {/* File Selector */}
-              <div>
-                <label htmlFor="modal-course-file" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  {editCourse ? 'Replace Course PDF (Optional)' : 'Select Course PDF'}
-                </label>
-                <input
-                  id="modal-course-file"
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => setFile(e.target.files[0])}
-                  className="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-slate-950 file:text-indigo-400 hover:file:bg-slate-800 cursor-pointer"
-                  required={!editCourse}
-                />
+              {/* Dynamic Course PDF Files Configuration */}
+              <div className="space-y-4 pt-2 border-t border-slate-850">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Course PDF Files ({courseFiles.length})
+                  </label>
+                </div>
+                
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {courseFiles.map((f, idx) => (
+                    <div key={f.id} className="bg-slate-950/50 border border-slate-800/80 rounded-xl p-3.5 space-y-3.5 relative">
+                      {/* Remove File Button */}
+                      {courseFiles.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFileSlot(f.id)}
+                          className="absolute top-3 right-3 text-slate-500 hover:text-rose-400 transition cursor-pointer"
+                          title="Remove PDF file slot"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                      )}
+
+                      {/* Display Name */}
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          PDF Display Name
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Part-1 Ancient History"
+                          value={f.name}
+                          onChange={(e) => handleUpdateFileSlot(f.id, { name: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+                          required
+                        />
+                      </div>
+
+                      {/* PDF File picker or existing status info */}
+                      {f.type === 'existing' ? (
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                            PDF Source Status
+                          </label>
+                          <div className="flex items-center justify-between text-xs text-slate-350 bg-slate-900 border border-slate-800/80 rounded-lg px-3 py-2 font-medium">
+                            <span className="truncate max-w-[200px]" title={f.url.replace('r2://', '')}>
+                              {f.url.replace('r2://', '')}
+                            </span>
+                            <span className="text-[10px] font-bold bg-indigo-950/80 border border-indigo-900/60 text-indigo-400 px-2 py-0.5 rounded shrink-0">
+                              {f.pageCount} pages
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                            Choose PDF File
+                          </label>
+                          <input
+                            type="file"
+                            accept=".pdf"
+                            onChange={(e) => {
+                              const fileObj = e.target.files[0];
+                              if (fileObj) {
+                                handleUpdateFileSlot(f.id, {
+                                  file: fileObj,
+                                  name: f.name || fileObj.name.replace(/\.[^/.]+$/, "")
+                                });
+                              }
+                            }}
+                            className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-900 file:text-indigo-400 hover:file:bg-slate-800 cursor-pointer"
+                            required={!editCourse}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddFileSlot}
+                  className="w-full py-2 bg-slate-950/60 hover:bg-slate-900 border border-dashed border-slate-800 hover:border-slate-700 text-indigo-400 hover:text-indigo-300 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Add Another PDF File
+                </button>
               </div>
 
               {/* Progress Bar */}
