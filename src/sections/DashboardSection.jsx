@@ -10,8 +10,10 @@ import BuyCourses from './BuyCourses';
 import UploadCourse from './UploadCourse';
 import PYQRecommender from './PYQRecommender';
 import PDFEditor from './PDFEditor';
+import PurchaseCourses from './PurchaseCourses';
+import AdminPurchases from './AdminPurchases';
 
-export default function DashboardSection({ user, onLogout, activeTab, setActiveTab }) {
+export default function DashboardSection({ user, onLogout, activeTab, setActiveTab, onUserUpdate }) {
   const [syllabusData, setSyllabusData] = useState(null);
   const [loadingSyllabus, setLoadingSyllabus] = useState(false);
   const [error, setError] = useState('');
@@ -95,6 +97,14 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'pdf_editor' && (
           <PDFEditor />
+        )}
+
+        {activeTab === 'purchase_courses' && (
+          <PurchaseCourses user={user} onUserUpdate={onUserUpdate} />
+        )}
+
+        {activeTab === 'admin_purchases' && (
+          <AdminPurchases />
         )}
       </main>
     </div>

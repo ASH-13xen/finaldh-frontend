@@ -25,13 +25,29 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
               >
                 <span className="hidden sm:inline">Student's </span>Dashboard
               </button>
-              {user.isAdmin && (
+              {!user.isAdmin && (
                 <button 
-                  onClick={() => setActiveTab('manage_courses')} 
-                  className={`text-[10px] md:text-xs font-semibold px-2 py-1 md:px-3 md:py-1.5 rounded-md md:rounded-lg transition-all cursor-pointer whitespace-nowrap ${activeTab === 'manage_courses' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-350 hover:text-white hover:bg-slate-800'}`}
+                  onClick={() => setActiveTab('purchase_courses')} 
+                  className={`text-[10px] md:text-xs font-semibold px-2 py-1 md:px-3 md:py-1.5 rounded-md md:rounded-lg transition-all cursor-pointer whitespace-nowrap ${activeTab === 'purchase_courses' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-350 hover:text-white hover:bg-slate-800'}`}
                 >
-                  <span className="hidden sm:inline">Manage </span>Courses
+                  Purchase Courses
                 </button>
+              )}
+              {user.isAdmin && (
+                <>
+                  <button 
+                    onClick={() => setActiveTab('manage_courses')} 
+                    className={`text-[10px] md:text-xs font-semibold px-2 py-1 md:px-3 md:py-1.5 rounded-md md:rounded-lg transition-all cursor-pointer whitespace-nowrap ${activeTab === 'manage_courses' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-350 hover:text-white hover:bg-slate-800'}`}
+                  >
+                    <span className="hidden sm:inline">Manage </span>Courses
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('admin_purchases')} 
+                    className={`text-[10px] md:text-xs font-semibold px-2 py-1 md:px-3 md:py-1.5 rounded-md md:rounded-lg transition-all cursor-pointer whitespace-nowrap ${activeTab === 'admin_purchases' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-350 hover:text-white hover:bg-slate-800'}`}
+                  >
+                    <span className="hidden sm:inline">Purchase </span>Requests
+                  </button>
+                </>
               )}
             </>
           ) : null}

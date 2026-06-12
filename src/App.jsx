@@ -181,6 +181,7 @@ function App() {
         onLogout={handleLogout} 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
+        onUserUpdate={setUser}
       />
     );
   }
