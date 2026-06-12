@@ -311,118 +311,79 @@ export default function StudentDashboard({ user }) {
       [courseId]: { step: 1, isDownloading: false, downloadPercent: 0 } 
     }));
 
-    const startStreaming = async () => {
-      try {
-        console.log(`[Stream Fetch] Triggering GET request to /api/courses/download/${courseId}`);
-        const res = await fetch(`/api/courses/download/${courseId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+    const triggerNativeDownload = () => {
+      const token = localStorage.getItem('token');
+      const downloadUrl = `${window.location.origin}/api/courses/download/${courseId}?token=${token}`;
+      console.log(`[handleDownload] Directing window to trigger native PDF download: ${downloadUrl}`);
 
-        if (!res.ok) {
-          let errorMsg = 'Failed to download PDF';
-          try {
-            const errData = await res.json();
-            errorMsg = errData.error || errorMsg;
-          } catch (jsonErr) {}
-          throw new Error(errorMsg);
-        }
-
-        const contentLength = res.headers.get('content-length');
-        const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
-
-        const reader = res.body.getReader();
-        let receivedBytes = 0;
-        const chunks = [];
-
-        setDownloadingStatus(prev => ({ 
-          ...prev, 
-          [courseId]: { step: 9, isDownloading: true, downloadPercent: 0 } 
-        }));
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-          receivedBytes += value.length;
-
-          if (totalBytes > 0) {
-            const progressPercent = Math.round((receivedBytes * 100) / totalBytes);
-            setDownloadingStatus(prev => ({ 
-              ...prev, 
-              [courseId]: { step: 9, isDownloading: true, downloadPercent: progressPercent } 
-            }));
-          }
-        }
-
-        const finalBlob = new Blob(chunks, { type: 'application/pdf' });
-        console.log(`[Stream Fetch] Download complete. Blob size: ${finalBlob.size} bytes`);
-        setDownloadingStatus(prev => ({ 
-          ...prev, 
-          [courseId]: { step: 9, isDownloading: false, downloadPercent: 100, isSuccess: true } 
-        }));
-
-        const url = window.URL.createObjectURL(finalBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${courseName.replace(/\s+/g, '_')}_secured.pdf`;
-        document.body.appendChild(a);
-        console.log('[Stream Fetch] Triggering browser file download link click');
-        a.click();
-        a.remove();
-        setTimeout(() => {
-          window.URL.revokeObjectURL(url);
-        }, 1500);
-
-        // Update UI limits locally
-        setCurrentUser(prev => {
-          const limits = [...(prev.downloadLimits || [])];
-          const entry = limits.find(d => d.courseId === courseId);
-          if (entry) {
-            entry.downloadedCount += 1;
-          } else {
-            limits.push({
-              courseId,
-              downloadedCount: 1,
-              allowedCount: 1
-            });
-          }
-          return { ...prev, downloadLimits: limits };
-        });
-
-      } catch (streamErr) {
-        console.error(`[Stream Error]`, streamErr);
-        setDownloadingStatus(prev => ({ 
-          ...prev, 
-          [courseId]: { isError: true, errorMsg: streamErr.message || 'Download failed' } 
-        }));
-      } finally {
-        setTimeout(() => {
-          setDownloadingStatus(prev => {
-            const next = { ...prev };
-            delete next[courseId];
-            return next;
+      // Update UI limits locally
+      setCurrentUser(prev => {
+        const limits = [...(prev.downloadLimits || [])];
+        const entry = limits.find(d => d.courseId === courseId);
+        if (entry) {
+          entry.downloadedCount += 1;
+        } else {
+          limits.push({
+            courseId,
+            downloadedCount: 1,
+            allowedCount: 1
           });
-        }, 3500);
-      }
+        }
+        return { ...prev, downloadLimits: limits };
+      });
+
+      // Update UI state to completed
+      setDownloadingStatus(prev => ({
+        ...prev,
+        [courseId]: { step: 9, isDownloading: false, downloadPercent: 100, isSuccess: true }
+      }));
+
+      // Trigger native browser download using redirection
+      window.location.href = downloadUrl;
+
+      // Clear downloading status after 3.5 seconds
+      setTimeout(() => {
+        setDownloadingStatus(prev => {
+          const next = { ...prev };
+          delete next[courseId];
+          return next;
+        });
+      }, 3500);
     };
 
     try {
-      console.log(`[Main Fetch] Triggering GET request to /api/courses/download/${courseId}`);
-      const res = await fetch(`/api/courses/download/${courseId}`, {
+      console.log(`[Main Fetch] Checking download status via GET request to /api/courses/download/${courseId}?checkOnly=true`);
+      const res = await fetch(`/api/courses/download/${courseId}?checkOnly=true`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      console.log(`[Main Fetch] Response received. Status: ${res.status} ${res.statusText}`);
+      console.log(`[Main Fetch] Check response received. Status: ${res.status}`);
 
-      if (res.status === 202) {
-        console.log(`[Main Fetch] Background generation started (202). Starting polling interval.`);
+      if (!res.ok) {
+        let errorMsg = 'Failed to download PDF';
+        try {
+          const errData = await res.json();
+          errorMsg = errData.error || errorMsg;
+        } catch (jsonErr) {}
+        throw new Error(errorMsg);
+      }
+
+      const data = await res.json();
+
+      // Case A: PDF is ready or sync streaming mode is active
+      if (data.exists || data.directStream) {
+        console.log(`[Main Fetch] PDF is ready or sync mode is active. Triggering native download.`);
+        triggerNativeDownload();
+        return;
+      }
+
+      // Case B: Background processing is currently running or just started
+      if (res.status === 202 || data.status === 'processing') {
+        console.log(`[Main Fetch] Background generation started or in progress. Starting polling interval.`);
         
-        let hasTriggeredStream = false;
+        let hasTriggeredDownload = false;
         const pollInterval = setInterval(async () => {
           try {
             const progressRes = await fetch(`/api/courses/download-progress/${courseId}`, {
@@ -431,16 +392,16 @@ export default function StudentDashboard({ user }) {
               }
             });
             if (progressRes.ok) {
-              const data = await progressRes.json();
-              const step = data.step || 1;
-              const status = data.status || 'processing';
+              const progressData = await progressRes.json();
+              const step = progressData.step || 1;
+              const status = progressData.status || 'processing';
               console.log(`[Progress Polling] Polled step: ${step}, status: ${status}`);
 
               if (status === 'completed') {
                 clearInterval(pollInterval);
-                if (!hasTriggeredStream) {
-                  hasTriggeredStream = true;
-                  await startStreaming();
+                if (!hasTriggeredDownload) {
+                  hasTriggeredDownload = true;
+                  triggerNativeDownload();
                 }
                 return;
               }
@@ -449,7 +410,7 @@ export default function StudentDashboard({ user }) {
                 clearInterval(pollInterval);
                 setDownloadingStatus(prev => ({
                   ...prev,
-                  [courseId]: { isError: true, errorMsg: data.error || 'Generation failed' }
+                  [courseId]: { isError: true, errorMsg: progressData.error || 'Generation failed' }
                 }));
                 setTimeout(() => {
                   setDownloadingStatus(prev => {
@@ -476,80 +437,8 @@ export default function StudentDashboard({ user }) {
         return;
       }
 
-      // If it returned 200 OK directly (already processed or downloaded instantly)
-      if (!res.ok) {
-        let errorMsg = 'Failed to download PDF';
-        try {
-          const errData = await res.json();
-          errorMsg = errData.error || errorMsg;
-        } catch (jsonErr) {}
-        throw new Error(errorMsg);
-      }
-
-      const contentLength = res.headers.get('content-length');
-      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
-
-      const reader = res.body.getReader();
-      let receivedBytes = 0;
-      const chunks = [];
-
-      setDownloadingStatus(prev => ({ 
-        ...prev, 
-        [courseId]: { step: 9, isDownloading: true, downloadPercent: 0 } 
-      }));
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        receivedBytes += value.length;
-
-        if (totalBytes > 0) {
-          const progressPercent = Math.round((receivedBytes * 100) / totalBytes);
-          setDownloadingStatus(prev => ({ 
-            ...prev, 
-            [courseId]: { step: 9, isDownloading: true, downloadPercent: progressPercent } 
-          }));
-        }
-      }
-
-      const finalBlob = new Blob(chunks, { type: 'application/pdf' });
-      console.log(`[Main Fetch] Download complete. Blob size: ${finalBlob.size} bytes`);
-      setDownloadingStatus(prev => ({ 
-        ...prev, 
-        [courseId]: { step: 9, isDownloading: false, downloadPercent: 100, isSuccess: true } 
-      }));
-
-      const url = window.URL.createObjectURL(finalBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${courseName.replace(/\s+/g, '_')}_secured.pdf`;
-      document.body.appendChild(a);
-      console.log('[Main Fetch] Triggering browser file download link click');
-      a.click();
-      a.remove();
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-      }, 1500);
-
-      // Manually increment locally to update UI
-      setCurrentUser(prev => {
-        const limits = [...(prev.downloadLimits || [])];
-        const entry = limits.find(d => d.courseId === courseId);
-        if (entry) {
-          entry.downloadedCount += 1;
-        } else {
-          limits.push({
-            courseId,
-            downloadedCount: 1,
-            allowedCount: 1
-          });
-        }
-        return { ...prev, downloadLimits: limits };
-      });
-
     } catch (err) {
-      console.error(`[handleDownload] Fatal catch block error:`, err);
+      console.error(`[handleDownload] Fatal error during check/download:`, err);
       setDownloadingStatus(prev => ({ 
         ...prev, 
         [courseId]: { isError: true, errorMsg: err.message || 'Download failed' } 
