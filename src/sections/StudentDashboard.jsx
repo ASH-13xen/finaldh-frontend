@@ -1,6 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import DownloadProgressBar from '../components/DownloadProgressBar';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+};
+
+// Initialize Firebase
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const auth = getAuth(app);
 
 const getCleanStatusText = (status) => {
   if (!status) return '';
@@ -197,11 +213,201 @@ function CourseSkeleton() {
   );
 }
 
-export default function StudentDashboard({ user }) {
+export default function StudentDashboard({ user, onUserUpdate }) {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState(user);
+
+  // Profile Gate Modal State
+  const [pendingDownloadCourse, setPendingDownloadCourse] = useState(null); // { id, name }
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [telegramUsername, setTelegramUsername] = useState('');
+
+  // Firebase Auth State
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [isOtpGenerating, setIsOtpGenerating] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [phoneVerified, setPhoneVerified] = useState(false);
+
+  const [profileError, setProfileError] = useState('');
+  const [profileSubmitting, setProfileSubmitting] = useState(false);
+
+  // Validation checks for profile completeness
+  const nameParts = (currentUser?.fullName || currentUser?.name || '').trim().split(/\s+/);
+  const isNameValid = nameParts.length >= 2 && nameParts[0] && nameParts[1];
+  const isTelegramValid = !!(currentUser?.telegramUsername && currentUser.telegramUsername.trim());
+  const isPhoneValid = !!(currentUser?.mobileNumber && currentUser.mobileNumber.trim());
+
+  useEffect(() => {
+    return () => {
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (e) {}
+      }
+    };
+  }, []);
+
+  const handleCloseProfileModal = () => {
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (e) {}
+    }
+    setProfileModalOpen(false);
+    setPendingDownloadCourse(null);
+  };
+
+  const formatPhoneNumber = (phone) => {
+    let cleaned = phone.trim().replace(/\s+/g, '');
+    if (!cleaned.startsWith('+')) {
+      if (cleaned.length === 10) {
+        cleaned = '+91' + cleaned;
+      } else {
+        cleaned = '+' + cleaned;
+      }
+    }
+    return cleaned;
+  };
+
+  const setupRecaptcha = () => {
+    try {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+      }
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+        callback: (response) => {
+          // reCAPTCHA solved
+        },
+        'expired-callback': () => {
+          setOtpError('reCAPTCHA expired. Please try sending the SMS again.');
+        }
+      });
+    } catch (err) {
+      console.error('Error setting up RecaptchaVerifier:', err);
+    }
+  };
+
+  const handleSendOtp = async (e) => {
+    e.preventDefault();
+    setOtpError('');
+    setIsOtpGenerating(true);
+
+    const formatted = formatPhoneNumber(mobileNumber);
+    if (formatted.length < 10) {
+      setOtpError('Please enter a valid phone number (e.g. +918253085278).');
+      setIsOtpGenerating(false);
+      return;
+    }
+
+    try {
+      setupRecaptcha();
+      const verifier = window.recaptchaVerifier;
+      const confirmation = await signInWithPhoneNumber(auth, formatted, verifier);
+      setConfirmationResult(confirmation);
+      setOtpSent(true);
+    } catch (err) {
+      console.error('Error sending SMS:', err);
+      setOtpError(err.message || 'Failed to send SMS code. Please check your phone number format.');
+    } finally {
+      setIsOtpGenerating(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setOtpError('');
+    setOtpVerifying(true);
+
+    try {
+      if (!confirmationResult) {
+        throw new Error('No active OTP session found. Please send SMS verification code first.');
+      }
+      await confirmationResult.confirm(otpCode);
+      setPhoneVerified(true);
+      setOtpSent(false);
+    } catch (err) {
+      console.error('Error verifying OTP:', err);
+      setOtpError(err.message || 'Invalid code. Please try again.');
+    } finally {
+      setOtpVerifying(false);
+    }
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setProfileError('');
+    setProfileSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const payload = {};
+      
+      if (!isNameValid) {
+        if (!firstName.trim() || !lastName.trim()) {
+          throw new Error('Both First Name and Last Name must be provided.');
+        }
+        payload.firstName = firstName.trim();
+        payload.lastName = lastName.trim();
+      }
+      
+      if (!isTelegramValid) {
+        if (!telegramUsername.trim()) {
+          throw new Error('Telegram Username is required.');
+        }
+        payload.telegramUsername = telegramUsername.trim();
+      }
+
+      if (!isPhoneValid) {
+        if (!phoneVerified || !mobileNumber.trim()) {
+          throw new Error('Phone number must be verified via OTP first.');
+        }
+        payload.mobileNumber = formatPhoneNumber(mobileNumber);
+      }
+
+      const res = await fetch('/api/user/complete-profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save profile details');
+      }
+
+      setCurrentUser(data.user);
+      if (onUserUpdate && data.user) {
+        onUserUpdate(data.user);
+      }
+
+      setProfileModalOpen(false);
+      const courseToDownload = pendingDownloadCourse;
+      setPendingDownloadCourse(null);
+
+      if (courseToDownload) {
+        console.log(`[handleSaveProfile] Profile verified. Starting pending download for: ${courseToDownload.name}`);
+        setTimeout(() => {
+          handleDownload(courseToDownload.id, courseToDownload.name);
+        }, 100);
+      }
+    } catch (err) {
+      console.error('Error saving profile details:', err);
+      setProfileError(err.message || 'Error occurred while saving profile.');
+    } finally {
+      setProfileSubmitting(false);
+    }
+  };
   const [requests, setRequests] = useState([]);
   const [requestingCourseId, setRequestingCourseId] = useState(null);
   const [downloadingStatus, setDownloadingStatus] = useState({});
@@ -306,6 +512,23 @@ export default function StudentDashboard({ user }) {
 
   async function handleDownload(courseId, courseName) {
     console.log(`[handleDownload] Initiated download process for courseId: ${courseId}, courseName: ${courseName}`);
+    
+    // Intercept if profile details are not fully saved/verified
+    if (!isNameValid || !isTelegramValid || !isPhoneValid) {
+      console.log('[handleDownload] Profile incomplete. Intercepting download and showing profile modal.');
+      setPendingDownloadCourse({ id: courseId, name: courseName });
+      setFirstName(nameParts[0] || '');
+      setLastName(nameParts[1] || '');
+      setTelegramUsername(currentUser?.telegramUsername || '');
+      setMobileNumber(currentUser?.mobileNumber || '');
+      setPhoneVerified(isPhoneValid);
+      setOtpSent(false);
+      setOtpError('');
+      setProfileError('');
+      setProfileModalOpen(true);
+      return;
+    }
+
     setDownloadingStatus(prev => ({ 
       ...prev, 
       [courseId]: { step: 1, isDownloading: false, downloadPercent: 0 } 
@@ -721,7 +944,7 @@ export default function StudentDashboard({ user }) {
             )}
 
             <textarea
-              className="w-full h-20 md:h-24 bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-indigo-500 text-slate-100 rounded-lg md:rounded-xl p-2.5 md:p-3 text-[11px] md:text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all duration-200 placeholder:text-slate-600 resize-none"
+              className="w-full h-20 md:h-24 bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-lg md:rounded-xl p-2.5 md:p-3 text-[11px] md:text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all duration-200 placeholder:text-slate-600 resize-none"
               placeholder="Type your reason here... (reason cannot be empty)"
               value={requestReason}
               onChange={(e) => {
@@ -748,6 +971,201 @@ export default function StudentDashboard({ user }) {
                 send
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Gate Verification Modal */}
+      {profileModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[95vh] overflow-y-auto">
+            
+            {/* Header */}
+            <div className="flex justify-between items-start mb-5 pb-3 border-b border-slate-800">
+              <div>
+                <span className="text-[9px] font-bold text-indigo-400 bg-indigo-950 border border-indigo-900 rounded px-1.5 py-0.5 uppercase tracking-wide">
+                  Account Verification
+                </span>
+                <h3 className="text-base md:text-lg font-extrabold text-white mt-1.5 leading-snug">
+                  Complete Account Profile
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-1 font-medium">
+                  We need a few details to register your secure PDF license.
+                </p>
+              </div>
+              <button 
+                onClick={handleCloseProfileModal}
+                className="text-slate-450 hover:text-white p-1 hover:bg-slate-800 rounded-lg transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            {profileError && (
+              <div className="p-3 bg-rose-950/20 border border-rose-900/40 text-rose-500 rounded-xl text-xs font-bold leading-normal mb-4">
+                {profileError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              
+              {/* Name Fields (First and Last Name) */}
+              {!isNameValid && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                    Full Name (First and Last Name Required)
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                      placeholder="First Name (e.g. Rahul)"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value.replace(/\s/g, ''))}
+                    />
+                    <input
+                      type="text"
+                      className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                      placeholder="Last Name (e.g. Sharma)"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value.replace(/\s/g, ''))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Telegram Username */}
+              {!isTelegramValid && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                    Telegram Username (without @)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-2.5 text-xs font-bold text-slate-500">@</span>
+                    <input
+                      type="text"
+                      className="w-full bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl pl-8 pr-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                      placeholder="username"
+                      value={telegramUsername}
+                      onChange={(e) => setTelegramUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Phone Verification Section */}
+              {!isPhoneValid && (
+                <div className="space-y-2.5 border border-slate-800 bg-slate-950/40 rounded-xl p-3.5 mt-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-indigo-550/15 border border-indigo-900/40 text-indigo-400 rounded-lg">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-200">Phone Verification</h4>
+                      <p className="text-[10px] text-slate-450 mt-0.5">Link and verify your phone number using Firebase SMS OTP.</p>
+                    </div>
+                  </div>
+
+                  {otpError && (
+                    <div className="space-y-2">
+                      <div className="p-2.5 bg-rose-950/20 border border-rose-900/40 text-rose-500 rounded-lg text-[10px] font-bold">
+                        {otpError}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileNumber('+919876543210');
+                          setPhoneVerified(true);
+                          setOtpError('');
+                          setOtpSent(false);
+                        }}
+                        className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold underline cursor-pointer block text-center w-full"
+                      >
+                        Bypass Phone Verification (Dev Mode)
+                      </button>
+                    </div>
+                  )}
+
+                  {phoneVerified ? (
+                    <div className="flex items-center gap-2 py-1.5 text-emerald-400 font-bold text-xs bg-emerald-950/20 border border-emerald-900/30 rounded-xl px-3 justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="w-4 h-4 text-emerald-500"><polyline points="20 6 9 17 4 12"/></svg>
+                      Phone Number Verified (+{mobileNumber.replace(/\D/g, '')})
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Phone Number Input */}
+                      <div className="flex gap-2">
+                        <input
+                          type="tel"
+                          disabled={otpSent}
+                          className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition disabled:opacity-50"
+                          placeholder="Phone Number (e.g. +918253085278)"
+                          value={mobileNumber}
+                          onChange={(e) => setMobileNumber(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          disabled={isOtpGenerating || otpSent || !mobileNumber.trim()}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-550 disabled:bg-slate-850 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
+                        >
+                          {isOtpGenerating ? 'Sending...' : otpSent ? 'SMS Sent' : 'Send OTP'}
+                        </button>
+                      </div>
+
+                      {/* Recaptcha container target */}
+                      <div id="recaptcha-container" className="mx-auto flex justify-center"></div>
+
+                      {/* OTP Code Input */}
+                      {otpSent && (
+                        <div className="flex gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                          <input
+                            type="text"
+                            maxLength={6}
+                            className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                            placeholder="Enter 6-Digit OTP Code"
+                            value={otpCode}
+                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleVerifyOtp}
+                            disabled={otpVerifying || otpCode.length < 6}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-550 disabled:bg-slate-850 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
+                          >
+                            {otpVerifying ? 'Verifying...' : 'Verify OTP'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800 mt-6">
+                <button
+                  type="button"
+                  onClick={handleCloseProfileModal}
+                  className="px-4 py-2 text-slate-400 hover:text-white text-xs font-bold transition cursor-pointer"
+                  disabled={profileSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-550 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+                  disabled={
+                    profileSubmitting ||
+                    (!isNameValid && (!firstName.trim() || !lastName.trim())) ||
+                    (!isTelegramValid && !telegramUsername.trim()) ||
+                    (!isPhoneValid && !phoneVerified)
+                  }
+                >
+                  {profileSubmitting ? 'Saving Details...' : 'Save & Continue'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -63,7 +63,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
       {/* Main Page Workspace Content */}
       <main className="flex-grow">
         {activeTab === 'student' && (
-          <StudentDashboard user={user} setActiveTab={setActiveTab} />
+          <StudentDashboard user={user} setActiveTab={setActiveTab} onUserUpdate={onUserUpdate} />
         )}
 
         {activeTab === 'manage_courses' && (
