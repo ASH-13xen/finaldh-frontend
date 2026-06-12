@@ -313,7 +313,8 @@ export default function StudentDashboard({ user }) {
 
     const triggerNativeDownload = () => {
       const token = localStorage.getItem('token');
-      const downloadUrl = `${window.location.origin}/api/courses/download/${courseId}?token=${token}`;
+      const apiBaseUrl = import.meta.env.VITE_API_URL || window.location.origin;
+      const downloadUrl = `${apiBaseUrl}/api/courses/download/${courseId}?token=${token}`;
       console.log(`[handleDownload] Directing window to trigger native PDF download: ${downloadUrl}`);
 
       // Update UI limits locally
