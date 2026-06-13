@@ -62,7 +62,8 @@ function App() {
     initializePortal();
   }, [token]);
 
-  // Initialize Google Sign-In button once configurations are fetched and loading is done
+  // Initialize Google Sign-In once configs are ready (no button rendering here —
+  // LoginSection may not be mounted yet since the default tab is buy_pdfs)
   useEffect(() => {
     if (token || loading || !googleClientId) return;
 
@@ -72,9 +73,7 @@ function App() {
       try {
         const authRes = await fetch('/api/auth/google', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ credential: response.credential })
         });
 
@@ -95,40 +94,35 @@ function App() {
       }
     };
 
-    // Render Google button once the script is available
     const checkGoogleLoaded = setInterval(() => {
       if (window.google?.accounts?.id) {
         clearInterval(checkGoogleLoaded);
-        
         window.google.accounts.id.initialize({
           client_id: googleClientId,
           callback: handleCredentialResponse
-        });
-
-        if (googleButtonRef.current) {
-          window.google.accounts.id.renderButton(
-            googleButtonRef.current,
-            { 
-              theme: 'outline', 
-              size: 'large', 
-              width: '100%',
-              shape: 'rectangular',
-              text: 'signin_with'
-            }
-          );
-        }
-        
-        // prompt Google One Tap — suppress FedCM AbortError noise in console
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // One Tap was not shown or dismissed — not an error
-          }
         });
       }
     }, 100);
 
     return () => clearInterval(checkGoogleLoaded);
   }, [token, loading, googleClientId]);
+
+  // Render the Google button every time the login tab becomes visible.
+  // This runs after LoginSection mounts so googleButtonRef.current is valid.
+  useEffect(() => {
+    if (activeTab !== 'login' || loading || token || !googleClientId) return;
+
+    const timer = setTimeout(() => {
+      if (window.google?.accounts?.id && googleButtonRef.current) {
+        window.google.accounts.id.renderButton(
+          googleButtonRef.current,
+          { theme: 'outline', size: 'large', width: '100%', shape: 'rectangular', text: 'signin_with' }
+        );
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [activeTab, loading, token, googleClientId]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
