@@ -962,8 +962,27 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
       {/* Help / Support Footer */}
       <div className="mt-12 md:mt-16 pt-6 border-t border-slate-850/60 text-center">
-        <p className="text-[11px] md:text-xs text-slate-500 font-semibold tracking-wide">
-          Have any problem then message us to Telegram: <span className="text-indigo-400 font-bold">@tdhadmin</span>
+        <p className="text-sm md:text-base text-slate-200 font-extrabold tracking-wide flex flex-col sm:flex-row items-center justify-center gap-2">
+          <span>In case of any issue contact us on Telegram:</span>
+          <span className="flex items-center gap-2">
+            <a
+              href="https://t.me/tdhadmin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-950/45 border border-indigo-900/60 text-indigo-400 hover:text-indigo-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
+            >
+              Telegram App (Mobile)
+            </a>
+            <span className="text-slate-700 font-medium hidden sm:inline">|</span>
+            <a
+              href="https://web.telegram.org/k/#@tdhadmin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-950/45 border border-indigo-900/60 text-indigo-400 hover:text-indigo-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
+            >
+              Telegram Web
+            </a>
+          </span>
         </p>
       </div>
 
