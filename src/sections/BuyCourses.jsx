@@ -167,6 +167,12 @@ export default function BuyCourses({ onRedirectToLogin }) {
                     <h3 className="text-sm font-bold text-slate-900 line-clamp-2 leading-relaxed">
                       {course.name || course.fileName}
                     </h3>
+                    {course.discountLimitTag && (
+                      <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-850 text-[10px] font-semibold px-2.5 py-0.5 rounded-lg w-fit tracking-wide animate-pulse">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-amber-600"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        Discount valid only for first 50 students!
+                      </div>
+                    )}
                     <p className="text-[10px] text-slate-400 font-medium truncate mt-1">
                       File: {course.fileName}
                     </p>

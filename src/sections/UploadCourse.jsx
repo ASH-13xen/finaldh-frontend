@@ -60,6 +60,7 @@ export default function UploadCourse() {
   const [price, setPrice] = useState('499');
   const [discountedPrice, setDiscountedPrice] = useState('499');
   const [useDiscount, setUseDiscount] = useState(false);
+  const [discountLimitTag, setDiscountLimitTag] = useState(false);
   const [courseFiles, setCourseFiles] = useState([]);
 
   // Status states
@@ -177,6 +178,7 @@ export default function UploadCourse() {
     setPrice('499');
     setDiscountedPrice('499');
     setUseDiscount(false);
+    setDiscountLimitTag(false);
     setCourseFiles([{ id: Date.now(), type: 'new', name: '', file: null }]);
     setFormError('');
     setSuccessMsg('');
@@ -194,6 +196,7 @@ export default function UploadCourse() {
     setPrice(String(course.price || 499));
     setDiscountedPrice(String(course.discountedPrice !== undefined ? course.discountedPrice : (course.price || 499)));
     setUseDiscount(!!course.useDiscount);
+    setDiscountLimitTag(!!course.discountLimitTag);
     
     if (course.fileUrls && course.fileUrls.length > 0) {
       setCourseFiles(course.fileUrls.map((url, idx) => ({
@@ -253,6 +256,7 @@ export default function UploadCourse() {
     formData.append('price', price);
     formData.append('discountedPrice', discountedPrice);
     formData.append('useDiscount', useDiscount);
+    formData.append('discountLimitTag', discountLimitTag);
 
     // Build the filesConfig array and append files
     const filesConfig = [];
@@ -381,6 +385,32 @@ export default function UploadCourse() {
     }
   };
 
+  // Handle toggling course discount limit tag
+  const handleToggleDiscountLimitTag = async (course) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/courses/${course._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          discountLimitTag: !course.discountLimitTag
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to toggle limit tag');
+      }
+      showToast('Discount limit tag updated successfully!', 'success');
+      fetchCourses();
+    } catch (err) {
+      console.error('Error toggling discount limit tag:', err);
+      showToast(err.message || 'Error occurred while toggling discount limit tag.', 'error');
+    }
+  };
+
   return (
     <div className="w-full max-w-6xl mx-auto px-6 py-10 md:py-14">
       {/* Admin Mode active banner callout */}
@@ -439,6 +469,7 @@ export default function UploadCourse() {
                   <th className="px-6 py-4">Subject</th>
                   <th className="px-6 py-4">Price (₹)</th>
                   <th className="px-6 py-4">Use Discount</th>
+                  <th className="px-6 py-4">50 Stud Tag</th>
                   <th className="px-6 py-4">PDF Files</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -448,7 +479,7 @@ export default function UploadCourse() {
                   const subDisplayName = availableSubjects.find(s => s.id === course.subject)?.name || course.subject;
                   return (
                     <tr key={course._id} className="hover:bg-slate-850/50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-indigo-400">
+                       <td className="px-6 py-4 font-bold text-indigo-400">
                         <span className="bg-indigo-950/40 border border-indigo-900/50 rounded-lg px-2 py-1 text-[10px]">
                           {course.courseId}
                         </span>
@@ -476,6 +507,20 @@ export default function UploadCourse() {
                           <span
                             aria-hidden="true"
                             className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${course.useDiscount ? 'translate-x-5' : 'translate-x-0'}`}
+                          />
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDiscountLimitTag(course)}
+                          className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${course.discountLimitTag ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                          role="switch"
+                          aria-checked={course.discountLimitTag}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${course.discountLimitTag ? 'translate-x-5' : 'translate-x-0'}`}
                           />
                         </button>
                       </td>
@@ -698,6 +743,20 @@ export default function UploadCourse() {
                 />
                 <label htmlFor="modal-course-use-discount" className="text-xs font-bold text-slate-350 cursor-pointer">
                   Activate discount price by default for this course
+                </label>
+              </div>
+
+              {/* Discount Limit Tag Checkbox */}
+              <div className="flex items-center gap-2 bg-slate-950/40 border border-slate-800/80 rounded-xl p-3">
+                <input
+                  id="modal-course-discount-limit-tag"
+                  type="checkbox"
+                  checked={discountLimitTag}
+                  onChange={(e) => setDiscountLimitTag(e.target.checked)}
+                  className="w-4 h-4 text-indigo-650 bg-slate-950 border-slate-800 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="modal-course-discount-limit-tag" className="text-xs font-bold text-slate-350 cursor-pointer">
+                  Show "Discount valid only for first 50 students!" tag on the card
                 </label>
               </div>
 
