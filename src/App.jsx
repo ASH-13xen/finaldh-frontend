@@ -15,12 +15,12 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [googleClientId, setGoogleClientId] = useState(null);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('login');
+  const [activeTab, setActiveTab] = useState('buy_pdfs');
   const googleButtonRef = useRef(null);
 
   // Automatically switch tabs when logging in
   useEffect(() => {
-    if (user && activeTab === 'login') {
+    if (user && (activeTab === 'login' || activeTab === 'buy_pdfs')) {
       setActiveTab(user.isAdmin ? 'manage_courses' : 'student');
     }
   }, [user]);
@@ -129,7 +129,7 @@ function App() {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-    setActiveTab('login');
+    setActiveTab('buy_pdfs');
   };
 
   const handleDevLogin = async () => {
