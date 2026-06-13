@@ -190,45 +190,50 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
   };
 
   // Handle opening Telegram with pre-filled message to tdhadmin
-  const handleTelegramNotify = async (request, course, e) => {
+  const handleTelegramNotify = (request, course, e) => {
     if (e) e.stopPropagation();
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`/api/courses/purchase-requests/${request._id}/notify-telegram`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
+
+    // 1. Open the Telegram redirection URL immediately (synchronous user action to bypass browser popup blockers)
+    const studentName = user?.fullName || user?.name || 'Student';
+    const courseName = course?.name || request?.courseName || 'Course';
+    const text = `I am ${studentName} enrolled in ${courseName}, requesting for confirmation and group link`;
+    const telegramUrl = `https://t.me/tdhadmin?text=${encodeURIComponent(text)}`;
+    
+    console.log(`[Telegram Redirect] Opening URL: ${telegramUrl}`);
+    window.open(telegramUrl, '_blank');
+
+    // 2. Fire the database tracking counter in the background
+    const token = localStorage.getItem('token');
+    fetch(`/api/courses/purchase-requests/${request._id}/notify-telegram`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          console.warn('[Telegram Redirect] Backend counter tracking failed:', data.error);
+          return;
         }
+
+        // Update list of requests to synchronize counts
+        const updatedRequests = purchaseRequests.map((r) => 
+          r._id === request._id ? { ...r, telegramNotificationCount: data.telegramNotificationCount } : r
+        );
+        setPurchaseRequests(updatedRequests);
+
+        // Update lastSubmittedRequest if that is the one
+        if (lastSubmittedRequest && lastSubmittedRequest._id === request._id) {
+          setLastSubmittedRequest({
+            ...lastSubmittedRequest,
+            telegramNotificationCount: data.telegramNotificationCount
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('[Telegram Redirect] Background tracking fetch failed:', err);
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to notify on Telegram');
-      }
-
-      // 1. Update list of requests to synchronize counts
-      const updatedRequests = purchaseRequests.map((r) => 
-        r._id === request._id ? { ...r, telegramNotificationCount: data.telegramNotificationCount } : r
-      );
-      setPurchaseRequests(updatedRequests);
-
-      // 2. Update lastSubmittedRequest if that is the one
-      if (lastSubmittedRequest && lastSubmittedRequest._id === request._id) {
-        setLastSubmittedRequest({
-          ...lastSubmittedRequest,
-          telegramNotificationCount: data.telegramNotificationCount
-        });
-      }
-
-      // 3. Trigger redirect to Telegram
-      const studentName = user?.fullName || user?.name || 'Student';
-      const courseName = course?.name || request?.courseName || 'Course';
-      const text = `I am ${studentName} enrolled in ${courseName}, requesting for confirmation and group link`;
-      const telegramUrl = `https://t.me/tdhadmin?text=${encodeURIComponent(text)}`;
-      window.open(telegramUrl, '_blank');
-    } catch (err) {
-      console.error('Telegram redirect notify error:', err);
-      alert(err.message || 'Error redirecting to Telegram.');
-    }
   };
 
   // Determine course purchase status

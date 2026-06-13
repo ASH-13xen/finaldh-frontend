@@ -348,22 +348,19 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     setProfileSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const payload = {};
       
-      if (!isNameValid) {
-        if (!firstName.trim() || !lastName.trim()) {
-          throw new Error('Both First Name and Last Name must be provided.');
-        }
-        payload.firstName = firstName.trim();
-        payload.lastName = lastName.trim();
+      if (!firstName.trim() || !lastName.trim()) {
+        throw new Error('Both First Name and Last Name must be provided.');
       }
-      
-      if (!isTelegramValid) {
-        if (!telegramUsername.trim()) {
-          throw new Error('Telegram Username is required.');
-        }
-        payload.telegramUsername = telegramUsername.trim();
+      if (!telegramUsername.trim()) {
+        throw new Error('Telegram Username is required.');
       }
+
+      const payload = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        telegramUsername: telegramUsername.trim()
+      };
 
       if (!isPhoneValid) {
         if (!phoneVerified || !mobileNumber.trim()) {
@@ -398,7 +395,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       if (courseToDownload) {
         console.log(`[handleSaveProfile] Profile verified. Starting pending download for: ${courseToDownload.name}`);
         setTimeout(() => {
-          handleDownload(courseToDownload.id, courseToDownload.name);
+          handleDownload(courseToDownload.id, courseToDownload.name, courseToDownload.fileIndex || 0, true);
         }, 100);
       }
     } catch (err) {
@@ -510,19 +507,19 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     fetchCourses();
   }, []);
 
-  async function handleDownload(courseId, courseName, fileIndex = 0) {
-    console.log(`[handleDownload] Initiated download process for courseId: ${courseId}, courseName: ${courseName}, fileIndex: ${fileIndex}`);
+  async function handleDownload(courseId, courseName, fileIndex = 0, skipModal = false) {
+    console.log(`[handleDownload] Initiated download process for courseId: ${courseId}, courseName: ${courseName}, fileIndex: ${fileIndex}, skipModal: ${skipModal}`);
     
     const targetCourse = courses.find(c => c.courseId && c.courseId.toLowerCase() === courseId.toLowerCase());
     const hasMultiplePdfs = targetCourse && targetCourse.fileUrls && targetCourse.fileUrls.length > 1;
     const compositeId = hasMultiplePdfs ? `${courseId}_${fileIndex}` : courseId;
 
-    // Intercept if profile details are not fully saved/verified
-    if (!isNameValid || !isTelegramValid || !isPhoneValid) {
-      console.log('[handleDownload] Profile incomplete. Intercepting download and showing profile modal.');
+    // Always show profile details modal when download button is clicked unless skipModal is true
+    if (!skipModal) {
+      console.log('[handleDownload] Showing profile details modal before download.');
       setPendingDownloadCourse({ id: courseId, name: courseName, fileIndex });
       setFirstName(nameParts[0] || '');
-      setLastName(nameParts[1] || '');
+      setLastName(nameParts.slice(1).join(' ') || '');
       setTelegramUsername(currentUser?.telegramUsername || '');
       setMobileNumber(currentUser?.mobileNumber || '');
       setPhoneVerified(isPhoneValid);
@@ -1045,137 +1042,151 @@ export default function StudentDashboard({ user, onUserUpdate }) {
             <form onSubmit={handleSaveProfile} className="space-y-4">
               
               {/* Name Fields (First and Last Name) */}
-              {!isNameValid && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                    Full Name (First and Last Name Required)
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
-                      placeholder="First Name (e.g. Rahul)"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value.replace(/\s/g, ''))}
-                    />
-                    <input
-                      type="text"
-                      className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
-                      placeholder="Last Name (e.g. Sharma)"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value.replace(/\s/g, ''))}
-                    />
-                  </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                  Full Name (First and Last Name Required)
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                    placeholder="First Name (e.g. Rahul)"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value.replace(/\s/g, ''))}
+                  />
+                  <input
+                    type="text"
+                    className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                    placeholder="Last Name (e.g. Sharma)"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value.replace(/\s/g, ''))}
+                  />
                 </div>
-              )}
+              </div>
 
               {/* Telegram Username */}
-              {!isTelegramValid && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                    Telegram Username (without @)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-2.5 text-xs font-bold text-slate-500">@</span>
-                    <input
-                      type="text"
-                      className="w-full bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl pl-8 pr-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
-                      placeholder="username"
-                      value={telegramUsername}
-                      onChange={(e) => setTelegramUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-                    />
-                  </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                  Telegram Username (without @)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-2.5 text-xs font-bold text-slate-500">@</span>
+                  <input
+                    type="text"
+                    className="w-full bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl pl-8 pr-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                    placeholder="username"
+                    value={telegramUsername}
+                    onChange={(e) => setTelegramUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                  />
                 </div>
-              )}
+              </div>
 
               {/* Phone Verification Section */}
-              {!isPhoneValid && (
-                <div className="space-y-2.5 border border-slate-800 bg-slate-950/40 rounded-xl p-3.5 mt-2">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-indigo-550/15 border border-indigo-900/40 text-indigo-400 rounded-lg">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-extrabold text-slate-200">Phone Verification</h4>
-                      <p className="text-[10px] text-slate-450 mt-0.5">Link and verify your phone number using Firebase SMS OTP.</p>
+              <div className="space-y-1.5">
+                <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                  Phone Number
+                </label>
+                {isPhoneValid ? (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      disabled
+                      className="w-full bg-slate-950/60 border border-slate-850/80 text-slate-400 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none opacity-80 cursor-not-allowed"
+                      value={mobileNumber || currentUser?.mobileNumber || ''}
+                    />
+                    <div className="absolute right-3.5 top-2.5 flex items-center gap-1 bg-emerald-950/40 border border-emerald-900/50 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-emerald-400"><polyline points="20 6 9 17 4 12"/></svg>
+                      Verified
                     </div>
                   </div>
-
-                  {otpError && (
-                    <div className="space-y-2">
-                      <div className="p-2.5 bg-rose-950/20 border border-rose-900/40 text-rose-500 rounded-lg text-[10px] font-bold">
-                        {otpError}
+                ) : (
+                  <div className="space-y-2.5 border border-slate-800 bg-slate-950/40 rounded-xl p-3.5 mt-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-indigo-550/15 border border-indigo-900/40 text-indigo-400 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMobileNumber('+919876543210');
-                          setPhoneVerified(true);
-                          setOtpError('');
-                          setOtpSent(false);
-                        }}
-                        className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold underline cursor-pointer block text-center w-full"
-                      >
-                        Bypass Phone Verification (Dev Mode)
-                      </button>
+                      <div>
+                        <h4 className="text-xs font-extrabold text-slate-200">Phone Verification</h4>
+                        <p className="text-[10px] text-slate-450 mt-0.5">Link and verify your phone number using Firebase SMS OTP.</p>
+                      </div>
                     </div>
-                  )}
 
-                  {phoneVerified ? (
-                    <div className="flex items-center gap-2 py-1.5 text-emerald-400 font-bold text-xs bg-emerald-950/20 border border-emerald-900/30 rounded-xl px-3 justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="w-4 h-4 text-emerald-500"><polyline points="20 6 9 17 4 12"/></svg>
-                      Phone Number Verified (+{mobileNumber.replace(/\D/g, '')})
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {/* Phone Number Input */}
-                      <div className="flex gap-2">
-                        <input
-                          type="tel"
-                          disabled={otpSent}
-                          className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition disabled:opacity-50"
-                          placeholder="Phone Number (e.g. +918253085278)"
-                          value={mobileNumber}
-                          onChange={(e) => setMobileNumber(e.target.value)}
-                        />
+                    {otpError && (
+                      <div className="space-y-2">
+                        <div className="p-2.5 bg-rose-950/20 border border-rose-900/40 text-rose-500 rounded-lg text-[10px] font-bold">
+                          {otpError}
+                        </div>
                         <button
                           type="button"
-                          onClick={handleSendOtp}
-                          disabled={isOtpGenerating || otpSent || !mobileNumber.trim()}
-                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-550 disabled:bg-slate-850 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
+                          onClick={() => {
+                            setMobileNumber('+919876543210');
+                            setPhoneVerified(true);
+                            setOtpError('');
+                            setOtpSent(false);
+                          }}
+                          className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold underline cursor-pointer block text-center w-full"
                         >
-                          {isOtpGenerating ? 'Sending...' : otpSent ? 'SMS Sent' : 'Send OTP'}
+                          Bypass Phone Verification (Dev Mode)
                         </button>
                       </div>
+                    )}
 
-                      {/* Recaptcha container target */}
-                      <div id="recaptcha-container" className="mx-auto flex justify-center"></div>
-
-                      {/* OTP Code Input */}
-                      {otpSent && (
-                        <div className="flex gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                    {phoneVerified ? (
+                      <div className="flex items-center gap-2 py-1.5 text-emerald-400 font-bold text-xs bg-emerald-950/20 border border-emerald-900/30 rounded-xl px-3 justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="w-4 h-4 text-emerald-500"><polyline points="20 6 9 17 4 12"/></svg>
+                        Phone Number Verified (+{mobileNumber.replace(/\D/g, '')})
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {/* Phone Number Input */}
+                        <div className="flex gap-2">
                           <input
-                            type="text"
-                            maxLength={6}
-                            className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
-                            placeholder="Enter 6-Digit OTP Code"
-                            value={otpCode}
-                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                            type="tel"
+                            disabled={otpSent}
+                            className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition disabled:opacity-50"
+                            placeholder="Phone Number (e.g. +918253085278)"
+                            value={mobileNumber}
+                            onChange={(e) => setMobileNumber(e.target.value)}
                           />
                           <button
                             type="button"
-                            onClick={handleVerifyOtp}
-                            disabled={otpVerifying || otpCode.length < 6}
-                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-550 disabled:bg-slate-850 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
+                            onClick={handleSendOtp}
+                            disabled={isOtpGenerating || otpSent || !mobileNumber.trim()}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-550 disabled:bg-slate-850 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
                           >
-                            {otpVerifying ? 'Verifying...' : 'Verify OTP'}
+                            {isOtpGenerating ? 'Sending...' : otpSent ? 'SMS Sent' : 'Send OTP'}
                           </button>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+
+                        {/* Recaptcha container target */}
+                        <div id="recaptcha-container" className="mx-auto flex justify-center"></div>
+
+                        {/* OTP Code Input */}
+                        {otpSent && (
+                          <div className="flex gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <input
+                              type="text"
+                              maxLength={6}
+                              className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                              placeholder="Enter 6-Digit OTP Code"
+                              value={otpCode}
+                              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleVerifyOtp}
+                              disabled={otpVerifying || otpCode.length < 6}
+                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-550 disabled:bg-slate-850 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
+                            >
+                              {otpVerifying ? 'Verifying...' : 'Verify OTP'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800 mt-6">
@@ -1192,8 +1203,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                   className="px-6 py-2 bg-indigo-600 hover:bg-indigo-550 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer flex items-center justify-center gap-1.5"
                   disabled={
                     profileSubmitting ||
-                    (!isNameValid && (!firstName.trim() || !lastName.trim())) ||
-                    (!isTelegramValid && !telegramUsername.trim()) ||
+                    !firstName.trim() ||
+                    !lastName.trim() ||
+                    !telegramUsername.trim() ||
                     (!isPhoneValid && !phoneVerified)
                   }
                 >
