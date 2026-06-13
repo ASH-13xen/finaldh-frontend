@@ -118,7 +118,12 @@ function App() {
           );
         }
         
-        window.google.accounts.id.prompt(); // prompt Google One Tap
+        // prompt Google One Tap — suppress FedCM AbortError noise in console
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // One Tap was not shown or dismissed — not an error
+          }
+        });
       }
     }, 100);
 
@@ -156,8 +161,16 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-950 text-slate-100">
-        <LoadingSpinner text="Verifying user... (may take up to 30 sec)" />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-slate-100 gap-6">
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-xl font-black text-white tracking-tight">The Dark Horse UPSC</span>
+          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Study Portal</span>
+        </div>
+        <div className="w-10 h-10 border-4 border-slate-800 border-t-indigo-500 rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-sm font-semibold text-slate-300 animate-pulse">Verifying user...</p>
+          <p className="text-[11px] text-slate-600 font-medium">This may take up to 30 seconds on first load</p>
+        </div>
       </div>
     );
   }
