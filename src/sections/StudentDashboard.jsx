@@ -960,6 +960,13 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         </div>
       )}
 
+      {/* Help / Support Footer */}
+      <div className="mt-12 md:mt-16 pt-6 border-t border-slate-850/60 text-center">
+        <p className="text-[11px] md:text-xs text-slate-500 font-semibold tracking-wide">
+          Have any problem then message us to Telegram: <span className="text-indigo-400 font-bold">@tdhadmin</span>
+        </p>
+      </div>
+
       {/* Request Additional Download Modal Overlay */}
       {showRequestModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4">

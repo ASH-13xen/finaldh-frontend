@@ -197,9 +197,27 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
     const studentName = user?.fullName || user?.name || 'Student';
     const courseName = course?.name || request?.courseName || 'Course';
     const text = `I am ${studentName} enrolled in ${courseName}, requesting for confirmation and group link`;
-    const telegramUrl = `https://t.me/tdhadmin?text=${encodeURIComponent(text)}`;
+
+    // Detect mobile browser
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    console.log(`[Telegram Redirect] Opening URL: ${telegramUrl}`);
+    let telegramUrl = `https://t.me/tdhadmin?text=${encodeURIComponent(text)}`;
+    if (!isMobile) {
+      // Direct laptop/desktop users directly to Telegram Web K version
+      telegramUrl = `https://web.telegram.org/k/#@tdhadmin`;
+      // Attempt to copy the message text to clipboard for easy pasting (Ctrl+V)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            console.log('[Telegram Redirect] Message copied to clipboard');
+          })
+          .catch((err) => {
+            console.warn('[Telegram Redirect] Clipboard copy failed:', err);
+          });
+      }
+    }
+    
+    console.log(`[Telegram Redirect] Device: ${isMobile ? 'Mobile' : 'Desktop'}, Opening URL: ${telegramUrl}`);
     window.open(telegramUrl, '_blank');
 
     // 2. Fire the database tracking counter in the background
