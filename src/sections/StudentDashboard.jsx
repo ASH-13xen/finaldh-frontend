@@ -963,7 +963,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       {/* Help / Support Footer */}
       <div className="mt-12 md:mt-16 pt-6 border-t border-slate-850/60 text-center">
         <p className="text-sm md:text-base text-slate-200 font-extrabold tracking-wide flex flex-col sm:flex-row items-center justify-center gap-2">
-          <span>In case of any issue contact us on Telegram:</span>
+          <span>In case of any issue, contact us on Telegram:</span>
           <span className="flex items-center gap-2">
             <a
               href="https://t.me/tdhadmin"
