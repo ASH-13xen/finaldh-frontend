@@ -8,6 +8,7 @@ const SUBJECT_NAMES = {
   'GS-2': 'GS-2: Governance, Constitution, Polity, Social Justice',
   'GS-3': 'GS-3: Science & Tech, Economic Dev, Bio-diversity, Security',
   'GS-4': 'GS-4: Ethics, Integrity & Aptitude',
+  'All GS': 'All GS',
 };
 
 const OPTIONAL_NAMES = {
