@@ -436,7 +436,7 @@ export default function UploadCourse() {
         <div>
           <button 
             onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md hover:shadow-indigo-950/30"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-accent-600 hover:bg-accent-500 text-white rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md hover:shadow-accent-950/30"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add New Course
@@ -480,8 +480,8 @@ export default function UploadCourse() {
                   const subDisplayName = availableSubjects.find(s => s.id === course.subject)?.name || course.subject;
                   return (
                     <tr key={course._id} className="hover:bg-slate-850/50 transition-colors">
-                       <td className="px-6 py-4 font-bold text-indigo-400">
-                        <span className="bg-indigo-950/40 border border-indigo-900/50 rounded-lg px-2 py-1 text-[10px]">
+                       <td className="px-6 py-4 font-bold text-accent-400">
+                        <span className="bg-accent-950/40 border border-accent-900/50 rounded-lg px-2 py-1 text-[10px]">
                           {course.courseId}
                         </span>
                       </td>
@@ -490,7 +490,7 @@ export default function UploadCourse() {
                       <td className="px-6 py-4">
                         {course.useDiscount ? (
                           <div className="flex flex-col">
-                            <span className="font-extrabold text-indigo-400">₹{course.discountedPrice}</span>
+                            <span className="font-extrabold text-accent-400">₹{course.discountedPrice}</span>
                             <span className="text-[10px] text-slate-500 line-through">₹{course.price}</span>
                           </div>
                         ) : (
@@ -501,7 +501,7 @@ export default function UploadCourse() {
                         <button
                           type="button"
                           onClick={() => handleToggleDiscount(course)}
-                          className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${course.useDiscount ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                          className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${course.useDiscount ? 'bg-accent-600' : 'bg-slate-700'}`}
                           role="switch"
                           aria-checked={course.useDiscount}
                         >
@@ -515,7 +515,7 @@ export default function UploadCourse() {
                         <button
                           type="button"
                           onClick={() => handleToggleDiscountLimitTag(course)}
-                          className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${course.discountLimitTag ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                          className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${course.discountLimitTag ? 'bg-accent-600' : 'bg-slate-700'}`}
                           role="switch"
                           aria-checked={course.discountLimitTag}
                         >
@@ -533,7 +533,7 @@ export default function UploadCourse() {
                               href={`${import.meta.env.VITE_API_URL || ''}/api/courses/raw/${course._id}?token=${localStorage.getItem('token')}&index=${idx}`} 
                               target="_blank" 
                               rel="noopener noreferrer" 
-                              className="hover:text-indigo-400 hover:underline flex items-center gap-1 truncate"
+                              className="hover:text-accent-400 hover:underline flex items-center gap-1 truncate"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-slate-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                               {fname}
@@ -605,8 +605,8 @@ export default function UploadCourse() {
                         <div className="font-semibold text-slate-200">{req.userName}</div>
                         <div className="text-[10px] text-slate-500 font-medium">{req.userEmail}</div>
                       </td>
-                      <td className="px-6 py-4 font-bold text-indigo-400">
-                        <span className="bg-indigo-950/10 border border-indigo-900/50 rounded-lg px-2 py-1 text-[10px]">
+                      <td className="px-6 py-4 font-bold text-accent-400">
+                        <span className="bg-accent-950/10 border border-accent-900/50 rounded-lg px-2 py-1 text-[10px]">
                           {req.courseId}
                         </span>
                       </td>
@@ -664,7 +664,7 @@ export default function UploadCourse() {
                   placeholder="e.g., GS1, GS2, Essay"
                   value={courseId}
                   onChange={(e) => setCourseId(e.target.value)}
-                  className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+                  className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-accent-500 transition-all font-semibold"
                   required
                 />
               </div>
@@ -678,7 +678,7 @@ export default function UploadCourse() {
                   placeholder="e.g., GS-1 History Complete Study Guide"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+                  className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-accent-500 transition-all font-semibold"
                   required
                 />
               </div>
@@ -690,7 +690,7 @@ export default function UploadCourse() {
                   id="modal-course-subject"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+                  className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-accent-500 transition-all font-semibold"
                   required
                 >
                   <option value="">Select subject...</option>
@@ -712,7 +712,7 @@ export default function UploadCourse() {
                     placeholder="e.g., 499"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+                    className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-accent-500 transition-all font-semibold"
                     required
                   />
                 </div>
@@ -727,7 +727,7 @@ export default function UploadCourse() {
                     placeholder="e.g., 399"
                     value={discountedPrice}
                     onChange={(e) => setDiscountedPrice(e.target.value)}
-                    className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+                    className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-accent-500 transition-all font-semibold"
                     required
                   />
                 </div>
@@ -740,7 +740,7 @@ export default function UploadCourse() {
                   type="checkbox"
                   checked={useDiscount}
                   onChange={(e) => setUseDiscount(e.target.checked)}
-                  className="w-4 h-4 text-indigo-650 bg-slate-950 border-slate-800 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-accent-650 bg-slate-950 border-slate-800 rounded focus:ring-accent-500"
                 />
                 <label htmlFor="modal-course-use-discount" className="text-xs font-bold text-slate-350 cursor-pointer">
                   Activate discount price by default for this course
@@ -754,7 +754,7 @@ export default function UploadCourse() {
                   type="checkbox"
                   checked={discountLimitTag}
                   onChange={(e) => setDiscountLimitTag(e.target.checked)}
-                  className="w-4 h-4 text-indigo-650 bg-slate-950 border-slate-800 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-accent-650 bg-slate-950 border-slate-800 rounded focus:ring-accent-500"
                 />
                 <label htmlFor="modal-course-discount-limit-tag" className="text-xs font-bold text-slate-350 cursor-pointer">
                   Show "Discount valid only for first 50 students!" tag on the card
@@ -794,7 +794,7 @@ export default function UploadCourse() {
                           placeholder="e.g. Part-1 Ancient History"
                           value={f.name}
                           onChange={(e) => handleUpdateFileSlot(f.id, { name: e.target.value })}
-                          className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+                          className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-accent-500 transition-all font-semibold"
                           required
                         />
                       </div>
@@ -809,7 +809,7 @@ export default function UploadCourse() {
                             <span className="truncate max-w-[200px]" title={f.url.replace('r2://', '')}>
                               {f.url.replace('r2://', '')}
                             </span>
-                            <span className="text-[10px] font-bold bg-indigo-950/80 border border-indigo-900/60 text-indigo-400 px-2 py-0.5 rounded shrink-0">
+                            <span className="text-[10px] font-bold bg-accent-950/80 border border-accent-900/60 text-accent-400 px-2 py-0.5 rounded shrink-0">
                               {f.pageCount} pages
                             </span>
                           </div>
@@ -831,7 +831,7 @@ export default function UploadCourse() {
                                 });
                               }
                             }}
-                            className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-900 file:text-indigo-400 hover:file:bg-slate-800 cursor-pointer"
+                            className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-900 file:text-accent-400 hover:file:bg-slate-800 cursor-pointer"
                             required={!editCourse}
                           />
                         </div>
@@ -843,7 +843,7 @@ export default function UploadCourse() {
                 <button
                   type="button"
                   onClick={handleAddFileSlot}
-                  className="w-full py-2 bg-slate-950/60 hover:bg-slate-900 border border-dashed border-slate-800 hover:border-slate-700 text-indigo-400 hover:text-indigo-300 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full py-2 bg-slate-950/60 hover:bg-slate-900 border border-dashed border-slate-800 hover:border-slate-700 text-accent-400 hover:text-accent-300 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Add Another PDF File
@@ -859,7 +859,7 @@ export default function UploadCourse() {
                   </div>
                   <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
                     <div 
-                      className="bg-indigo-500 h-2.5 rounded-full transition-all duration-300 ease-out" 
+                      className="bg-accent-500 h-2.5 rounded-full transition-all duration-300 ease-out" 
                       style={{ width: `${uploadProgress}%` }}
                     ></div>
                   </div>
@@ -907,13 +907,13 @@ export default function UploadCourse() {
             className={`px-4 py-3 rounded-xl shadow-2xl border text-xs font-bold pointer-events-auto flex items-center gap-2.5 animate-bounce ${
               toast.type === 'error'
                 ? 'bg-rose-950/95 border-rose-900/50 text-rose-200'
-                : 'bg-indigo-950/95 border-indigo-900/50 text-indigo-200'
+                : 'bg-accent-950/95 border-accent-900/50 text-accent-200'
             }`}
           >
             {toast.type === 'error' ? (
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-rose-400"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-indigo-400"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-accent-400"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
             )}
             <span>{toast.message}</span>
           </div>

@@ -77,7 +77,7 @@ export default function DisplayUPSCQuestions() {
             placeholder="Search questions or tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-indigo-500 transition-all font-semibold shadow-sm"
+            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-accent-500 transition-all font-semibold shadow-sm"
           />
         </div>
       </div>
@@ -109,7 +109,7 @@ export default function DisplayUPSCQuestions() {
                   <div
                     key={q._id}
                     onClick={() => handleSelectQuestion(q)}
-                    className={`p-4 border rounded-xl cursor-pointer transition-all duration-200 hover:border-slate-350 hover:shadow-sm ${isSelected ? 'border-indigo-650 bg-indigo-50/20 ring-1 ring-indigo-500/20' : 'border-slate-200/80 bg-white'}`}
+                    className={`p-4 border rounded-xl cursor-pointer transition-all duration-200 hover:border-slate-350 hover:shadow-sm ${isSelected ? 'border-accent-650 bg-accent-50/20 ring-1 ring-accent-500/20' : 'border-slate-200/80 bg-white'}`}
                   >
                     {/* Tags */}
                     <div className="flex flex-wrap gap-1 mb-2.5">
@@ -133,7 +133,7 @@ export default function DisplayUPSCQuestions() {
                     {/* Bottom Metadata */}
                     <div className="flex items-center justify-between mt-3 text-[9px] text-slate-400 font-semibold">
                       <span>Pages {q.start_page}-{q.end_page}</span>
-                      <span className="flex items-center gap-1 text-indigo-650 font-bold">
+                      <span className="flex items-center gap-1 text-accent-650 font-bold">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                         {q.file_urls?.length || 0} sheets
                       </span>
@@ -193,14 +193,14 @@ export default function DisplayUPSCQuestions() {
                               <div
                                 key={i}
                                 onClick={() => handleSelectTopper(topper)}
-                                className={`p-4 border rounded-xl cursor-pointer transition-all hover:border-slate-350 hover:bg-slate-50/50 flex flex-col justify-between gap-3 ${isSelectedTopper ? 'border-indigo-650 bg-indigo-50/10' : 'border-slate-150'}`}
+                                className={`p-4 border rounded-xl cursor-pointer transition-all hover:border-slate-350 hover:bg-slate-50/50 flex flex-col justify-between gap-3 ${isSelectedTopper ? 'border-accent-650 bg-accent-50/10' : 'border-slate-150'}`}
                               >
                                 <div className="flex items-start justify-between">
                                   <div>
                                     <h4 className="text-xs font-extrabold text-slate-800">{topper.topper_name || 'Anonymous Topper'}</h4>
                                     <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Year: {topper.topper_year || 'N/A'} | Rank: {topper.topper_rank || 'N/A'}</p>
                                   </div>
-                                  <div className="bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded">
+                                  <div className="bg-accent-50 border border-accent-100 text-accent-700 text-[10px] font-bold px-2 py-0.5 rounded">
                                     {topper.topper_marks ? `${topper.topper_marks} Marks` : 'N/A'}
                                   </div>
                                 </div>
@@ -210,7 +210,7 @@ export default function DisplayUPSCQuestions() {
                                     e.stopPropagation();
                                     handleSelectTopper(topper);
                                   }}
-                                  className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                                  className="w-full py-1.5 bg-accent-600 hover:bg-accent-500 text-white rounded-lg text-[10px] font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                                 >
                                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
                                   Preview Answer Copy
@@ -237,7 +237,7 @@ export default function DisplayUPSCQuestions() {
               <div className="bg-slate-50/50 border-b border-slate-100 px-4 py-3 flex items-center justify-between flex-shrink-0">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Answer Sheet Preview</span>
                 {selectedTopper && (
-                  <span className="text-[10px] font-bold text-indigo-650 bg-indigo-50 border border-indigo-100 rounded px-2 py-0.5 max-w-[120px] truncate">
+                  <span className="text-[10px] font-bold text-accent-650 bg-accent-50 border border-accent-100 rounded px-2 py-0.5 max-w-[120px] truncate">
                     {selectedTopper.topper_name}
                   </span>
                 )}

@@ -739,7 +739,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       <div className="mb-6 md:mb-10 border-b border-slate-800/80 pb-4 md:pb-6">
         <h1 className="text-lg md:text-3xl font-extrabold text-white tracking-tight flex flex-wrap items-center gap-x-1.5 md:gap-x-2 gap-y-0.5 md:gap-y-1">
           <span>{getGreeting()},</span>
-          <span className="bg-gradient-to-r from-indigo-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent capitalize">
+          <span className="bg-gradient-to-r from-accent-400 via-accent-300 to-purple-400 bg-clip-text text-transparent capitalize">
             {currentUser?.fullName?.split(' ')[0] || currentUser?.name || 'Scholar'}
           </span>
         </h1>
@@ -747,12 +747,12 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       </div>
 
       {/* Profile summary banner */}
-      <div className="bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-indigo-950/15 border border-slate-800/70 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-xl mb-6 md:mb-10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-accent-950/15 border border-slate-800/70 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-xl mb-6 md:mb-10 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-accent-500/5 rounded-full blur-3xl pointer-events-none"></div>
         <div className="space-y-3 md:space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 md:gap-2.5">
-              <div className="p-1 md:p-1.5 bg-indigo-550/10 border border-indigo-900/40 text-indigo-400 rounded-md md:rounded-lg">
+              <div className="p-1 md:p-1.5 bg-accent-550/10 border border-accent-900/40 text-accent-400 rounded-md md:rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 md:w-4 md:h-4"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
               </div>
               <h2 className="text-[10px] md:text-xs font-bold text-slate-350 uppercase tracking-wider md:tracking-widest">My Enrolled Courses</h2>
@@ -774,9 +774,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                 return (
                   <div 
                     key={index}
-                    className="group/pill relative flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-slate-950/60 hover:bg-indigo-950/20 border border-slate-850 hover:border-indigo-500/30 rounded-lg md:rounded-xl text-[10px] md:text-xs text-indigo-300 hover:text-indigo-250 font-bold shadow-sm transition-all duration-300 cursor-default hover:scale-[1.02]"
+                    className="group/pill relative flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-slate-950/60 hover:bg-accent-950/20 border border-slate-850 hover:border-accent-500/30 rounded-lg md:rounded-xl text-[10px] md:text-xs text-accent-300 hover:text-accent-250 font-bold shadow-sm transition-all duration-300 cursor-default hover:scale-[1.02]"
                   >
-                    <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full group-hover/pill:bg-indigo-400 transition-colors"></span>
+                    <span className="w-1.5 h-1.5 bg-accent-500 rounded-full group-hover/pill:bg-accent-400 transition-colors"></span>
                     <span>{courseId}</span>
                     {courseDetail && (
                       <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 md:w-56 hidden group-hover/pill:block bg-slate-950 border border-slate-800 text-[9px] md:text-[10px] text-slate-400 rounded-lg p-2 md:p-2.5 shadow-2xl z-30 leading-normal pointer-events-none text-center">
@@ -830,7 +830,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                   key={course._id}
                   onMouseMove={handleMouseMove}
                   style={{ '--mouse-x': '0px', '--mouse-y': '0px' }}
-                  className="course-card relative overflow-hidden bg-slate-900/40 backdrop-blur-md border border-slate-800/80 hover:border-slate-700/60 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-md flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.35)] hover:shadow-indigo-950/10 transition-all duration-300 transform hover:-translate-y-0.5 before:absolute before:inset-0 before:z-0 before:pointer-events-none before:rounded-xl md:before:rounded-2xl before:bg-[radial-gradient(400px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(99,102,241,0.06),transparent_60%)]"
+                  className="course-card relative overflow-hidden bg-slate-900/40 backdrop-blur-md border border-slate-800/80 hover:border-slate-700/60 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-md flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.35)] hover:shadow-accent-950/10 transition-all duration-300 transform hover:-translate-y-0.5 before:absolute before:inset-0 before:z-0 before:pointer-events-none before:rounded-xl md:before:rounded-2xl before:bg-[radial-gradient(400px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(139,92,246,0.06),transparent_60%)]"
                 >
                   <div className="relative z-10 flex-grow flex flex-col justify-between space-y-4">
                     <div>
@@ -842,9 +842,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                       {/* Password Info */}
                       <p className="text-[10px] md:text-xs text-slate-400 mt-1 md:mt-2 font-medium tracking-wide">
                         PDF password: {currentUser?.mobileNumber ? (
-                          <span className="text-indigo-400 font-bold">{currentUser.mobileNumber.replace(/\D/g, '').slice(-10)}</span>
+                          <span className="text-accent-400 font-bold">{currentUser.mobileNumber.replace(/\D/g, '').slice(-10)}</span>
                         ) : (
-                          <span className="text-indigo-400/60 italic font-semibold">your contact number (without +91)</span>
+                          <span className="text-accent-400/60 italic font-semibold">your contact number (without +91)</span>
                         )}
                       </p>
                     </div>
@@ -891,7 +891,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                   ) : (
                                     <button
                                       onClick={() => handleOpenRequestModal(compositeId, `${course.name} - ${fileDisplayName}`)}
-                                      className="px-3 py-1 bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-850/80 text-indigo-400 rounded-lg text-[10px] font-bold transition duration-200 cursor-pointer whitespace-nowrap"
+                                      className="px-3 py-1 bg-accent-950/40 hover:bg-accent-900/40 border border-accent-850/80 text-accent-400 rounded-lg text-[10px] font-bold transition duration-200 cursor-pointer whitespace-nowrap"
                                     >
                                       request download
                                     </button>
@@ -940,7 +940,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                       console.log(`[UI Click] Clicked download for composite: ${compositeId}`);
                                       handleDownload(course.courseId, course.name, idx);
                                     }}
-                                    className="w-full inline-flex items-center justify-center gap-1 py-1.5 bg-indigo-600 hover:bg-indigo-550 text-white rounded-lg text-[10px] font-bold transition shadow cursor-pointer"
+                                    className="w-full inline-flex items-center justify-center gap-1 py-1.5 bg-accent-600 hover:bg-accent-550 text-white rounded-lg text-[10px] font-bold transition shadow cursor-pointer"
                                   >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                     Download PDF
@@ -969,7 +969,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
               href="https://t.me/tdhadmin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-950/45 border border-indigo-900/60 text-indigo-400 hover:text-indigo-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-950/45 border border-accent-900/60 text-accent-400 hover:text-accent-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
             >
               Telegram App (Mobile)
             </a>
@@ -978,7 +978,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
               href="https://web.telegram.org/k/#@tdhadmin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-950/45 border border-indigo-900/60 text-indigo-400 hover:text-indigo-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-950/45 border border-accent-900/60 text-accent-400 hover:text-accent-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
             >
               Telegram Web
             </a>
@@ -992,7 +992,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
           <div className="bg-slate-900 border border-slate-800 rounded-xl md:rounded-2xl w-full max-w-md p-4 md:p-6 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-sm md:text-base font-extrabold text-white mb-1.5 md:mb-2">Request Additional Download</h3>
             <p className="text-[10px] md:text-xs text-slate-400 mb-3 md:mb-4 font-medium">
-              Please specify a reason for requesting another download of <span className="text-indigo-400 font-bold">{requestModalCourseName}</span>.
+              Please specify a reason for requesting another download of <span className="text-accent-400 font-bold">{requestModalCourseName}</span>.
             </p>
             
             {requestErrorMsg && (
@@ -1002,7 +1002,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
             )}
 
             <textarea
-              className="w-full h-20 md:h-24 bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-lg md:rounded-xl p-2.5 md:p-3 text-[11px] md:text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all duration-200 placeholder:text-slate-600 resize-none"
+              className="w-full h-20 md:h-24 bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-lg md:rounded-xl p-2.5 md:p-3 text-[11px] md:text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition-all duration-200 placeholder:text-slate-600 resize-none"
               placeholder="Type your reason here... (reason cannot be empty)"
               value={requestReason}
               onChange={(e) => {
@@ -1024,7 +1024,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
               </button>
               <button
                 onClick={handleSubmitRequest}
-                className="px-3 py-1.5 md:px-4 md:py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold transition shadow-md hover:shadow-indigo-950/20 cursor-pointer"
+                className="px-3 py-1.5 md:px-4 md:py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold transition shadow-md hover:shadow-accent-950/20 cursor-pointer"
               >
                 send
               </button>
@@ -1041,7 +1041,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
             {/* Header */}
             <div className="flex justify-between items-start mb-5 pb-3 border-b border-slate-800">
               <div>
-                <span className="text-[9px] font-bold text-indigo-400 bg-indigo-950 border border-indigo-900 rounded px-1.5 py-0.5 uppercase tracking-wide">
+                <span className="text-[9px] font-bold text-accent-400 bg-accent-950 border border-accent-900 rounded px-1.5 py-0.5 uppercase tracking-wide">
                   Account Verification
                 </span>
                 <h3 className="text-base md:text-lg font-extrabold text-white mt-1.5 leading-snug">
@@ -1075,14 +1075,14 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input
                     type="text"
-                    className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                    className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition"
                     placeholder="First Name (e.g. Rahul)"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value.replace(/\s/g, ''))}
                   />
                   <input
                     type="text"
-                    className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                    className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition"
                     placeholder="Last Name (e.g. Sharma)"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value.replace(/\s/g, ''))}
@@ -1099,7 +1099,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                   <span className="absolute left-4 top-2.5 text-xs font-bold text-slate-500">@</span>
                   <input
                     type="text"
-                    className="w-full bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl pl-8 pr-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                    className="w-full bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-xl pl-8 pr-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition"
                     placeholder="username"
                     value={telegramUsername}
                     onChange={(e) => setTelegramUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
@@ -1128,7 +1128,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                 ) : (
                   <div className="space-y-2.5 border border-slate-800 bg-slate-950/40 rounded-xl p-3.5 mt-2">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-indigo-550/15 border border-indigo-900/40 text-indigo-400 rounded-lg">
+                      <div className="p-1.5 bg-accent-550/15 border border-accent-900/40 text-accent-400 rounded-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       </div>
                       <div>
@@ -1150,7 +1150,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                             setOtpError('');
                             setOtpSent(false);
                           }}
-                          className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold underline cursor-pointer block text-center w-full"
+                          className="text-[10px] text-accent-400 hover:text-accent-300 font-bold underline cursor-pointer block text-center w-full"
                         >
                           Bypass Phone Verification (Dev Mode)
                         </button>
@@ -1169,7 +1169,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                           <input
                             type="tel"
                             disabled={otpSent}
-                            className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition disabled:opacity-50"
+                            className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition disabled:opacity-50"
                             placeholder="Phone Number (e.g. +918253085278)"
                             value={mobileNumber}
                             onChange={(e) => setMobileNumber(e.target.value)}
@@ -1178,7 +1178,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                             type="button"
                             onClick={handleSendOtp}
                             disabled={isOtpGenerating || otpSent || !mobileNumber.trim()}
-                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-550 disabled:bg-slate-850 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
+                            className="px-4 py-2 bg-accent-600 hover:bg-accent-550 disabled:bg-slate-850 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
                           >
                             {isOtpGenerating ? 'Sending...' : otpSent ? 'SMS Sent' : 'Send OTP'}
                           </button>
@@ -1193,7 +1193,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                             <input
                               type="text"
                               maxLength={6}
-                              className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-indigo-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+                              className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition"
                               placeholder="Enter 6-Digit OTP Code"
                               value={otpCode}
                               onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
@@ -1226,7 +1226,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-550 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+                  className="px-6 py-2 bg-accent-600 hover:bg-accent-550 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer flex items-center justify-center gap-1.5"
                   disabled={
                     profileSubmitting ||
                     !firstName.trim() ||

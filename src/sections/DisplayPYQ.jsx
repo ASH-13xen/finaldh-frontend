@@ -93,7 +93,7 @@ export default function DisplayPYQ() {
               id="filter-subject"
               value={selectedSubject}
               onChange={(e) => setSelectedSubject(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-accent-500 transition-all font-semibold"
             >
               <option value="ALL">All Subjects</option>
               <optgroup label="General Studies Modules">
@@ -118,7 +118,7 @@ export default function DisplayPYQ() {
               placeholder="Search keyword, tag..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-accent-500 transition-all font-semibold"
             />
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function DisplayPYQ() {
                 <div className="space-y-3">
                   {/* Card Badges */}
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[9px] font-bold text-indigo-650 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5 uppercase tracking-wide">
+                    <span className="text-[9px] font-bold text-accent-650 bg-accent-50 border border-accent-100 rounded px-1.5 py-0.5 uppercase tracking-wide">
                       {displayName}
                     </span>
                     <span className="text-[9px] font-bold text-slate-500 bg-slate-50 border border-slate-150 rounded px-1.5 py-0.5 uppercase tracking-wide">

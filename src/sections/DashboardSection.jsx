@@ -12,6 +12,9 @@ import PYQRecommender from './PYQRecommender';
 import PDFEditor from './PDFEditor';
 import PurchaseCourses from './PurchaseCourses';
 import AdminPurchases from './AdminPurchases';
+import AdminProgressData from './AdminProgressData';
+import ComingSoon from './ComingSoon';
+import AdminMcqData from './AdminMcqData';
 
 export default function DashboardSection({ user, onLogout, activeTab, setActiveTab, onUserUpdate }) {
   const [syllabusData, setSyllabusData] = useState(null);
@@ -105,6 +108,22 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'admin_purchases' && (
           <AdminPurchases />
+        )}
+
+        {activeTab === 'progress' && (
+          <ComingSoon title="Progress" onBack={() => setActiveTab(user?.isAdmin ? 'manage_courses' : 'student')} />
+        )}
+
+        {activeTab === 'admin_progress_data' && (
+          <AdminProgressData />
+        )}
+
+        {activeTab?.startsWith('mcq_') && (
+          <ComingSoon title="MCQ Tests" onBack={() => setActiveTab(user?.isAdmin ? 'manage_courses' : 'student')} />
+        )}
+
+        {activeTab === 'admin_mcq_data' && (
+          <AdminMcqData />
         )}
       </main>
     </div>

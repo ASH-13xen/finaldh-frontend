@@ -91,7 +91,7 @@ export default function AdminPurchases() {
         <div>
           <h1 className="text-xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
             Course Purchase Requests
-            <span className="px-2.5 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-black rounded-full uppercase tracking-wider">
+            <span className="px-2.5 py-0.5 bg-accent-500/10 border border-accent-500/20 text-accent-400 text-xs font-black rounded-full uppercase tracking-wider">
               Verification Desk
             </span>
           </h1>
@@ -118,7 +118,7 @@ export default function AdminPurchases() {
             <button
               key={tab}
               onClick={() => setFilterTab(tab)}
-              className={`pb-3 text-xs md:text-sm font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${filterTab === tab ? 'border-indigo-550 text-indigo-400 font-extrabold' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+              className={`pb-3 text-xs md:text-sm font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-all ${filterTab === tab ? 'border-accent-550 text-accent-400 font-extrabold' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
             >
               {tab} ({count})
             </button>
@@ -169,7 +169,7 @@ export default function AdminPurchases() {
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-400 font-medium">Course ID:</span>
-                    <span className="text-indigo-400 font-extrabold uppercase">{req.courseId}</span>
+                    <span className="text-accent-400 font-extrabold uppercase">{req.courseId}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-400 font-medium">Price:</span>
@@ -197,7 +197,7 @@ export default function AdminPurchases() {
                   <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider block">Receipt Screenshot</span>
                   <div 
                     onClick={() => setLightboxImage(req.screenshotUrl)}
-                    className="relative group overflow-hidden border border-slate-800 hover:border-indigo-500/50 rounded-xl aspect-[16/9] bg-slate-950 flex items-center justify-center cursor-zoom-in"
+                    className="relative group overflow-hidden border border-slate-800 hover:border-accent-500/50 rounded-xl aspect-[16/9] bg-slate-950 flex items-center justify-center cursor-zoom-in"
                   >
                     <img 
                       src={getImageUrl(req.screenshotUrl)} 
@@ -232,7 +232,7 @@ export default function AdminPurchases() {
                     <button
                       onClick={() => handleAction(req._id, 'approve')}
                       disabled={processingId === req._id}
-                      className="px-4 py-1.5 bg-indigo-650 hover:bg-indigo-500 disabled:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-md hover:shadow-indigo-950/20 disabled:text-slate-500 cursor-pointer flex items-center gap-1"
+                      className="px-4 py-1.5 bg-accent-650 hover:bg-accent-500 disabled:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-md hover:shadow-accent-950/20 disabled:text-slate-500 cursor-pointer flex items-center gap-1"
                     >
                       {processingId === req._id ? 'Processing...' : (
                         <>

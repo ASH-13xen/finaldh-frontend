@@ -36,7 +36,7 @@ export default function ProgressUpdater({ syllabusData, refreshSyllabus }) {
   if (!syllabusData || !syllabusData.optionalSubject) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-73px)] text-center p-4">
-        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border border-indigo-100 mb-4">
+        <div className="w-12 h-12 bg-accent-50 text-accent-600 rounded-xl flex items-center justify-center border border-accent-100 mb-4">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         </div>
         <h3 className="font-bold text-slate-900">Syllabus Tracker Inactive</h3>
@@ -149,7 +149,7 @@ export default function ProgressUpdater({ syllabusData, refreshSyllabus }) {
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-md px-2 py-0.5 uppercase tracking-wide">{sub.name}</span>
+                    <span className="text-[10px] font-bold text-accent-600 bg-accent-50 border border-accent-100 rounded-md px-2 py-0.5 uppercase tracking-wide">{sub.name}</span>
                     <span className="text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-100 rounded-md px-2 py-0.5 uppercase tracking-wide">{completed} / {total} Completed</span>
                   </div>
                   <h3 className="font-extrabold text-slate-905 text-base">{sub.fullName}</h3>
@@ -184,7 +184,7 @@ export default function ProgressUpdater({ syllabusData, refreshSyllabus }) {
                               <span className="text-xs font-semibold leading-relaxed max-w-[85%]">{top.title}</span>
                               <div className="flex items-center justify-center w-5 h-5 flex-shrink-0">
                                 {isUpdating ? (
-                                  <div className="w-3.5 h-3.5 border-2 border-indigo-200 border-t-indigo-650 rounded-full animate-spin"></div>
+                                  <div className="w-3.5 h-3.5 border-2 border-accent-200 border-t-accent-650 rounded-full animate-spin"></div>
                                 ) : top.isCompleted ? (
                                   <div className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center border border-emerald-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>

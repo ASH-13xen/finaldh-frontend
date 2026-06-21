@@ -108,11 +108,11 @@ export default function BuyCourses({ onRedirectToLogin }) {
             return (
               <div
                 key={course._id}
-                className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 hover:border-slate-700 transition-all duration-200"
+                className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 hover:border-slate-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
               >
                 {/* Header */}
                 <div className="space-y-2">
-                  <span className="text-[9px] font-bold text-indigo-400 bg-indigo-950/50 border border-indigo-900/50 rounded px-1.5 py-0.5 uppercase tracking-wide w-fit block">
+                  <span className="text-[9px] font-bold text-accent-400 bg-accent-950/50 border border-accent-900/50 rounded px-1.5 py-0.5 uppercase tracking-wide w-fit block">
                     {subjectDisplay}
                   </span>
                   <h3 className="text-sm font-bold text-slate-100 leading-snug">
@@ -150,7 +150,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
                   <div>
                     {course.useDiscount ? (
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-base font-extrabold text-indigo-400">₹{course.discountedPrice}</span>
+                        <span className="text-base font-extrabold text-accent-400">₹{course.discountedPrice}</span>
                         <span className="text-[10px] text-slate-500 line-through">₹{course.price}</span>
                       </div>
                     ) : (
@@ -159,7 +159,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
                   </div>
                   <button
                     onClick={onRedirectToLogin}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
                     Sign In to Purchase
@@ -176,7 +176,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
         {/* Header bar */}
         <div className="px-6 py-4 flex items-center justify-between border-b border-slate-800 bg-slate-900/60">
           <div className="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-indigo-400"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-accent-400"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
             <span className="text-sm font-bold text-slate-200">Sociology Paper 1 — Free Sample</span>
             {numPages && (
               <span className="text-[10px] text-slate-500 font-medium">({numPages} pages)</span>
@@ -222,7 +222,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
             <div className="flex flex-col items-center justify-center gap-3 text-slate-500 py-16">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-10 h-10"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12.01" y2="18"/><line x1="12" y1="12" x2="12" y2="14"/></svg>
               <p className="text-sm font-semibold">Could not load PDF preview</p>
-              <a href={SAMPLE_PDF} download className="text-indigo-400 hover:text-indigo-300 text-xs font-bold underline">Download instead</a>
+              <a href={SAMPLE_PDF} download className="text-accent-400 hover:text-accent-300 text-xs font-bold underline">Download instead</a>
             </div>
           ) : (
             <Document
@@ -231,7 +231,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
               onLoadError={() => setPdfError(true)}
               loading={
                 <div className="flex flex-col items-center justify-center gap-3 py-20">
-                  <div className="w-8 h-8 border-4 border-slate-700 border-t-indigo-500 rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-4 border-slate-700 border-t-accent-500 rounded-full animate-spin" />
                   <p className="text-xs text-slate-500 font-medium">Loading sample PDF...</p>
                 </div>
               }
@@ -256,7 +256,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
               href="https://t.me/tdhadmin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-950/45 border border-indigo-900/60 text-indigo-400 hover:text-indigo-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-950/45 border border-accent-900/60 text-accent-400 hover:text-accent-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
             >
               Telegram App (Mobile)
             </a>
@@ -265,7 +265,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
               href="https://web.telegram.org/k/#@tdhadmin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-950/45 border border-indigo-900/60 text-indigo-400 hover:text-indigo-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-950/45 border border-accent-900/60 text-accent-400 hover:text-accent-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
             >
               Telegram Web
             </a>

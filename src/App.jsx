@@ -168,7 +168,7 @@ function App() {
             Study Portal
           </span>
         </div>
-        <div className="w-10 h-10 border-4 border-slate-800 border-t-indigo-500 rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-slate-800 border-t-accent-500 rounded-full animate-spin" />
         <div className="flex flex-col items-center gap-1">
           <p className="text-sm font-semibold text-slate-300 animate-pulse">
             Verifying user...

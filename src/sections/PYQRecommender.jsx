@@ -301,14 +301,14 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-73px)] bg-slate-50 px-4">
         <div className="w-full max-w-md bg-white border border-slate-200/80 rounded-2xl p-8 shadow-sm text-center">
-          <div className="flex items-center justify-center w-12 h-12 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-xl mx-auto mb-6">
+          <div className="flex items-center justify-center w-12 h-12 bg-accent-50 border border-accent-100 text-accent-600 rounded-xl mx-auto mb-6">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           </div>
           <h2 className="text-xl font-bold text-slate-900 leading-snug">No Purchased Courses</h2>
           <p className="text-sm text-slate-500 mt-2 font-medium">You need to purchase a study package before using the AI PDF Analyzer and PYQ Recommender.</p>
           <button 
             onClick={onRedirectToBuy} 
-            className="mt-6 w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+            className="mt-6 w-full py-2.5 bg-accent-600 hover:bg-accent-500 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
           >
             Visit Marketplace
           </button>
@@ -323,7 +323,7 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
       <div className="w-full max-w-7xl mx-auto px-6 py-10 md:py-14 flex flex-col gap-8">
         <div className="border-b border-slate-100 pb-5">
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6 text-indigo-650"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6 text-accent-650"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
             PDF Analyzer & PYQ Recommender
           </h1>
           <p className="text-slate-500 text-sm mt-1.5 font-medium">Select a purchased study package to open in the interactive workspace and start analyzing questions page-by-page.</p>
@@ -336,7 +336,7 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
             return (
               <div 
                 key={course._id} 
-                className="bg-white border border-slate-200 hover:border-indigo-400 rounded-2xl p-6 flex flex-col justify-between hover:shadow-md transition-all duration-300 group cursor-pointer"
+                className="bg-white border border-slate-200 hover:border-accent-400 rounded-2xl p-6 flex flex-col justify-between hover:shadow-md transition-all duration-300 group cursor-pointer"
                 onClick={() => {
                   setActiveCourse(course);
                   setPageInput('1');
@@ -348,16 +348,16 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-indigo-650 bg-indigo-50 border border-indigo-100 rounded px-2.5 py-0.5 uppercase tracking-wide">
+                    <span className="text-[9px] font-bold text-accent-650 bg-accent-50 border border-accent-100 rounded px-2.5 py-0.5 uppercase tracking-wide">
                       {course.subject}
                     </span>
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+                    <div className="w-8 h-8 rounded-lg bg-accent-50 border border-accent-100 flex items-center justify-center text-accent-600 group-hover:bg-accent-600 group-hover:text-white transition-all duration-300">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     </div>
                   </div>
                   
                   <div className="space-y-1.5">
-                    <h3 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors leading-relaxed line-clamp-2">
+                    <h3 className="font-bold text-slate-900 text-sm group-hover:text-accent-600 transition-colors leading-relaxed line-clamp-2">
                       {course.name || course.fileName}
                     </h3>
                     <p className="text-[10px] text-slate-400 font-medium truncate">
@@ -368,7 +368,7 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
 
                 <div className="pt-6 mt-6 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-[10px] text-slate-450 font-semibold uppercase">PDF E-Book</span>
-                  <span className="text-xs font-bold text-indigo-650 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                  <span className="text-xs font-bold text-accent-650 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
                     Analyze Course
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                   </span>
@@ -389,7 +389,7 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6 text-indigo-600"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6 text-accent-600"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
             PYQ Recommender
           </h1>
           <p className="text-slate-500 text-sm mt-1 font-medium">Read textbook PDFs and get real-time PYQ recommendations from same syllabus topics.</p>
@@ -441,7 +441,7 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
         <div className="lg:col-span-4 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col gap-6 h-[720px] overflow-y-auto">
           <div>
             <h2 className="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-indigo-650"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-accent-650"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               AI Insights & PYQs
             </h2>
             <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Syllabus tagging and related past exam questions.</p>
@@ -472,14 +472,14 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
           {analysisResult && (
             <div className="space-y-6 flex-grow flex flex-col justify-start">
               {/* Identified Concept */}
-              <div className="p-4 bg-indigo-50/50 border border-indigo-100/60 rounded-xl space-y-2">
-                <span className="text-[9px] font-bold text-indigo-700 uppercase tracking-wider bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5">Identified Topic</span>
+              <div className="p-4 bg-accent-50/50 border border-accent-100/60 rounded-xl space-y-2">
+                <span className="text-[9px] font-bold text-accent-700 uppercase tracking-wider bg-accent-50 border border-accent-100 rounded px-1.5 py-0.5">Identified Topic</span>
                 <h4 className="text-xs font-bold text-slate-800 leading-relaxed">
                   {analysisResult.questionText}
                 </h4>
-                <div className="pt-2 flex flex-wrap gap-2 text-[9px] font-bold text-indigo-900">
-                  <span className="bg-white border border-indigo-100 rounded px-2 py-0.5 truncate max-w-[150px]" title={analysisResult.section}>SEC: {analysisResult.section}</span>
-                  <span className="bg-white border border-indigo-100 rounded px-2 py-0.5 truncate max-w-[150px]" title={analysisResult.title}>TOPIC: {analysisResult.title}</span>
+                <div className="pt-2 flex flex-wrap gap-2 text-[9px] font-bold text-accent-900">
+                  <span className="bg-white border border-accent-100 rounded px-2 py-0.5 truncate max-w-[150px]" title={analysisResult.section}>SEC: {analysisResult.section}</span>
+                  <span className="bg-white border border-accent-100 rounded px-2 py-0.5 truncate max-w-[150px]" title={analysisResult.title}>TOPIC: {analysisResult.title}</span>
                 </div>
               </div>
 
@@ -503,9 +503,9 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
                 ) : (
                   <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
                     {recommendedQuestions.map((q) => (
-                      <div key={q._id} className="p-3 bg-slate-55/35 border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-white hover:shadow-sm transition-all duration-300 space-y-2 text-xs">
+                      <div key={q._id} className="p-3 bg-slate-55/35 border border-slate-200 rounded-xl hover:border-accent-300 hover:bg-white hover:shadow-sm transition-all duration-300 space-y-2 text-xs">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[8px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.2">
+                          <span className="text-[8px] font-bold text-accent-700 bg-accent-50 border border-accent-100 rounded px-1.5 py-0.2">
                             {q.subject}
                           </span>
                           <span className="text-[8px] font-semibold text-slate-450 bg-slate-50 border border-slate-150 rounded px-1 py-0.2">
@@ -572,7 +572,7 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
                   pattern="[0-9]*"
                   value={pageInput} 
                   onChange={(e) => setPageInput(e.target.value.replace(/\D/g,''))}
-                  className="w-12 text-center bg-slate-50 border border-slate-200 rounded-lg py-1 px-1.5 focus:outline-none focus:border-indigo-500 font-semibold"
+                  className="w-12 text-center bg-slate-50 border border-slate-200 rounded-lg py-1 px-1.5 focus:outline-none focus:border-accent-500 font-semibold"
                 />
                 <button 
                   type="submit"
@@ -607,7 +607,7 @@ export default function PYQRecommender({ selectedCourseId, onRedirectToBuy }) {
                 type="button"
                 onClick={handleAnalyzePage}
                 disabled={analyzing}
-                className="ml-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-350 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5 animate-pulse hover:animate-none"
+                className="ml-2 px-4 py-1.5 bg-accent-600 hover:bg-accent-500 disabled:bg-accent-350 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5 animate-pulse hover:animate-none"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/></svg>
                 {analyzing ? 'Understanding...' : 'Understand it deeply'}

@@ -28,7 +28,7 @@ export default function DownloadProgressBar({ step, isDownloading, downloadPerce
   return (
     <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden mt-1 border border-slate-800/80">
       <div 
-        className="bg-gradient-to-r from-indigo-500 to-indigo-400 h-2 rounded-full transition-all duration-350" 
+        className="bg-gradient-to-r from-accent-500 to-accent-400 h-2 rounded-full transition-all duration-350" 
         style={{ width: `${progressPercent}%` }}
       ></div>
     </div>

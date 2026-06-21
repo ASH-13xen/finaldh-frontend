@@ -145,7 +145,7 @@ export default function QuestionUploader({ syllabusData }) {
                 id="subject-select"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-705 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-705 focus:outline-none focus:border-accent-500 transition-all font-semibold"
               >
                 <option value="">Select subject...</option>
                 {availableSubjects.map((sub) => (
@@ -164,7 +164,7 @@ export default function QuestionUploader({ syllabusData }) {
                 onChange={(e) => setYear(Number(e.target.value))}
                 min="1990"
                 max="2030"
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-accent-500 transition-all font-semibold"
               />
             </div>
 
@@ -176,7 +176,7 @@ export default function QuestionUploader({ syllabusData }) {
                 type="file"
                 accept=".pdf"
                 onChange={(e) => setFile(e.target.files[0])}
-                className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-accent-50 file:text-accent-700 hover:file:bg-accent-100 cursor-pointer"
               />
             </div>
 
@@ -228,13 +228,13 @@ export default function QuestionUploader({ syllabusData }) {
                   <div key={q._id} className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4 hover:border-slate-300 transition-all">
                     {/* Header tags */}
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[9px] font-bold text-indigo-650 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5 uppercase tracking-wide">
+                      <span className="text-[9px] font-bold text-accent-650 bg-accent-50 border border-accent-100 rounded px-1.5 py-0.5 uppercase tracking-wide">
                         {displayName}
                       </span>
                       <span className="text-[9px] font-bold text-slate-500 bg-slate-50 border border-slate-150 rounded px-1.5 py-0.5 uppercase tracking-wide">
                         Year {q.year}
                       </span>
-                      <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50/40 border border-indigo-100/60 rounded px-1.5 py-0.5 tracking-wide">
+                      <span className="text-[9px] font-bold text-accent-500 bg-accent-50/40 border border-accent-100/60 rounded px-1.5 py-0.5 tracking-wide">
                         Section: {q.tags?.section || 'General'}
                       </span>
                       <span className="text-[9px] font-bold text-slate-600 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 tracking-wide truncate max-w-[200px]">

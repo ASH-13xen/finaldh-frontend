@@ -544,7 +544,7 @@ export default function PDFEditor() {
       <div className="w-full max-w-4xl mx-auto px-6 py-12 md:py-16 flex flex-col gap-8 animate-fadeIn">
         <div className="border-b border-slate-200 pb-5">
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6 text-indigo-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6 text-accent-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             AI PDF Editor
           </h1>
           <p className="text-slate-500 text-sm mt-1.5 font-medium">Load purchased courses or upload custom PDF sheets to strip out question prefixes and center-align cleaned question text without altering backgrounds.</p>
@@ -564,9 +564,9 @@ export default function PDFEditor() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Option A */}
-            <div className="bg-white border border-slate-200/80 hover:border-indigo-400 rounded-2xl p-8 shadow-sm flex flex-col justify-between transition duration-300">
+            <div className="bg-white border border-slate-200/80 hover:border-accent-400 rounded-2xl p-8 shadow-sm flex flex-col justify-between transition duration-300">
               <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-650">
+                <div className="w-12 h-12 rounded-xl bg-accent-50 border border-accent-100 flex items-center justify-center text-accent-650">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                 </div>
                 <div>
@@ -587,7 +587,7 @@ export default function PDFEditor() {
                       id="course-select-editor"
                       onChange={(e) => handleSelectCourse(e.target.value)}
                       defaultValue=""
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold focus:outline-none focus:border-accent-500 cursor-pointer"
                     >
                       <option value="" disabled>Choose a course e-book...</option>
                       {purchasedCourses.map((c) => (
@@ -600,9 +600,9 @@ export default function PDFEditor() {
             </div>
 
             {/* Option B */}
-            <div className="bg-white border border-slate-200/80 hover:border-indigo-400 rounded-2xl p-8 shadow-sm flex flex-col justify-between transition duration-300">
+            <div className="bg-white border border-slate-200/80 hover:border-accent-400 rounded-2xl p-8 shadow-sm flex flex-col justify-between transition duration-300">
               <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-650">
+                <div className="w-12 h-12 rounded-xl bg-accent-50 border border-accent-100 flex items-center justify-center text-accent-650">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 </div>
                 <div>
@@ -619,13 +619,13 @@ export default function PDFEditor() {
                     type="file"
                     accept=".pdf"
                     onChange={(e) => setCustomFile(e.target.files[0])}
-                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-accent-50 file:text-accent-700 hover:file:bg-accent-100 cursor-pointer"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={!customFile}
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+                  className="w-full py-2.5 bg-accent-600 hover:bg-accent-500 disabled:bg-accent-300 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
                 >
                   Start Editing
                 </button>
@@ -644,7 +644,7 @@ export default function PDFEditor() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div className="space-y-1">
-          <span className="text-[9px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-0.5 uppercase tracking-wide">
+          <span className="text-[9px] font-bold text-accent-700 bg-accent-50 border border-accent-100 rounded px-2 py-0.5 uppercase tracking-wide">
             PDF Editor Active
           </span>
           <h1 className="text-lg md:text-xl font-bold text-slate-900 tracking-tight truncate max-w-[400px]" title={fileName}>
@@ -665,7 +665,7 @@ export default function PDFEditor() {
           <a
             href={`${import.meta.env.VITE_API_URL || ''}/api/pdf-editor/download/${editId}`}
             download
-            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-650 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 bg-accent-650 hover:bg-accent-600 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download Cleaned PDF
@@ -718,7 +718,7 @@ export default function PDFEditor() {
                   value={pageInput}
                   onChange={(e) => setPageInput(e.target.value.replace(/\D/g,''))}
                   disabled={pdfLoading || applying || detecting}
-                  className="w-12 text-center bg-slate-50 border border-slate-200 rounded-lg py-1 px-1 focus:outline-none focus:border-indigo-500 text-xs font-bold"
+                  className="w-12 text-center bg-slate-50 border border-slate-200 rounded-lg py-1 px-1 focus:outline-none focus:border-accent-500 text-xs font-bold"
                 />
                 <span className="text-xs text-slate-400 font-semibold">of {numPages}</span>
                 <button
@@ -774,7 +774,7 @@ export default function PDFEditor() {
                   <div
                     style={{
                       position: 'absolute',
-                      border: '2px dashed #4f46e5',
+                      border: '2px dashed #7c3aed',
                       backgroundColor: 'rgba(79, 70, 229, 0.08)',
                       left: `${normBox.x}px`,
                       top: `${normBox.y}px`,
@@ -784,7 +784,7 @@ export default function PDFEditor() {
                       zIndex: 30
                     }}
                   >
-                    <div className="absolute -top-2.5 -left-1 bg-indigo-600 text-white font-bold text-[8px] px-1 rounded shadow select-none">
+                    <div className="absolute -top-2.5 -left-1 bg-accent-600 text-white font-bold text-[8px] px-1 rounded shadow select-none">
                       Question Target Area
                     </div>
                   </div>
@@ -800,7 +800,7 @@ export default function PDFEditor() {
           <div className="space-y-5">
             <div>
               <h2 className="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-indigo-650"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-accent-650"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 Editor Panel
               </h2>
               <p className="text-[10px] text-slate-450 font-semibold mt-0.5">Strip prefixes and write cleaned, centered question text.</p>
@@ -812,20 +812,20 @@ export default function PDFEditor() {
               <ol className="list-decimal pl-4 space-y-1.5">
                 <li>Navigate to your page containing the prefixed question.</li>
                 <li>Draw a target area around the question by dragging on the canvas.</li>
-                <li>Or, click <span className="text-indigo-650 font-bold">Auto-Detect</span> below to let Gemini identify the text.</li>
+                <li>Or, click <span className="text-accent-650 font-bold">Auto-Detect</span> below to let Gemini identify the text.</li>
                 <li>Review/edit the text in the textarea below.</li>
                 <li>Click <span className="text-slate-800 font-bold">Strip & Replace Text</span> to cleanly replace it center-aligned!</li>
               </ol>
             </div>
 
             {/* Auto-Clean Entire PDF Card */}
-            <div className="bg-gradient-to-br from-indigo-50/65 to-violet-50/65 border border-indigo-100 rounded-xl p-4 space-y-3">
+            <div className="bg-gradient-to-br from-accent-50/65 to-violet-50/65 border border-accent-100 rounded-xl p-4 space-y-3">
               <div>
-                <h3 className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-indigo-650"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m12 8-4 4h8z"/><path d="M12 12v6"/></svg>
+                <h3 className="text-xs font-bold text-accent-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-accent-650"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m12 8-4 4h8z"/><path d="M12 12v6"/></svg>
                   Bulk AI Clean
                 </h3>
-                <p className="text-[10px] text-indigo-700/90 font-medium mt-0.5 leading-relaxed">
+                <p className="text-[10px] text-accent-700/90 font-medium mt-0.5 leading-relaxed">
                   {autoCleanPhase === 'none' && "Step 1: Clean and verify the first 10 pages before processing the rest."}
                   {autoCleanPhase === 'preview' && "Cleaning pages 1 to 10. Please wait..."}
                   {autoCleanPhase === 'preview_ready' && "Preview ready! Check the first 10 pages. If they look correct, click proceed to clean the remaining pages."}
@@ -839,7 +839,7 @@ export default function PDFEditor() {
                   type="button"
                   onClick={handleAutoCleanPreview}
                   disabled={autoCleaning || pdfLoading || applying || detecting}
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  className="w-full py-2.5 bg-accent-600 hover:bg-accent-500 disabled:bg-accent-300 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
                   Run AI Auto-Clean (Pages 1-10)
@@ -850,7 +850,7 @@ export default function PDFEditor() {
                 <button
                   type="button"
                   disabled
-                  className="w-full py-2.5 bg-indigo-400 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-not-allowed shadow-sm"
+                  className="w-full py-2.5 bg-accent-400 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-not-allowed shadow-sm"
                 >
                   <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   Cleaning Pages 1-10...
@@ -883,7 +883,7 @@ export default function PDFEditor() {
                 <button
                   type="button"
                   disabled
-                  className="w-full py-2.5 bg-indigo-400 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-not-allowed shadow-sm"
+                  className="w-full py-2.5 bg-accent-400 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-not-allowed shadow-sm"
                 >
                   <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   Cleaning Remaining Pages...
@@ -894,7 +894,7 @@ export default function PDFEditor() {
                 <button
                   type="button"
                   onClick={() => setAutoCleanPhase('none')}
-                  className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  className="w-full py-2 bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-100 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                   Clean Again
@@ -903,19 +903,19 @@ export default function PDFEditor() {
             </div>
 
             {/* Selective Page AI Clean Card */}
-            <div className="bg-gradient-to-br from-indigo-50/65 to-violet-50/65 border border-indigo-100 rounded-xl p-4 space-y-3">
+            <div className="bg-gradient-to-br from-accent-50/65 to-violet-50/65 border border-accent-100 rounded-xl p-4 space-y-3">
               <div>
-                <h3 className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-indigo-650"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                <h3 className="text-xs font-bold text-accent-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-accent-650"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                   Selective Page AI Clean
                 </h3>
-                <p className="text-[10px] text-indigo-700/90 font-medium mt-0.5 leading-relaxed">
+                <p className="text-[10px] text-accent-700/90 font-medium mt-0.5 leading-relaxed">
                   Clean explicit page numbers in chunks of 10 pages.
                 </p>
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="selective-pages-input" className="block text-[9px] font-bold text-indigo-950/70 uppercase tracking-wide">Enter page numbers (comma separated)</label>
+                <label htmlFor="selective-pages-input" className="block text-[9px] font-bold text-accent-950/70 uppercase tracking-wide">Enter page numbers (comma separated)</label>
                 <input
                   id="selective-pages-input"
                   type="text"
@@ -923,7 +923,7 @@ export default function PDFEditor() {
                   onChange={(e) => setSelectivePagesInput(e.target.value)}
                   placeholder="e.g. 1, 3, 5, 8"
                   disabled={selectiveCleaning || autoCleaning || pdfLoading || applying || detecting}
-                  className="w-full px-3 py-2 bg-white/95 border border-indigo-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-inner"
+                  className="w-full px-3 py-2 bg-white/95 border border-accent-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-accent-500 shadow-inner"
                 />
               </div>
 
@@ -931,7 +931,7 @@ export default function PDFEditor() {
                 type="button"
                 onClick={handleSelectiveClean}
                 disabled={!selectivePagesInput.trim() || selectiveCleaning || autoCleaning || pdfLoading || applying || detecting}
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-300 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                className="w-full py-2.5 bg-accent-600 hover:bg-accent-500 disabled:bg-accent-300 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm"
               >
                 {selectiveCleaning ? (
                   <>
@@ -955,17 +955,17 @@ export default function PDFEditor() {
                 onChange={(e) => setCleanedQuestionText(e.target.value)}
                 placeholder="Wait for AI detection or type the cleaned question text here..."
                 disabled={pdfLoading || applying}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold focus:outline-none focus:border-indigo-500 h-28 resize-none shadow-inner"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold focus:outline-none focus:border-accent-500 h-28 resize-none shadow-inner"
               />
             </div>
 
             {/* AI Results */}
             {aiResult && (
-              <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl text-xs space-y-1">
-                <span className="text-[9px] font-bold text-indigo-700 uppercase tracking-wider bg-white border border-indigo-100 rounded px-1.5 py-0.2">AI Detected Prefix</span>
+              <div className="p-3 bg-accent-50/50 border border-accent-100 rounded-xl text-xs space-y-1">
+                <span className="text-[9px] font-bold text-accent-700 uppercase tracking-wider bg-white border border-accent-100 rounded px-1.5 py-0.2">AI Detected Prefix</span>
                 {aiResult.found ? (
                   <p className="font-semibold text-slate-700 leading-normal mt-1">
-                    Prefix found: <span className="font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5">{aiResult.prefix || 'N/A'}</span>
+                    Prefix found: <span className="font-bold text-accent-700 bg-accent-50 border border-accent-100 rounded px-1.5 py-0.5">{aiResult.prefix || 'N/A'}</span>
                   </p>
                 ) : (
                   <p className="font-semibold text-slate-500 italic mt-1">No prefix detected. Please select manually.</p>
@@ -981,11 +981,11 @@ export default function PDFEditor() {
               type="button"
               onClick={handleAutoDetect}
               disabled={detecting || applying || pdfLoading}
-              className="w-full py-2.5 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50 text-indigo-700 border border-indigo-100 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+              className="w-full py-2.5 bg-accent-50 hover:bg-accent-100 disabled:opacity-50 text-accent-700 border border-accent-100 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm"
             >
               {detecting ? (
                 <>
-                  <svg className="animate-spin h-4 w-4 text-indigo-650" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  <svg className="animate-spin h-4 w-4 text-accent-650" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   Detecting with AI...
                 </>
               ) : (
@@ -1001,7 +1001,7 @@ export default function PDFEditor() {
               type="button"
               onClick={handleApplyReplacement}
               disabled={!box || !cleanedQuestionText.trim() || applying || detecting || pdfLoading}
-              className="w-full py-3 bg-indigo-650 hover:bg-indigo-600 disabled:bg-indigo-300 text-white rounded-xl text-xs font-bold transition shadow flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 bg-accent-650 hover:bg-accent-600 disabled:bg-accent-300 text-white rounded-xl text-xs font-bold transition shadow flex items-center justify-center gap-2 cursor-pointer"
             >
               {applying ? (
                 <>
