@@ -410,6 +410,11 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   const [downloadingStatus, setDownloadingStatus] = useState({});
   const [requestingStatus, setRequestingStatus] = useState({});
 
+  // Multi-PDF list UI: per-course collapse/expand override + filename search
+  const PDF_AUTO_COLLAPSE_THRESHOLD = 6;
+  const [expandedCourses, setExpandedCourses] = useState({});
+  const [pdfSearch, setPdfSearch] = useState({});
+
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [requestModalCourseId, setRequestModalCourseId] = useState('');
   const [requestModalCourseName, setRequestModalCourseName] = useState('');
@@ -825,6 +830,14 @@ export default function StudentDashboard({ user, onUserUpdate }) {
               const pdfUrls = course.fileUrls && course.fileUrls.length > 0 ? course.fileUrls : [course.fileUrl];
               const pdfNames = course.fileNames && course.fileNames.length > 0 ? course.fileNames : [course.fileName || course.name];
 
+              const isExpanded = expandedCourses[course._id] !== undefined
+                ? expandedCourses[course._id]
+                : pdfUrls.length <= PDF_AUTO_COLLAPSE_THRESHOLD;
+              const searchTerm = (pdfSearch[course._id] || '').trim().toLowerCase();
+              const visibleIndices = searchTerm
+                ? pdfUrls.map((_, idx) => idx).filter((idx) => (pdfNames[idx] || '').toLowerCase().includes(searchTerm))
+                : pdfUrls.map((_, idx) => idx);
+
               return (
                 <div 
                   key={course._id}
@@ -850,107 +863,143 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                     </div>
 
                     {/* PDF items list */}
-                    <div className="space-y-4 pt-3 md:pt-4 border-t border-slate-850/60">
-                      {pdfUrls.map((url, idx) => {
-                        const fileDisplayName = pdfNames[idx];
-                        const compositeId = pdfUrls.length > 1 ? `${course.courseId}_${idx}` : course.courseId;
+                    <div className="pt-3 md:pt-4 border-t border-slate-850/60">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedCourses(prev => ({ ...prev, [course._id]: !isExpanded }))}
+                        className="w-full flex items-center justify-between gap-2 cursor-pointer group/pdfheader"
+                      >
+                        <span className="text-[10px] md:text-xs font-bold text-slate-300 uppercase tracking-wider group-hover/pdfheader:text-white transition-colors">
+                          {pdfUrls.length} PDF{pdfUrls.length !== 1 ? 's' : ''}
+                        </span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                          className={`w-3.5 h-3.5 text-slate-400 group-hover/pdfheader:text-white transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                        >
+                          <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                      </button>
 
-                        const limitEntry = currentUser?.downloadLimits?.find(d => d.courseId.toLowerCase() === compositeId.toLowerCase());
-                        const downloadedCount = limitEntry ? limitEntry.downloadedCount : 0;
-                        const allowedCount = limitEntry ? limitEntry.allowedCount : 1;
-                        const remaining = allowedCount - downloadedCount;
-                        const isLimitReached = remaining <= 0;
+                      {isExpanded && (
+                        <div className="space-y-3 mt-3">
+                          {pdfUrls.length > PDF_AUTO_COLLAPSE_THRESHOLD && (
+                            <input
+                              type="text"
+                              value={pdfSearch[course._id] || ''}
+                              onChange={(e) => setPdfSearch(prev => ({ ...prev, [course._id]: e.target.value }))}
+                              placeholder="Search PDFs by name..."
+                              className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-lg text-[11px] text-slate-200 placeholder:text-slate-550 focus:outline-none focus:border-accent-500 transition-all font-medium"
+                            />
+                          )}
 
-                        const pdfRequests = requests.filter(r => r.courseId.toLowerCase() === compositeId.toLowerCase());
-                        const hasPendingRequest = pdfRequests.some(r => r.status === 'pending');
+                          {visibleIndices.length === 0 ? (
+                            <p className="text-[11px] text-slate-500 font-semibold text-center py-3">No PDFs match your search.</p>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {visibleIndices.map((idx) => {
+                                const fileDisplayName = pdfNames[idx];
+                                const compositeId = pdfUrls.length > 1 ? `${course.courseId}_${idx}` : course.courseId;
 
-                        return (
-                          <div key={idx} className="bg-slate-950/40 border border-slate-850/60 rounded-xl p-3 space-y-2.5 flex flex-col justify-between">
-                            <div className="flex justify-between items-start gap-2">
-                              <span className="text-[11px] md:text-xs font-bold text-slate-200 leading-snug">
-                                {fileDisplayName}
-                              </span>
-                              <span className="text-[9px] md:text-[10px] text-slate-450 shrink-0 font-semibold uppercase tracking-wider">
-                                {downloadedCount} of {allowedCount} used
-                              </span>
-                            </div>
+                                const limitEntry = currentUser?.downloadLimits?.find(d => d.courseId.toLowerCase() === compositeId.toLowerCase());
+                                const downloadedCount = limitEntry ? limitEntry.downloadedCount : 0;
+                                const allowedCount = limitEntry ? limitEntry.allowedCount : 1;
+                                const remaining = allowedCount - downloadedCount;
+                                const isLimitReached = remaining <= 0;
 
-                            <div>
-                              {isLimitReached ? (
-                                <div className="flex items-center justify-between gap-2.5 w-full">
-                                  <span className="text-[9px] md:text-[10px] text-rose-400 font-bold whitespace-nowrap bg-rose-950/20 border border-rose-900/30 rounded px-1.5 py-0.5">
-                                    locked count full
-                                  </span>
-                                  {hasPendingRequest ? (
-                                    <button
-                                      disabled
-                                      className="px-3 py-1 bg-slate-850 text-slate-500 rounded-lg text-[10px] font-bold cursor-not-allowed whitespace-nowrap border border-slate-800"
-                                    >
-                                      request pending
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleOpenRequestModal(compositeId, `${course.name} - ${fileDisplayName}`)}
-                                      className="px-3 py-1 bg-accent-950/40 hover:bg-accent-900/40 border border-accent-850/80 text-accent-400 rounded-lg text-[10px] font-bold transition duration-200 cursor-pointer whitespace-nowrap"
-                                    >
-                                      request download
-                                    </button>
-                                  )}
-                                </div>
-                              ) : (
-                                downloadingStatus[compositeId] ? (() => {
-                                  const status = downloadingStatus[compositeId];
+                                const pdfRequests = requests.filter(r => r.courseId.toLowerCase() === compositeId.toLowerCase());
+                                const hasPendingRequest = pdfRequests.some(r => r.status === 'pending');
 
-                                  if (status.isError) {
-                                    return (
-                                      <div className="flex flex-col gap-1 w-full">
-                                        <span className="text-[10px] text-rose-500 font-bold text-center animate-pulse">
-                                          {status.errorMsg}
-                                        </span>
-                                      </div>
-                                    );
-                                  }
-
-                                  return (
-                                    <div className="flex flex-col gap-2 w-full">
-                                      {!status.isSuccess && (
-                                        <div className="flex flex-col gap-1 bg-rose-950/25 border border-rose-900/60 rounded-lg p-2.5 animate-pulse">
-                                          <div className="flex items-center gap-1 text-rose-400 font-black text-[8px] uppercase tracking-wider">
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-rose-500"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                            <span>Processing Watermarks -- Do Not Refresh</span>
-                                          </div>
-                                        </div>
-                                      )}
-                                      <DownloadProgressBar 
-                                        step={status.step || 0}
-                                        isDownloading={status.isDownloading || false}
-                                        downloadPercent={status.downloadPercent || 0}
-                                      />
-                                      <button
-                                        disabled
-                                        className="w-full py-1 bg-slate-850/85 text-slate-500 rounded-lg text-[10px] font-bold cursor-wait"
-                                      >
-                                        {status.isSuccess ? 'completed' : 'processing...'}
-                                      </button>
+                                return (
+                                  <div key={idx} className="bg-slate-950/40 border border-slate-850/60 rounded-xl p-3 space-y-2.5 flex flex-col justify-between">
+                                    <div className="flex justify-between items-start gap-2">
+                                      <span className="text-[11px] md:text-xs font-bold text-slate-200 leading-snug">
+                                        {fileDisplayName}
+                                      </span>
+                                      <span className="text-[9px] md:text-[10px] text-slate-450 shrink-0 font-semibold uppercase tracking-wider">
+                                        {downloadedCount} of {allowedCount} used
+                                      </span>
                                     </div>
-                                  );
-                                })() : (
-                                  <button
-                                    onClick={() => {
-                                      console.log(`[UI Click] Clicked download for composite: ${compositeId}`);
-                                      handleDownload(course.courseId, course.name, idx);
-                                    }}
-                                    className="w-full inline-flex items-center justify-center gap-1 py-1.5 bg-accent-600 hover:bg-accent-550 text-white rounded-lg text-[10px] font-bold transition shadow cursor-pointer"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    Download PDF
-                                  </button>
-                                )
-                              )}
+
+                                    <div>
+                                      {isLimitReached ? (
+                                        <div className="flex items-center justify-between gap-2.5 w-full">
+                                          <span className="text-[9px] md:text-[10px] text-rose-400 font-bold whitespace-nowrap bg-rose-950/20 border border-rose-900/30 rounded px-1.5 py-0.5">
+                                            locked count full
+                                          </span>
+                                          {hasPendingRequest ? (
+                                            <button
+                                              disabled
+                                              className="px-3 py-1 bg-slate-850 text-slate-500 rounded-lg text-[10px] font-bold cursor-not-allowed whitespace-nowrap border border-slate-800"
+                                            >
+                                              request pending
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() => handleOpenRequestModal(compositeId, `${course.name} - ${fileDisplayName}`)}
+                                              className="px-3 py-1 bg-accent-950/40 hover:bg-accent-900/40 border border-accent-850/80 text-accent-400 rounded-lg text-[10px] font-bold transition duration-200 cursor-pointer whitespace-nowrap"
+                                            >
+                                              request download
+                                            </button>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        downloadingStatus[compositeId] ? (() => {
+                                          const status = downloadingStatus[compositeId];
+
+                                          if (status.isError) {
+                                            return (
+                                              <div className="flex flex-col gap-1 w-full">
+                                                <span className="text-[10px] text-rose-500 font-bold text-center animate-pulse">
+                                                  {status.errorMsg}
+                                                </span>
+                                              </div>
+                                            );
+                                          }
+
+                                          return (
+                                            <div className="flex flex-col gap-2 w-full">
+                                              {!status.isSuccess && (
+                                                <div className="flex flex-col gap-1 bg-rose-950/25 border border-rose-900/60 rounded-lg p-2.5 animate-pulse">
+                                                  <div className="flex items-center gap-1 text-rose-400 font-black text-[8px] uppercase tracking-wider">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-rose-500"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                                    <span>Processing Watermarks -- Do Not Refresh</span>
+                                                  </div>
+                                                </div>
+                                              )}
+                                              <DownloadProgressBar
+                                                step={status.step || 0}
+                                                isDownloading={status.isDownloading || false}
+                                                downloadPercent={status.downloadPercent || 0}
+                                              />
+                                              <button
+                                                disabled
+                                                className="w-full py-1 bg-slate-850/85 text-slate-500 rounded-lg text-[10px] font-bold cursor-wait"
+                                              >
+                                                {status.isSuccess ? 'completed' : 'processing...'}
+                                              </button>
+                                            </div>
+                                          );
+                                        })() : (
+                                          <button
+                                            onClick={() => {
+                                              console.log(`[UI Click] Clicked download for composite: ${compositeId}`);
+                                              handleDownload(course.courseId, course.name, idx);
+                                            }}
+                                            className="w-full inline-flex items-center justify-center gap-1 py-1.5 bg-accent-600 hover:bg-accent-550 text-white rounded-lg text-[10px] font-bold transition shadow cursor-pointer"
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                            Download PDF
+                                          </button>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
-                          </div>
-                        );
-                      })}
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

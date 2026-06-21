@@ -163,14 +163,37 @@ export default function AdminPurchases() {
 
                 {/* Course Details Block */}
                 <div className="p-3.5 bg-slate-950/60 border border-slate-850 rounded-xl space-y-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-medium">Course:</span>
-                    <span className="text-slate-200 font-bold text-right truncate max-w-xs">{req.courseName}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-medium">Course ID:</span>
-                    <span className="text-accent-400 font-extrabold uppercase">{req.courseId}</span>
-                  </div>
+                  {req.comboOffer ? (
+                    <>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-400 font-medium">Combo:</span>
+                        <span className="bg-accent-950/40 border border-accent-900/50 text-accent-400 font-extrabold text-right truncate max-w-xs rounded px-2 py-0.5 text-[11px]">
+                          {req.comboOffer.label || req.courseName}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-start text-xs gap-2">
+                        <span className="text-slate-400 font-medium shrink-0">Courses:</span>
+                        <div className="flex flex-wrap gap-1 justify-end">
+                          {(req.courses && req.courses.length > 0 ? req.courses : []).map((c) => (
+                            <span key={c._id} className="text-slate-200 font-bold bg-slate-850 border border-slate-750 rounded px-1.5 py-0.5 text-[10px]">
+                              {c.name || c.courseId}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-400 font-medium">Course:</span>
+                        <span className="text-slate-200 font-bold text-right truncate max-w-xs">{req.courseName}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-400 font-medium">Course ID:</span>
+                        <span className="text-accent-400 font-extrabold uppercase">{req.courseId}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-400 font-medium">Price:</span>
                     <span className="text-emerald-450 font-extrabold">₹{req.price}</span>

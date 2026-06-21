@@ -77,6 +77,20 @@ export default function UploadCourse() {
   const [requestError, setRequestError] = useState('');
   const [approvingId, setApprovingId] = useState(null);
 
+  // Combo Offers state
+  const [comboOffers, setComboOffers] = useState([]);
+  const [loadingCombos, setLoadingCombos] = useState(true);
+  const [comboError, setComboError] = useState('');
+  const [showComboModal, setShowComboModal] = useState(false);
+  const [editCombo, setEditCombo] = useState(null);
+  const [comboLabel, setComboLabel] = useState('');
+  const [comboEligibleIds, setComboEligibleIds] = useState([]);
+  const [comboPickCount, setComboPickCount] = useState(1);
+  const [comboRequiredIds, setComboRequiredIds] = useState([]);
+  const [comboPrice, setComboPrice] = useState('');
+  const [savingCombo, setSavingCombo] = useState(false);
+  const [comboFormError, setComboFormError] = useState('');
+
   // Toast notifications state
   const [toasts, setToasts] = useState([]);
   const showToast = (message, type = 'info') => {
@@ -152,10 +166,160 @@ export default function UploadCourse() {
     }
   };
 
+  // Fetch all combo offers (admin view, includes inactive)
+  const fetchComboOffers = async () => {
+    setLoadingCombos(true);
+    setComboError('');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/courses/combo-offers', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Failed to retrieve combo offers');
+      const data = await res.json();
+      setComboOffers(data.comboOffers || []);
+    } catch (err) {
+      console.error(err);
+      setComboError(err.message || 'Failed to load combo offers.');
+    } finally {
+      setLoadingCombos(false);
+    }
+  };
+
   useEffect(() => {
     fetchCourses();
     fetchPendingRequests();
+    fetchComboOffers();
   }, []);
+
+  // Open modal for adding a combo offer
+  const handleOpenAddCombo = () => {
+    setEditCombo(null);
+    setComboLabel('');
+    setComboEligibleIds([]);
+    setComboPickCount(1);
+    setComboRequiredIds([]);
+    setComboPrice('');
+    setComboFormError('');
+    setShowComboModal(true);
+  };
+
+  // Open modal for editing a combo offer
+  const handleOpenEditCombo = (combo) => {
+    setEditCombo(combo);
+    setComboLabel(combo.label || '');
+    setComboEligibleIds(combo.eligibleCourseIds || []);
+    setComboPickCount(combo.pickCount || 1);
+    setComboRequiredIds(combo.requiredCourseIds || []);
+    setComboPrice(String(combo.price ?? ''));
+    setComboFormError('');
+    setShowComboModal(true);
+  };
+
+  const toggleComboEligible = (courseId) => {
+    setComboEligibleIds(prev => {
+      const next = prev.includes(courseId) ? prev.filter(id => id !== courseId) : [...prev, courseId];
+      // Keep pickCount valid as the eligible set shrinks/grows
+      setComboPickCount(pc => Math.min(Math.max(pc, 1), Math.max(next.length, 1)));
+      return next;
+    });
+  };
+
+  const toggleComboRequired = (courseId) => {
+    setComboRequiredIds(prev => prev.includes(courseId) ? prev.filter(id => id !== courseId) : [...prev, courseId]);
+  };
+
+  // Handle Combo Offer Form Submit (Add or Update)
+  const handleComboFormSubmit = async (e) => {
+    e.preventDefault();
+    setComboFormError('');
+
+    if (!comboLabel.trim() || comboEligibleIds.length === 0 || !comboPrice) {
+      setComboFormError('Please fill in all required fields.');
+      return;
+    }
+
+    setSavingCombo(true);
+    try {
+      const token = localStorage.getItem('token');
+      const url = editCombo ? `/api/courses/combo-offers/${editCombo._id}` : '/api/courses/combo-offers';
+      const method = editCombo ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          label: comboLabel.trim(),
+          eligibleCourseIds: comboEligibleIds,
+          pickCount: Number(comboPickCount),
+          requiredCourseIds: comboRequiredIds,
+          price: Number(comboPrice)
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save combo offer');
+      }
+
+      showToast(editCombo ? 'Combo offer updated successfully!' : 'Combo offer created successfully!', 'success');
+      await fetchComboOffers();
+      setShowComboModal(false);
+    } catch (err) {
+      console.error(err);
+      setComboFormError(err.message || 'Error occurred while saving combo offer.');
+    } finally {
+      setSavingCombo(false);
+    }
+  };
+
+  // Handle toggling combo offer active state
+  const handleToggleComboActive = async (combo) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/courses/combo-offers/${combo._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ active: !combo.active })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to toggle combo offer');
+      }
+      showToast('Combo offer status updated!', 'success');
+      fetchComboOffers();
+    } catch (err) {
+      console.error('Error toggling combo offer:', err);
+      showToast(err.message || 'Error occurred while toggling combo offer.', 'error');
+    }
+  };
+
+  // Handle combo offer deletion
+  const handleDeleteCombo = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this combo offer? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/courses/combo-offers/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to delete combo offer');
+      }
+      fetchComboOffers();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Error occurred while deleting combo offer.', 'error');
+    }
+  };
 
   // PDF file slots helper methods
   const handleAddFileSlot = () => {
@@ -563,6 +727,108 @@ export default function UploadCourse() {
         </div>
       )}
 
+      {/* Combo Offers Section */}
+      <div className="mt-14 pt-10 border-t border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-xl font-extrabold text-white tracking-tight">Combo Offers</h2>
+            <p className="text-slate-400 text-xs mt-1 font-medium">Sell discounted multi-course bundles (e.g. "Any 2 GS Papers") on top of the courses above.</p>
+          </div>
+          <button
+            onClick={handleOpenAddCombo}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-accent-600 hover:bg-accent-500 text-white rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md hover:shadow-accent-950/30 shrink-0"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Combo Offer
+          </button>
+        </div>
+
+        {loadingCombos ? (
+          <div className="py-10 text-center">
+            <LoadingSpinner text="Loading combo offers..." />
+          </div>
+        ) : comboError ? (
+          <div className="p-4 bg-rose-950/30 border border-rose-900/50 text-rose-400 text-xs font-semibold rounded-xl text-center">
+            {comboError}
+          </div>
+        ) : comboOffers.length === 0 ? (
+          <div className="py-10 text-center text-slate-500 border border-dashed border-slate-800 bg-slate-900/50 rounded-2xl p-6">
+            <p className="text-xs font-bold text-slate-400">No combo offers yet.</p>
+            <p className="text-[10px] text-slate-500 mt-1">Click "Add Combo Offer" to create your first bundle.</p>
+          </div>
+        ) : (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-950 border-b border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-4">Label</th>
+                    <th className="px-6 py-4">Eligible Courses</th>
+                    <th className="px-6 py-4">Required</th>
+                    <th className="px-6 py-4">Price (₹)</th>
+                    <th className="px-6 py-4">Active</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-xs text-slate-300">
+                  {comboOffers.map((combo) => (
+                    <tr key={combo._id} className="hover:bg-slate-850/50 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-slate-200 max-w-xs">{combo.label}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {(combo.eligibleCourses || []).map((c) => (
+                            <span key={c.courseId} className="bg-accent-950/40 border border-accent-900/50 rounded-lg px-2 py-1 text-[10px] font-bold text-accent-400">{c.courseId}</span>
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-bold mt-1 block">pick {combo.pickCount}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {(combo.requiredCourses || []).length === 0 ? (
+                            <span className="text-[10px] text-slate-500 font-medium">—</span>
+                          ) : combo.requiredCourses.map((c) => (
+                            <span key={c.courseId} className="bg-slate-850 border border-slate-750 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-300">{c.courseId}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 font-extrabold text-slate-200">₹{combo.price}</td>
+                      <td className="px-6 py-4">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleComboActive(combo)}
+                          className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${combo.active ? 'bg-accent-600' : 'bg-slate-700'}`}
+                          role="switch"
+                          aria-checked={combo.active}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${combo.active ? 'translate-x-5' : 'translate-x-0'}`}
+                          />
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 text-right space-x-2">
+                        <button
+                          onClick={() => handleOpenEditCombo(combo)}
+                          className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-bold transition cursor-pointer border border-slate-750"
+                        >
+                          Modify
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCombo(combo._id)}
+                          className="px-2.5 py-1.5 bg-rose-950/20 hover:bg-rose-900/40 text-rose-400 rounded-lg font-bold transition cursor-pointer border border-rose-900/50"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Pending Download Requests Section */}
       <div className="mt-14 pt-10 border-t border-slate-800">
         <div className="mb-6">
@@ -892,6 +1158,139 @@ export default function UploadCourse() {
                 </button>
                 <Button variant="primary" disabled={saving}>
                   {saving ? 'Saving...' : 'Save Course'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Combo Offer Modal Overlay */}
+      {showComboModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl w-full max-w-lg space-y-6 relative transform transition-all duration-300">
+            <button
+              onClick={() => setShowComboModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+
+            <div>
+              <h2 className="text-xl font-extrabold text-white">
+                {editCombo ? 'Modify Combo Offer' : 'Add Combo Offer'}
+              </h2>
+              <p className="text-slate-400 text-xs mt-1 font-medium">
+                Define a discounted bundle students can choose from a set of existing courses.
+              </p>
+            </div>
+
+            <form onSubmit={handleComboFormSubmit} className="space-y-4">
+              {/* Label */}
+              <div>
+                <label htmlFor="combo-label" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Label</label>
+                <input
+                  id="combo-label"
+                  type="text"
+                  placeholder="e.g., Any 2 GS Papers"
+                  value={comboLabel}
+                  onChange={(e) => setComboLabel(e.target.value)}
+                  className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-accent-500 transition-all font-semibold"
+                  required
+                />
+              </div>
+
+              {/* Eligible Courses */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Eligible Courses (student picks from these)</label>
+                <div className="flex flex-wrap gap-2 bg-slate-950/40 border border-slate-800/80 rounded-xl p-3 max-h-40 overflow-y-auto">
+                  {courses.map((c) => (
+                    <button
+                      type="button"
+                      key={c._id}
+                      onClick={() => toggleComboEligible(c.courseId)}
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
+                        comboEligibleIds.includes(c.courseId)
+                          ? 'bg-accent-600 border-accent-500 text-white'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      {c.courseId}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pick Count */}
+              <div>
+                <label htmlFor="combo-pick-count" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Pick Count (how many of the eligible courses must the student choose)
+                </label>
+                <input
+                  id="combo-pick-count"
+                  type="number"
+                  min="1"
+                  max={Math.max(comboEligibleIds.length, 1)}
+                  value={comboPickCount}
+                  onChange={(e) => setComboPickCount(e.target.value)}
+                  className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-accent-500 transition-all font-semibold"
+                  required
+                />
+              </div>
+
+              {/* Required Courses */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Always-Included Courses (optional, e.g. Essay)</label>
+                <div className="flex flex-wrap gap-2 bg-slate-950/40 border border-slate-800/80 rounded-xl p-3 max-h-40 overflow-y-auto">
+                  {courses.filter(c => !comboEligibleIds.includes(c.courseId)).map((c) => (
+                    <button
+                      type="button"
+                      key={c._id}
+                      onClick={() => toggleComboRequired(c.courseId)}
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
+                        comboRequiredIds.includes(c.courseId)
+                          ? 'bg-accent-600 border-accent-500 text-white'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      {c.courseId}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price */}
+              <div>
+                <label htmlFor="combo-price" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Flat Combo Price (₹)</label>
+                <input
+                  id="combo-price"
+                  type="number"
+                  min="0"
+                  placeholder="e.g., 949"
+                  value={comboPrice}
+                  onChange={(e) => setComboPrice(e.target.value)}
+                  className="w-full px-4.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-accent-500 transition-all font-semibold"
+                  required
+                />
+              </div>
+
+              {comboFormError && (
+                <div className="p-3 bg-rose-950/30 border border-rose-900/50 text-rose-400 text-[11px] font-semibold rounded-xl flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-rose-500"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>{comboFormError}</span>
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowComboModal(false)}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <Button variant="primary" disabled={savingCombo}>
+                  {savingCombo ? 'Saving...' : 'Save Combo Offer'}
                 </Button>
               </div>
             </form>

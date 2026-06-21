@@ -39,10 +39,11 @@ const OPTIONAL_NAMES = {
 export default function PurchaseCourses({ user, onUserUpdate }) {
   const [courses, setCourses] = useState([]);
   const [purchaseRequests, setPurchaseRequests] = useState([]);
+  const [comboOffers, setComboOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Modal State
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [upiTxnId, setUpiTxnId] = useState('');
@@ -53,18 +54,30 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
   const [zoomQr, setZoomQr] = useState(false);
   const [lastSubmittedRequest, setLastSubmittedRequest] = useState(null);
 
-  // Fetch all courses and purchase requests
+  // Combo purchase flow state
+  const [pickerCombo, setPickerCombo] = useState(null); // combo offer currently being configured (picker step)
+  const [pickerSelectedIds, setPickerSelectedIds] = useState([]); // courseIds the student picked in the picker
+  const [comboPurchaseDraft, setComboPurchaseDraft] = useState(null); // { comboOffer, selectedCourseIds } once "Continue to Payment" is clicked
+
+  // Fetch all courses, combo offers, and purchase requests
   const fetchData = async () => {
     setLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('token');
-      
+
       // Fetch all courses
       const courseRes = await fetch('/api/courses/list');
       let courseData = { courses: [] };
       if (courseRes.ok) {
         courseData = await courseRes.json();
+      }
+
+      // Fetch active combo offers
+      const comboRes = await fetch('/api/courses/combo-offers/active');
+      let comboData = { comboOffers: [] };
+      if (comboRes.ok) {
+        comboData = await comboRes.json();
       }
 
       // Fetch user's purchase requests
@@ -79,6 +92,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
       }
 
       setCourses(courseData.courses || []);
+      setComboOffers(comboData.comboOffers || []);
       setPurchaseRequests(requestsData || []);
     } catch (err) {
       console.error('Error fetching purchase course details:', err);
@@ -102,6 +116,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
 
   const handleOpenPurchaseModal = (course) => {
     setSelectedCourse(course);
+    setComboPurchaseDraft(null);
     setLastSubmittedRequest(null);
     setUpiTxnId('');
     setScreenshot(null);
@@ -112,6 +127,51 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
 
   const handleClosePurchaseModal = () => {
     setSelectedCourse(null);
+    setComboPurchaseDraft(null);
+  };
+
+  // Open the course-picker step for a combo offer
+  const handleOpenComboPicker = (combo) => {
+    setPickerCombo(combo);
+    setPickerSelectedIds([]);
+  };
+
+  const handleClosePicker = () => {
+    setPickerCombo(null);
+    setPickerSelectedIds([]);
+  };
+
+  const togglePickerCourse = (courseId) => {
+    setPickerSelectedIds((prev) => {
+      if (prev.includes(courseId)) return prev.filter((id) => id !== courseId);
+      if (prev.length >= pickerCombo.pickCount) return prev; // already at the pick limit
+      return [...prev, courseId];
+    });
+  };
+
+  const ownedCourseIds = (Array.isArray(user?.interestedCourses) ? user.interestedCourses : []).map((c) => c.toLowerCase());
+  const isOwned = (courseId) => ownedCourseIds.includes((courseId || '').toLowerCase());
+
+  const handleContinueComboToPayment = () => {
+    if (!pickerCombo || pickerSelectedIds.length !== pickerCombo.pickCount) return;
+    setComboPurchaseDraft({ comboOffer: pickerCombo, selectedCourseIds: pickerSelectedIds });
+    setLastSubmittedRequest(null);
+    setUpiTxnId('');
+    setScreenshot(null);
+    setScreenshotPreview('');
+    setModalError('');
+    setSuccessMessage('');
+    setPickerCombo(null);
+    setPickerSelectedIds([]);
+  };
+
+  // Determine combo purchase status (only "available" vs "pending" — once approved, courses unlock individually)
+  const getComboStatus = (combo) => {
+    const pendingRequest = purchaseRequests.find(
+      (r) => r.comboOffer?._id === combo._id && r.status === 'pending'
+    );
+    if (pendingRequest) return { type: 'pending', label: 'Pending Verification', request: pendingRequest };
+    return { type: 'available', label: 'Available' };
   };
 
   const handleScreenshotChange = (e) => {
@@ -153,7 +213,12 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
-      formData.append('courseId', selectedCourse.courseId);
+      if (comboPurchaseDraft) {
+        formData.append('comboOfferId', comboPurchaseDraft.comboOffer._id);
+        formData.append('selectedCourseIds', JSON.stringify(comboPurchaseDraft.selectedCourseIds));
+      } else {
+        formData.append('courseId', selectedCourse.courseId);
+      }
       formData.append('upiTxnId', upiTxnId.trim());
       formData.append('screenshot', screenshot);
 
@@ -278,6 +343,12 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
     return { type: 'available', label: 'Available' };
   };
 
+  // Generalized checkout target — either a single course or a configured combo draft
+  const checkoutName = comboPurchaseDraft ? comboPurchaseDraft.comboOffer.label : selectedCourse?.name;
+  const checkoutPrice = comboPurchaseDraft
+    ? comboPurchaseDraft.comboOffer.price
+    : (selectedCourse ? (selectedCourse.useDiscount ? selectedCourse.discountedPrice : selectedCourse.price) : 0);
+
   return (
     <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-14">
       {/* Header */}
@@ -289,6 +360,103 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
           Unlock standard study packages and syllabus guides directly. Simply make a UPI payment and upload your receipt for immediate access.
         </p>
       </div>
+
+      {!loading && !error && comboOffers.length > 0 && (
+        <div className="mb-10 md:mb-14">
+          <div className="mb-5">
+            <h2 className="text-base md:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 md:w-5 md:h-5 text-accent-400"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>
+              Bundle & Save
+            </h2>
+            <p className="text-slate-400 text-xs md:text-sm mt-1 font-medium">
+              Buy multiple papers together at a flat discounted price instead of purchasing them one by one.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {comboOffers.map((combo) => {
+              const comboStatus = getComboStatus(combo);
+              const sortedEligiblePrices = [...combo.eligibleCourses].map((c) => c.price || 0).sort((a, b) => b - a);
+              const estimatedIndividualTotal =
+                sortedEligiblePrices.slice(0, combo.pickCount).reduce((sum, p) => sum + p, 0) +
+                combo.requiredCourses.reduce((sum, c) => sum + (c.price || 0), 0);
+              const savings = estimatedIndividualTotal - combo.price;
+
+              return (
+                <div
+                  key={combo._id}
+                  className="bg-gradient-to-br from-accent-950/30 to-slate-900/40 backdrop-blur-md border border-accent-900/50 hover:border-accent-700/60 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-xl flex flex-col justify-between hover:shadow-accent-950/20 hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden"
+                >
+                  <div className="space-y-2.5 md:space-y-3">
+                    <span className="text-[8px] md:text-[9px] font-extrabold text-accent-300 bg-accent-900/50 border border-accent-800/60 rounded px-1.5 py-0.5 uppercase tracking-wider w-fit block">
+                      Bundle Offer
+                    </span>
+
+                    <h3 className="text-xs md:text-base font-bold text-slate-100 leading-relaxed">
+                      {combo.label}
+                    </h3>
+
+                    <div className="space-y-2 text-[10px] md:text-xs">
+                      <div>
+                        <span className="text-slate-400 font-semibold">Choose any {combo.pickCount} of:</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {combo.eligibleCourses.map((c) => (
+                            <span key={c.courseId} className="bg-slate-800/80 border border-slate-700/60 text-slate-300 rounded px-1.5 py-0.5 font-bold">
+                              {c.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      {combo.requiredCourses.length > 0 && (
+                        <div>
+                          <span className="text-slate-400 font-semibold">Always includes:</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {combo.requiredCourses.map((c) => (
+                              <span key={c.courseId} className="bg-emerald-950/40 border border-emerald-900/50 text-emerald-400 rounded px-1.5 py-0.5 font-bold">
+                                {c.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-accent-900/40 pt-3 mt-4 md:pt-4 md:mt-5 flex items-center justify-between gap-2">
+                    <div>
+                      <span className="text-[8px] md:text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Bundle Price</span>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-sm md:text-lg font-extrabold text-accent-300">₹{combo.price}</span>
+                        {savings > 0 && (
+                          <span className="text-[9px] md:text-xs text-slate-500 line-through">₹{estimatedIndividualTotal}</span>
+                        )}
+                      </div>
+                      {savings > 0 && (
+                        <span className="text-[9px] md:text-[10px] font-bold text-emerald-400 block">Save ₹{savings}</span>
+                      )}
+                    </div>
+
+                    {comboStatus.type === 'pending' ? (
+                      <div className="flex items-center gap-1 px-2 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg md:rounded-xl text-[9px] md:text-xs font-bold animate-pulse shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span className="hidden min-[350px]:inline">Pending Verification</span>
+                        <span className="min-[350px]:hidden">Pending</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleOpenComboPicker(combo)}
+                        className="px-2.5 py-1.5 md:px-4 md:py-2 bg-accent-600 hover:bg-accent-550 text-white rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold transition-all shadow-md hover:shadow-accent-950/20 cursor-pointer flex items-center gap-1 md:gap-1.5 shrink-0"
+                      >
+                        Select Papers
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="py-16 text-center bg-slate-900/40 border border-slate-800/80 rounded-2xl">
@@ -398,11 +566,118 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
             );
           })}
         </div>
-      )}      {/* Checkout Modal Form */}
-      {selectedCourse && (
+      )}
+
+      {/* Combo Course Picker Modal */}
+      {pickerCombo && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[95vh] overflow-y-auto">
-            
+            <div className="flex justify-between items-start mb-5">
+              <div>
+                <span className="text-[9px] font-bold text-accent-400 bg-accent-950 border border-accent-900 rounded px-1.5 py-0.5 uppercase tracking-wide">
+                  Bundle Offer
+                </span>
+                <h3 className="text-base md:text-lg font-extrabold text-white mt-1.5 leading-snug">
+                  {pickerCombo.label}
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-1 font-medium">
+                  Choose exactly {pickerCombo.pickCount} paper{pickerCombo.pickCount > 1 ? 's' : ''} below for a flat ₹{pickerCombo.price}.
+                </p>
+              </div>
+              <button
+                onClick={handleClosePicker}
+                className="text-slate-450 hover:text-white p-1 hover:bg-slate-800 rounded-lg transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <div className="space-y-2 mb-4">
+              {pickerCombo.eligibleCourses.map((c) => {
+                const owned = isOwned(c.courseId);
+                const checked = pickerSelectedIds.includes(c.courseId);
+                const disabled = owned || (!checked && pickerSelectedIds.length >= pickerCombo.pickCount);
+                return (
+                  <button
+                    type="button"
+                    key={c.courseId}
+                    disabled={disabled}
+                    onClick={() => togglePickerCourse(c.courseId)}
+                    className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-left transition ${
+                      checked
+                        ? 'bg-accent-950/40 border-accent-600 text-accent-200 cursor-pointer'
+                        : disabled
+                        ? 'bg-slate-950/40 border-slate-850 text-slate-500 cursor-not-allowed'
+                        : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700 cursor-pointer'
+                    }`}
+                  >
+                    <span className="text-xs font-bold">{c.name}</span>
+                    {owned ? (
+                      <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wide shrink-0">Already owned</span>
+                    ) : (
+                      <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${checked ? 'bg-accent-600 border-accent-500' : 'border-slate-700'}`}>
+                        {checked && (
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-2.5 h-2.5 text-white"><polyline points="20 6 9 17 4 12"/></svg>
+                        )}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {pickerCombo.requiredCourses.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Always included</p>
+                <div className="flex flex-wrap gap-2">
+                  {pickerCombo.requiredCourses.map((c) => {
+                    const owned = isOwned(c.courseId);
+                    return (
+                      <span
+                        key={c.courseId}
+                        className={`text-[11px] font-bold rounded-lg px-3 py-1.5 border ${owned ? 'bg-rose-950/30 border-rose-900/50 text-rose-400' : 'bg-emerald-950/30 border-emerald-900/50 text-emerald-400'}`}
+                      >
+                        {c.name}{owned ? ' (already owned)' : ''}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {pickerCombo.requiredCourses.some((c) => isOwned(c.courseId)) && (
+              <div className="p-3 bg-rose-950/20 border border-rose-900/40 text-rose-400 rounded-xl text-[11px] font-bold mb-4">
+                You already own a course that's always included in this bundle, so it can't be purchased this way.
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-800">
+              <span className="text-[11px] font-bold text-slate-400">{pickerSelectedIds.length} / {pickerCombo.pickCount} selected</span>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleClosePicker}
+                  className="px-4 py-2 text-slate-400 hover:text-white text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleContinueComboToPayment}
+                  disabled={pickerSelectedIds.length !== pickerCombo.pickCount || pickerCombo.requiredCourses.some((c) => isOwned(c.courseId))}
+                  className="px-5 py-2 bg-accent-600 hover:bg-accent-500 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Continue to Payment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Checkout Modal Form */}
+      {(selectedCourse || comboPurchaseDraft) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[95vh] overflow-y-auto">
+
             {/* Header info */}
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -410,13 +685,13 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                   UPI Payment Checkout
                 </span>
                 <h3 className="text-base md:text-lg font-extrabold text-white mt-1.5 leading-snug">
-                  Unlock: {selectedCourse.name}
+                  Unlock: {checkoutName}
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-1 font-medium">
                   Complete standard payment verification for access.
                 </p>
               </div>
-              <button 
+              <button
                 onClick={handleClosePurchaseModal}
                 className="text-slate-450 hover:text-white p-1 hover:bg-slate-800 rounded-lg transition"
               >
@@ -480,7 +755,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent-500 to-transparent animate-pulse"></div>
                   
                   <p className="text-xs text-slate-300 font-semibold leading-relaxed">
-                    Scan the QR code below using GPay, PhonePe, Paytm, or any UPI app to transfer <span className="text-accent-400 font-extrabold text-sm">₹{selectedCourse.useDiscount ? selectedCourse.discountedPrice : selectedCourse.price}</span>. Click the QR code to view it full size.
+                    Scan the QR code below using GPay, PhonePe, Paytm, or any UPI app to transfer <span className="text-accent-400 font-extrabold text-sm">₹{checkoutPrice}</span>. Click the QR code to view it full size.
                   </p>
 
                   {/* QR Image Box with scanning-line effect */}
