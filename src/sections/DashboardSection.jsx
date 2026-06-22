@@ -15,6 +15,7 @@ import AdminPurchases from './AdminPurchases';
 import AdminProgressData from './AdminProgressData';
 import ComingSoon from './ComingSoon';
 import AdminMcqData from './AdminMcqData';
+import AdminView from './AdminView';
 
 export default function DashboardSection({ user, onLogout, activeTab, setActiveTab, onUserUpdate }) {
   const [syllabusData, setSyllabusData] = useState(null);
@@ -108,6 +109,10 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'admin_purchases' && (
           <AdminPurchases />
+        )}
+
+        {activeTab === 'admin_view' && (
+          <AdminView />
         )}
 
         {activeTab === 'progress' && (
