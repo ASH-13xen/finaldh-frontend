@@ -17,21 +17,48 @@ window.fetch = async (input, init) => {
   }
   if (baseUrl) {
     const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+    
+    const shouldRewrite = (urlString) => {
+      if (!urlString || typeof urlString !== 'string') return false;
+      // Relative paths
+      if (urlString.startsWith('/api/') || urlString.startsWith('api/') || 
+          urlString.startsWith('/uploads/') || urlString.startsWith('uploads/')) {
+        return true;
+      }
+      // Absolute URLs matching current origin
+      const origin = window.location.origin;
+      if (urlString.startsWith(origin + '/api/') || 
+          urlString.startsWith(origin + 'api/') || 
+          urlString.startsWith(origin + '/uploads/') || 
+          urlString.startsWith(origin + 'uploads/')) {
+        return true;
+      }
+      return false;
+    };
+
+    const getRewrittenUrl = (urlString) => {
+      const origin = window.location.origin;
+      let path = urlString;
+      if (urlString.startsWith(origin)) {
+        path = urlString.substring(origin.length);
+      }
+      if (!path.startsWith('/')) {
+        path = '/' + path;
+      }
+      return `${cleanBaseUrl}${path}`;
+    };
+
     if (typeof url === 'string') {
-      if (url.startsWith('/api/') || url.startsWith('api/') || url.startsWith('/uploads/') || url.startsWith('uploads/')) {
-        const path = url.startsWith('/') ? url : `/${url}`;
-        url = `${cleanBaseUrl}${path}`;
+      if (shouldRewrite(url)) {
+        url = getRewrittenUrl(url);
       }
     } else if (url instanceof URL) {
-      if (url.pathname.startsWith('/api/') || url.pathname.startsWith('api/') || url.pathname.startsWith('/uploads/') || url.pathname.startsWith('uploads/')) {
-        const pathname = url.pathname.startsWith('/') ? url.pathname : `/${url.pathname}`;
-        url = new URL(`${cleanBaseUrl}${pathname}${url.search}`);
+      if (shouldRewrite(url.href)) {
+        url = new URL(getRewrittenUrl(url.href));
       }
     } else if (url && typeof url === 'object' && 'url' in url) {
-      if (url.url.startsWith('/api/') || url.url.startsWith('api/') || url.url.startsWith('/uploads/') || url.url.startsWith('uploads/')) {
-        const path = url.url.startsWith('/') ? url.url : `/${url.url}`;
-        const newUrl = `${cleanBaseUrl}${path}`;
-        url = new Request(newUrl, url);
+      if (shouldRewrite(url.url)) {
+        url = new Request(getRewrittenUrl(url.url), url);
       }
     }
   }
