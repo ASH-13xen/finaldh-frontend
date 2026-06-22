@@ -9,6 +9,7 @@ const SUBJECT_NAMES = {
   'GS-3': 'GS-3: Science & Tech, Economic Dev, Bio-diversity, Security',
   'GS-4': 'GS-4: Ethics, Integrity & Aptitude',
   'All GS': 'All GS',
+  'Essay': 'Essay',
 };
 
 const OPTIONAL_NAMES = {

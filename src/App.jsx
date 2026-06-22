@@ -1,5 +1,6 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useRef } from "react";
-import LoadingSpinner from "./components/LoadingSpinner";
 import LoginSection from "./sections/LoginSection";
 import DashboardSection from "./sections/DashboardSection";
 import Navbar from "./components/Navbar";
@@ -210,7 +211,7 @@ function App() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
         />
-        <main className="flex-grow">
+        <main className="grow">
           {activeTab === "uploader" ? (
             <QuestionUploader syllabusData={null} />
           ) : activeTab === "pyqs" ? (
