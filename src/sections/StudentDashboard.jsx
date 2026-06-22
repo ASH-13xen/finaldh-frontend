@@ -830,9 +830,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
               const pdfUrls = course.fileUrls && course.fileUrls.length > 0 ? course.fileUrls : [course.fileUrl];
               const pdfNames = course.fileNames && course.fileNames.length > 0 ? course.fileNames : [course.fileName || course.name];
 
-              const isExpanded = expandedCourses[course._id] !== undefined
-                ? expandedCourses[course._id]
-                : pdfUrls.length <= PDF_AUTO_COLLAPSE_THRESHOLD;
+              const isExpanded = !!expandedCourses[course._id];
               const searchTerm = (pdfSearch[course._id] || '').trim().toLowerCase();
               const visibleIndices = searchTerm
                 ? pdfUrls.map((_, idx) => idx).filter((idx) => (pdfNames[idx] || '').toLowerCase().includes(searchTerm))

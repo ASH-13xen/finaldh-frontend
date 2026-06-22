@@ -92,6 +92,14 @@ export default function UploadCourse() {
   const [savingCombo, setSavingCombo] = useState(false);
   const [comboFormError, setComboFormError] = useState('');
 
+  // Course Samples state
+  const [showSampleModal, setShowSampleModal] = useState(false);
+  const [sampleCourse, setSampleCourse] = useState(null);
+  const [sampleFile, setSampleFile] = useState(null);
+  const [savingSample, setSavingSample] = useState(false);
+  const [sampleFormError, setSampleFormError] = useState('');
+  const [sampleUploadProgress, setSampleUploadProgress] = useState(0);
+
   // Toast notifications state
   const [toasts, setToasts] = useState([]);
   const showToast = (message, type = 'info') => {
@@ -324,6 +332,79 @@ export default function UploadCourse() {
     } catch (err) {
       console.error(err);
       showToast(err.message || 'Error occurred while deleting combo offer.', 'error');
+    }
+  };
+
+  // Open modal to upload/replace a course's sample PDF
+  const handleOpenSampleModal = (course) => {
+    setSampleCourse(course);
+    setSampleFile(null);
+    setSampleFormError('');
+    setSampleUploadProgress(0);
+    setShowSampleModal(true);
+  };
+
+  // Handle Sample Upload Form Submit
+  const handleSampleFormSubmit = async (e) => {
+    e.preventDefault();
+    setSampleFormError('');
+
+    if (!sampleFile) {
+      setSampleFormError('Please select a PDF file.');
+      return;
+    }
+
+    setSavingSample(true);
+    const formData = new FormData();
+    formData.append('sample', sampleFile);
+
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+      await axios({
+        method: 'POST',
+        url: `${apiBaseUrl}/api/courses/${sampleCourse._id}/sample`,
+        data: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            setSampleUploadProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+          }
+        }
+      });
+
+      showToast('Sample uploaded successfully!', 'success');
+      await fetchCourses();
+      setShowSampleModal(false);
+    } catch (err) {
+      console.error(err);
+      setSampleFormError(err.response?.data?.error || err.message || 'Error occurred while uploading sample.');
+    } finally {
+      setSavingSample(false);
+    }
+  };
+
+  // Handle removing a course's sample PDF
+  const handleRemoveSample = async (course) => {
+    if (!window.confirm(`Remove the sample PDF for "${course.name}"? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/courses/${course._id}/sample`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to remove sample');
+      }
+      showToast('Sample removed successfully!', 'success');
+      fetchCourses();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Error occurred while removing sample.', 'error');
     }
   };
 
@@ -835,6 +916,71 @@ export default function UploadCourse() {
         )}
       </div>
 
+      {/* Course Samples Section */}
+      <div className="mt-14 pt-10 border-t border-slate-800">
+        <div className="mb-6">
+          <h2 className="text-xl font-extrabold text-white tracking-tight">Course Samples</h2>
+          <p className="text-slate-400 text-xs mt-1 font-medium">Upload a free preview PDF per course — shown via "See Sample" on the student Purchase Courses page.</p>
+        </div>
+
+        {loadingList ? (
+          <div className="py-10 text-center">
+            <LoadingSpinner text="Loading courses..." />
+          </div>
+        ) : courses.length === 0 ? (
+          <div className="py-10 text-center text-slate-500 border border-dashed border-slate-800 bg-slate-900/50 rounded-2xl p-6">
+            <p className="text-xs font-bold text-slate-400">No courses yet.</p>
+            <p className="text-[10px] text-slate-500 mt-1">Add a course above before uploading a sample.</p>
+          </div>
+        ) : (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-950 border-b border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-4">Course</th>
+                    <th className="px-6 py-4">Sample Status</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-xs text-slate-300">
+                  {courses.map((course) => (
+                    <tr key={course._id} className="hover:bg-slate-850/50 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-slate-200 max-w-xs truncate">{course.name}</td>
+                      <td className="px-6 py-4">
+                        {course.sampleFileUrl ? (
+                          <span className="bg-emerald-950/30 border border-emerald-900/50 text-emerald-400 rounded-lg px-2 py-1 text-[10px] font-bold">
+                            ✅ {course.samplePageCount} page{course.samplePageCount === 1 ? '' : 's'}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 font-semibold">— No sample</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right space-x-2">
+                        <button
+                          onClick={() => handleOpenSampleModal(course)}
+                          className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-bold transition cursor-pointer border border-slate-750"
+                        >
+                          {course.sampleFileUrl ? 'Replace' : 'Upload Sample'}
+                        </button>
+                        {course.sampleFileUrl && (
+                          <button
+                            onClick={() => handleRemoveSample(course)}
+                            className="px-2.5 py-1.5 bg-rose-950/20 hover:bg-rose-900/40 text-rose-400 rounded-lg font-bold transition cursor-pointer border border-rose-900/50"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Pending Download Requests Section */}
       <div className="mt-14 pt-10 border-t border-slate-800">
         <div className="mb-6">
@@ -1297,6 +1443,77 @@ export default function UploadCourse() {
                 </button>
                 <Button variant="primary" disabled={savingCombo}>
                   {savingCombo ? 'Saving...' : 'Save Combo Offer'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload/Replace Sample Modal Overlay */}
+      {showSampleModal && sampleCourse && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl w-full max-w-lg space-y-6 relative transform transition-all duration-300">
+            <button
+              onClick={() => setShowSampleModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+
+            <div>
+              <h2 className="text-xl font-extrabold text-white">
+                {sampleCourse.sampleFileUrl ? 'Replace Sample' : 'Upload Sample'}
+              </h2>
+              <p className="text-slate-400 text-xs mt-1 font-medium">
+                For <span className="text-accent-400 font-bold">{sampleCourse.name}</span>
+              </p>
+            </div>
+
+            <form onSubmit={handleSampleFormSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Sample PDF File</label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setSampleFile(e.target.files[0] || null)}
+                  className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-slate-900 file:text-accent-400 hover:file:bg-slate-800 cursor-pointer"
+                  required
+                />
+              </div>
+
+              {savingSample && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span>Uploading...</span>
+                    <span>{sampleUploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                    <div
+                      className="bg-accent-500 h-2.5 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${sampleUploadProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+
+              {sampleFormError && (
+                <div className="p-3 bg-rose-950/30 border border-rose-900/50 text-rose-400 text-[11px] font-semibold rounded-xl flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-rose-500"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>{sampleFormError}</span>
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowSampleModal(false)}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <Button variant="primary" disabled={savingSample}>
+                  {savingSample ? 'Uploading...' : 'Save Sample'}
                 </Button>
               </div>
             </form>
