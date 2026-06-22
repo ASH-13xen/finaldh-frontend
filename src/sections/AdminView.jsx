@@ -256,6 +256,32 @@ export default function AdminView() {
       ) : currentView === 'transactions' ? (
         // TRANSACTION VIEW
         <div className="space-y-4">
+          {/* Highlight Summary Stats Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 flex flex-col justify-center">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Transactions</span>
+              <span className="text-lg font-black text-white mt-1">{transactions.length}</span>
+            </div>
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 flex flex-col justify-center">
+              <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider">Unmarked</span>
+              <span className="text-lg font-black text-slate-350 mt-1">{transactions.filter(t => !t.highlight || t.highlight === 'none').length}</span>
+            </div>
+            <div className="bg-rose-950/20 border border-rose-900/45 rounded-xl p-3 flex flex-col justify-center">
+              <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-650 inline-block"></span>
+                Red Highlighted
+              </span>
+              <span className="text-lg font-black text-rose-450 mt-1">{transactions.filter(t => t.highlight === 'red').length}</span>
+            </div>
+            <div className="bg-amber-950/15 border border-amber-900/30 rounded-xl p-3 flex flex-col justify-center">
+              <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-yellow-550 inline-block"></span>
+                Yellow Highlighted
+              </span>
+              <span className="text-lg font-black text-amber-450 mt-1">{transactions.filter(t => t.highlight === 'yellow').length}</span>
+            </div>
+          </div>
+
           {/* Filters Row */}
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/40 border border-slate-800 p-4 rounded-2xl">
             <div className="flex flex-wrap gap-2.5 w-full md:w-auto">
