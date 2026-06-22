@@ -219,15 +219,20 @@ export default function UploadCourse() {
 
   const toggleComboEligible = (courseId) => {
     setComboEligibleIds(prev => {
-      const next = prev.includes(courseId) ? prev.filter(id => id !== courseId) : [...prev, courseId];
+      const isRemoving = prev.includes(courseId);
+      const next = isRemoving ? prev.filter(id => id !== courseId) : [...prev, courseId];
       // Keep pickCount valid as the eligible set shrinks/grows
       setComboPickCount(pc => Math.min(Math.max(pc, 1), Math.max(next.length, 1)));
       return next;
     });
+    // A course can't be both eligible and required — adding to eligible clears it from required
+    setComboRequiredIds(prev => prev.filter(id => id !== courseId));
   };
 
   const toggleComboRequired = (courseId) => {
     setComboRequiredIds(prev => prev.includes(courseId) ? prev.filter(id => id !== courseId) : [...prev, courseId]);
+    // A course can't be both eligible and required — adding to required clears it from eligible
+    setComboEligibleIds(prev => prev.filter(id => id !== courseId));
   };
 
   // Handle Combo Offer Form Submit (Add or Update)
