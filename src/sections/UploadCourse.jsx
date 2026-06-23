@@ -663,6 +663,32 @@ export default function UploadCourse() {
     }
   };
 
+  // Handle toggling whether a course appears in the student Progress tab
+  const handleToggleProgressEnabled = async (course) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/courses/${course._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          progressEnabled: !course.progressEnabled
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to toggle Progress tab visibility');
+      }
+      showToast('Progress tab visibility updated successfully!', 'success');
+      fetchCourses();
+    } catch (err) {
+      console.error('Error toggling Progress tab visibility:', err);
+      showToast(err.message || 'Error occurred while toggling Progress tab visibility.', 'error');
+    }
+  };
+
   return (
     <div className="w-full max-w-6xl mx-auto px-6 py-10 md:py-14">
       {/* Admin Mode active banner callout */}
@@ -722,6 +748,7 @@ export default function UploadCourse() {
                   <th className="px-6 py-4">Price (₹)</th>
                   <th className="px-6 py-4">Use Discount</th>
                   <th className="px-6 py-4">50 Stud Tag</th>
+                  <th className="px-6 py-4">Progress Tab</th>
                   <th className="px-6 py-4">PDF Files</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -773,6 +800,21 @@ export default function UploadCourse() {
                           <span
                             aria-hidden="true"
                             className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${course.discountLimitTag ? 'translate-x-5' : 'translate-x-0'}`}
+                          />
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleProgressEnabled(course)}
+                          title="When on, this course is visible in every user's Progress tab (locked until they purchase it)."
+                          className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${course.progressEnabled ? 'bg-accent-600' : 'bg-slate-700'}`}
+                          role="switch"
+                          aria-checked={course.progressEnabled}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${course.progressEnabled ? 'translate-x-5' : 'translate-x-0'}`}
                           />
                         </button>
                       </td>

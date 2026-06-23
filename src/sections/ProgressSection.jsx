@@ -14,10 +14,26 @@ const getFileEntries = (course) => {
 
 const splitTagDisplay = (tag) => (tag || '').split(';').map(t => t.trim()).filter(Boolean);
 
+// Groups PYQs by topic (section), newest year first within each group, so the panel shows
+// one topic header followed by all of its PYQs instead of repeating the topic on every row.
+const groupPyqsBySection = (items) => {
+  const order = [];
+  const bySection = new Map();
+  for (const p of items) {
+    const key = p.section || 'Other';
+    if (!bySection.has(key)) {
+      bySection.set(key, []);
+      order.push(key);
+    }
+    bySection.get(key).push(p);
+  }
+  return order.map((key) => [key, bySection.get(key).sort((a, b) => (b.year || 0) - (a.year || 0))]);
+};
+
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
 export default function ProgressSection({ onRedirectToBuy }) {
-  const [purchasedCourses, setPurchasedCourses] = useState([]);
+  const [progressCourses, setProgressCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [coursesError, setCoursesError] = useState('');
 
@@ -35,6 +51,8 @@ export default function ProgressSection({ onRedirectToBuy }) {
   const [pyqPanelLoading, setPyqPanelLoading] = useState(false);
   const [pyqPanelItems, setPyqPanelItems] = useState([]);
 
+  const [collapsedTopics, setCollapsedTopics] = useState({});
+
   const screenContainerRef = useRef(null);
   const fillBarRef = useRef(null);
   const pyqPanelRef = useRef(null);
@@ -42,20 +60,20 @@ export default function ProgressSection({ onRedirectToBuy }) {
   const autoExpandedRef = useRef(false);
 
   useEffect(() => {
-    const fetchPurchased = async () => {
+    const fetchProgressCourses = async () => {
       try {
-        const res = await fetch('/api/courses/purchased', { headers: authHeaders() });
+        const res = await fetch('/api/progress/courses', { headers: authHeaders() });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load purchased courses');
-        setPurchasedCourses(data.purchasedCourses || []);
+        if (!res.ok) throw new Error(data.error || 'Failed to load courses');
+        setProgressCourses(data.courses || []);
       } catch (err) {
         console.error(err);
-        setCoursesError(err.message || 'Failed to load your purchased courses.');
+        setCoursesError(err.message || 'Failed to load courses.');
       } finally {
         setLoadingCourses(false);
       }
     };
-    fetchPurchased();
+    fetchProgressCourses();
   }, []);
 
   // Auto-skip the file picker for single-PDF courses.
@@ -178,6 +196,10 @@ export default function ProgressSection({ onRedirectToBuy }) {
     }
   };
 
+  const toggleTopicCollapsed = (topicId) => {
+    setCollapsedTopics((prev) => ({ ...prev, [topicId]: !prev[topicId] }));
+  };
+
   const handleToggle = async (topicId, question) => {
     const newCompleted = !question.completed;
 
@@ -229,12 +251,12 @@ export default function ProgressSection({ onRedirectToBuy }) {
 
   return (
     <div className="w-full min-h-[calc(100vh-73px)] bg-slate-950">
-      {/* ===== Screen 1: no purchases ===== */}
-      {!loadingCourses && purchasedCourses.length === 0 && (
+      {/* ===== Screen 1: no Progress-enabled courses ===== */}
+      {!loadingCourses && progressCourses.length === 0 && (
         <div ref={screenContainerRef} className="w-full max-w-3xl mx-auto px-6 py-16 text-center">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12">
-            <h2 className="text-xl font-extrabold text-slate-100 mb-2">No Purchased Courses</h2>
-            <p className="text-sm text-slate-400 mb-6">Purchase a course to track your topic-by-topic progress and practice related PYQs as you study.</p>
+            <h2 className="text-xl font-extrabold text-slate-100 mb-2">No Courses Available</h2>
+            <p className="text-sm text-slate-400 mb-6">Progress tracking isn't enabled for any course yet. Check back soon.</p>
             {coursesError && <p className="text-rose-400 text-xs font-semibold mb-4">{coursesError}</p>}
             <button
               onClick={onRedirectToBuy}
@@ -247,19 +269,25 @@ export default function ProgressSection({ onRedirectToBuy }) {
       )}
 
       {/* ===== Screen 2: course grid ===== */}
-      {purchasedCourses.length > 0 && !activeCourse && (
+      {progressCourses.length > 0 && !activeCourse && (
         <div ref={screenContainerRef} className="w-full max-w-7xl mx-auto px-6 py-10 md:py-14 flex flex-col gap-8">
           <div className="border-b border-slate-800 pb-5">
             <h1 className="text-2xl md:text-3xl font-extrabold text-slate-100 tracking-tight">Progress</h1>
             <p className="text-slate-400 text-sm mt-1.5 font-medium">Pick a course to track your topic-by-topic study progress.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {purchasedCourses.map((course) => (
+            {progressCourses.map((course) => (
               <div
                 key={course._id}
-                onClick={() => setActiveCourse(course)}
-                className="bg-slate-900/50 border border-slate-800 hover:border-accent-500 rounded-2xl p-6 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
+                onClick={() => course.unlocked ? setActiveCourse(course) : onRedirectToBuy()}
+                className={`relative bg-slate-900/50 border rounded-2xl p-6 flex flex-col justify-between transition-all duration-200 cursor-pointer group ${course.unlocked ? 'border-slate-800 hover:border-accent-500 hover:shadow-lg hover:-translate-y-0.5' : 'border-slate-800/70 opacity-80 hover:opacity-100'}`}
               >
+                {!course.unlocked && (
+                  <span className="absolute top-4 right-4 flex items-center gap-1 text-[9px] font-bold text-amber-400 bg-amber-950/50 border border-amber-900/50 rounded px-2 py-0.5 uppercase tracking-wide">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Locked
+                  </span>
+                )}
                 <div className="space-y-3">
                   <span className="text-[9px] font-bold text-accent-400 bg-accent-950/50 border border-accent-900/50 rounded px-2.5 py-0.5 uppercase tracking-wide">
                     {course.subject}
@@ -270,10 +298,17 @@ export default function ProgressSection({ onRedirectToBuy }) {
                   <span className="text-[10px] text-slate-500 font-semibold uppercase">
                     {getFileEntries(course).length} File{getFileEntries(course).length !== 1 ? 's' : ''}
                   </span>
-                  <span className="text-xs font-bold text-accent-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    View Progress
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                  </span>
+                  {course.unlocked ? (
+                    <span className="text-xs font-bold text-accent-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      View Progress
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-amber-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      Purchase to Unlock
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -360,14 +395,23 @@ export default function ProgressSection({ onRedirectToBuy }) {
                 No topics have been added for this PDF yet. Check back soon.
               </div>
             )}
-            {!loadingTopics && topics.map((topic) => (
+            {!loadingTopics && topics.map((topic) => {
+              const isCollapsed = !!collapsedTopics[topic._id];
+              return (
               <div key={topic._id} className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
-                  <h3 className="font-bold text-slate-100 text-sm">{topic.name}</h3>
-                  <span className="text-[10px] text-slate-500 font-semibold uppercase">
+                <button
+                  onClick={() => toggleTopicCollapsed(topic._id)}
+                  className="w-full px-5 py-3.5 border-b border-slate-800 flex items-center justify-between cursor-pointer hover:bg-slate-900/80 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`w-3.5 h-3.5 text-slate-500 flex-shrink-0 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
+                    <h3 className="font-bold text-slate-100 text-sm truncate">{topic.name}</h3>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-semibold uppercase flex-shrink-0 ml-3">
                     {topic.questions.filter(q => q.completed).length}/{topic.questions.length} done
                   </span>
-                </div>
+                </button>
+                {!isCollapsed && (
                 <div className="divide-y divide-slate-800">
                   {topic.questions.map((q) => (
                     <div
@@ -395,8 +439,10 @@ export default function ProgressSection({ onRedirectToBuy }) {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -412,24 +458,23 @@ export default function ProgressSection({ onRedirectToBuy }) {
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
               {pyqPanelLoading && <LoadingSpinner text="Loading PYQs..." />}
               {!pyqPanelLoading && pyqPanelItems.length === 0 && (
                 <p className="text-xs text-slate-500">Complete a question to see related PYQs here.</p>
               )}
-              {!pyqPanelLoading && pyqPanelItems.filter(p => !p.completed).map((p) => (
-                <PyqPanelItem key={p._id} pyq={p} onToggle={handleTogglePyq} />
-              ))}
-              {!pyqPanelLoading && pyqPanelItems.some(p => p.completed) && (
-                <>
-                  <div className="pt-2 mt-1 border-t border-slate-800">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Completed PYQs</p>
+              {!pyqPanelLoading && groupPyqsBySection(pyqPanelItems).map(([section, items]) => (
+                <div key={section} className="space-y-2">
+                  <h4 className="text-[11px] font-bold text-accent-300 bg-accent-950/30 border border-accent-900/40 rounded-lg px-2.5 py-1.5 leading-snug">
+                    {section}
+                  </h4>
+                  <div className="flex flex-col gap-2">
+                    {items.map((p) => (
+                      <PyqPanelItem key={p._id} pyq={p} onToggle={handleTogglePyq} />
+                    ))}
                   </div>
-                  {pyqPanelItems.filter(p => p.completed).map((p) => (
-                    <PyqPanelItem key={p._id} pyq={p} onToggle={handleTogglePyq} />
-                  ))}
-                </>
-              )}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -460,13 +505,10 @@ function PyqPanelItem({ pyq, onToggle }) {
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>
         )}
       </button>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[9px] font-bold text-accent-400 bg-accent-950/40 border border-accent-900/40 rounded px-1.5 py-0.5">{pyq.section}</span>
-          <span className="text-[10px] text-slate-500 font-semibold">{pyq.year}</span>
-        </div>
-        <p className={`text-xs leading-relaxed ${pyq.completed ? 'text-slate-500 line-through' : 'text-slate-300'}`}>{pyq.questionText}</p>
-      </div>
+      <span className={`flex-shrink-0 mt-0.5 text-xs font-extrabold rounded-lg px-2 py-0.5 h-fit ${pyq.completed ? 'bg-slate-900 text-slate-500' : 'bg-accent-600/20 text-accent-300 border border-accent-600/40'}`}>
+        {pyq.year}
+      </span>
+      <p className={`text-xs leading-relaxed flex-1 min-w-0 ${pyq.completed ? 'text-slate-500 line-through' : 'text-slate-300'}`}>{pyq.questionText}</p>
     </div>
   );
 }

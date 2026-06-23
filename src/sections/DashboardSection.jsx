@@ -13,6 +13,7 @@ import PDFEditor from './PDFEditor';
 import PurchaseCourses from './PurchaseCourses';
 import AdminPurchases from './AdminPurchases';
 import AdminProgressData from './AdminProgressData';
+import ProgressSection from './ProgressSection';
 import ComingSoon from './ComingSoon';
 import AdminMcqData from './AdminMcqData';
 import AdminView from './AdminView';
@@ -116,7 +117,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
         )}
 
         {activeTab === 'progress' && (
-          <ComingSoon title="Progress" onBack={() => setActiveTab(user?.isAdmin ? 'manage_courses' : 'student')} />
+          <ProgressSection onRedirectToBuy={() => setActiveTab('buy_pdfs')} />
         )}
 
         {activeTab === 'admin_progress_data' && (

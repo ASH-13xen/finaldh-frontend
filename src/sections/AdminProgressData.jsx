@@ -1,39 +1,4 @@
-import { useState, useEffect } from 'react';
-
-const SUBJECT_NAMES = {
-  'GS-1': 'GS-1: Culture, History, Geography, Society',
-  'GS-2': 'GS-2: Governance, Constitution, Polity, Social Justice',
-  'GS-3': 'GS-3: Science & Tech, Economic Dev, Bio-diversity, Security',
-  'GS-4': 'GS-4: Ethics, Integrity & Aptitude',
-};
-
-const OPTIONAL_NAMES = {
-  OptionalSubjectAgriculture: 'Optional: Agriculture',
-  OptionalSubjectAnimalHusbandryAndVeterinaryScience: 'Optional: Animal Husbandry & Veterinary Science',
-  OptionalSubjectAnthropology: 'Optional: Anthropology',
-  OptionalSubjectBotany: 'Optional: Botany',
-  OptionalSubjectChemistry: 'Optional: Chemistry',
-  OptionalSubjectCivilEngineering: 'Optional: Civil Engineering',
-  OptionalSubjectCommerceAndAccountancy: 'Optional: Commerce & Accountancy',
-  OptionalSubjectEconomics: 'Optional: Economics',
-  OptionalSubjectElectricalEngineering: 'Optional: Electrical Engineering',
-  OptionalSubjectGeography: 'Optional: Geography',
-  OptionalSubjectGeology: 'Optional: Geology',
-  OptionalSubjectHistory: 'Optional: History',
-  OptionalSubjectLaw: 'Optional: Law',
-  OptionalSubjectMangement: 'Optional: Management',
-  OptionalSubjectMathematics: 'Optional: Mathematics',
-  OptionalSubjectMechanicalEngineering: 'Optional: Mechanical Engineering',
-  OptionalSubjectMedicalScience: 'Optional: Medical Science',
-  OptionalSubjectPhilosophy: 'Optional: Philosophy',
-  OptionalSubjectPhysics: 'Optional: Physics',
-  OptionalSubjectPoliticalScienceAndInternationalRelations: 'Optional: Political Science & International Relations',
-  OptionalSubjectPsychology: 'Optional: Psychology',
-  OptionalSubjectPublicAdministration: 'Optional: Public Administration',
-  OptionalSubjectSociology: 'Optional: Sociology',
-  OptionalSubjectStatistics: 'Optional: Statistics',
-  OptionalSubjectZoology: 'Optional: Zoology'
-};
+import { useState, useEffect, useRef } from 'react';
 
 const getFileEntries = (course) => {
   if (course.fileUrls && course.fileUrls.length > 0) {
@@ -67,9 +32,10 @@ function UploadSummary({ summary }) {
   );
 }
 
-function CourseFileSelect({ courses, loadingCourses, courseId, setCourseId, fileIndex, setFileIndex }) {
+function CourseFileSelect({ courses, loadingCourses, courseId, setCourseId, fileIndex, setFileIndex, allowedFileIndexes }) {
   const selectedCourse = courses.find(c => c._id === courseId);
   const fileEntries = selectedCourse ? getFileEntries(selectedCourse) : [];
+  const filteredEntries = allowedFileIndexes ? fileEntries.filter((f) => allowedFileIndexes.includes(f.index)) : fileEntries;
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
@@ -84,11 +50,11 @@ function CourseFileSelect({ courses, loadingCourses, courseId, setCourseId, file
           {courses.map((c) => <option key={c._id} value={c._id}>{c.name} ({c.subject})</option>)}
         </select>
       </div>
-      {fileEntries.length > 1 && (
+      {filteredEntries.length > 1 && (
         <div>
           <label className={labelClass}>PDF File</label>
           <select value={fileIndex} onChange={(e) => setFileIndex(Number(e.target.value))} className={inputClass}>
-            {fileEntries.map((f) => <option key={f.index} value={f.index}>{f.name}</option>)}
+            {filteredEntries.map((f) => <option key={f.index} value={f.index}>{f.name}</option>)}
           </select>
         </div>
       )}
@@ -353,125 +319,674 @@ function ManageTopicsTab({ courses, loadingCourses }) {
   );
 }
 
-function UploadPyqsTab() {
-  const [subject, setSubject] = useState('');
-  const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
+function ExtractQuestionsTab({ courses, loadingCourses }) {
+  const [courseId, setCourseId] = useState('');
+  const [fileIndex, setFileIndex] = useState(0);
+  const [pdfFile, setPdfFile] = useState(null);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
-  const [summary, setSummary] = useState(null);
-  const [pyqs, setPyqs] = useState([]);
-  const [loadingPyqs, setLoadingPyqs] = useState(false);
+  const [job, setJob] = useState(null);
+  const [existingTopics, setExistingTopics] = useState([]);
+  const [reviewRows, setReviewRows] = useState([]);
+  const [bulkTopic, setBulkTopic] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveSummary, setSaveSummary] = useState(null);
+  const pollRef = useRef(null);
 
-  const refreshPyqs = async (subj) => {
-    if (!subj) { setPyqs([]); return; }
-    setLoadingPyqs(true);
-    try {
-      const res = await authedFetch(`/api/progress/admin/pyqs?subject=${encodeURIComponent(subj)}`);
-      const data = await res.json();
-      if (res.ok) setPyqs(data.pyqs || []);
-    } finally {
-      setLoadingPyqs(false);
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
     }
   };
 
-  useEffect(() => { refreshPyqs(subject); }, [subject]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => stopPolling, []); // clear interval on unmount
 
-  const handleSubmit = async (e) => {
+  const fetchExistingTopics = async () => {
+    try {
+      const res = await authedFetch(`/api/progress/topics?courseId=${courseId}&fileIndex=${fileIndex}`);
+      const data = await res.json();
+      if (res.ok) setExistingTopics((data.topics || []).map((t) => t.name));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const poll = async (jobId) => {
+    try {
+      const res = await authedFetch(`/api/progress/admin/extract-questions/${jobId}/status`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch extraction status');
+      setJob(data);
+
+      if (data.status === 'done') {
+        stopPolling();
+        await fetchExistingTopics();
+        setReviewRows((data.extractedQuestions || []).map((q) => ({
+          pageNumber: q.pageNumber,
+          questionText: q.questionText,
+          topicName: q.suggestedTopicName || '',
+          isNewTopic: false,
+          newTopicName: '',
+          discarded: false
+        })));
+      } else if (data.status === 'error') {
+        stopPolling();
+      }
+    } catch (err) {
+      console.error(err);
+      stopPolling();
+      setError(err.message || 'Failed to fetch extraction status.');
+    }
+  };
+
+  const handleStart = async (e) => {
     e.preventDefault();
-    if (!subject || !file) {
-      setError('Please select a subject and a CSV file.');
+    if (!courseId || !pdfFile) {
+      setError('Please select a course and a source PDF.');
       return;
     }
-    setUploading(true);
+    setStarting(true);
     setError('');
-    setSummary(null);
+    setSaveSummary(null);
+    setReviewRows([]);
 
     const formData = new FormData();
-    formData.append('subject', subject);
-    formData.append('file', file);
+    formData.append('courseId', courseId);
+    formData.append('fileIndex', String(fileIndex));
+    formData.append('pdf', pdfFile);
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/progress/admin/pyqs/upload-csv', {
+      const res = await fetch('/api/progress/admin/extract-questions/start', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-      setSummary(data);
-      setFile(null);
-      await refreshPyqs(subject);
+      if (!res.ok) throw new Error(data.error || 'Failed to start extraction');
+      setJob({ status: 'pending' });
+      pollRef.current = setInterval(() => poll(data.jobId), 2500);
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Failed to upload CSV.');
+      setError(err.message || 'Failed to start extraction.');
     } finally {
-      setUploading(false);
+      setStarting(false);
+    }
+  };
+
+  const handleStartOver = () => {
+    stopPolling();
+    setJob(null);
+    setReviewRows([]);
+    setError('');
+    setPdfFile(null);
+  };
+
+  const updateRow = (idx, updates) => {
+    setReviewRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...updates } : r)));
+  };
+
+  const applyBulkTopic = () => {
+    if (!bulkTopic) return;
+    setReviewRows((prev) => prev.map((r) =>
+      (!r.topicName && !r.isNewTopic && !r.discarded) ? { ...r, topicName: bulkTopic } : r
+    ));
+  };
+
+  const handleSave = async () => {
+    const activeRows = reviewRows.filter((r) => !r.discarded);
+    if (activeRows.length === 0) {
+      setError('No questions to save (all rows discarded).');
+      return;
+    }
+    if (activeRows.some((r) => !(r.isNewTopic ? r.newTopicName.trim() : r.topicName))) {
+      setError('Every row needs a topic assigned before saving.');
+      return;
+    }
+    if (activeRows.some((r) => !r.questionText.trim())) {
+      setError('Every row needs non-empty question text.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const questions = activeRows.map((r) => ({
+        topicName: r.isNewTopic ? r.newTopicName.trim() : r.topicName,
+        questionText: r.questionText.trim(),
+        pageNumber: r.pageNumber
+      }));
+      const res = await authedFetch('/api/progress/admin/topic-questions/bulk-create', {
+        method: 'POST',
+        body: JSON.stringify({ courseId, fileIndex, questions })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save questions');
+      setSaveSummary(data);
+      setReviewRows([]);
+      setJob(null);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Failed to save questions.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const activeCount = reviewRows.filter((r) => !r.discarded).length;
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+        <h2 className="text-sm font-extrabold text-slate-100 mb-1">Extract Questions from PDF</h2>
+        <p className="text-xs text-slate-400 mb-5">
+          Upload a compiled answer-copy PDF (handwritten answers, with a typed question header at the top of the page where each question starts). Gemini extracts the question text + page number for every question — ignoring handwriting and multi-page continuation pages — and suggests a topic per question using the PDF's own index page. Nothing is saved until you review and confirm below.
+        </p>
+
+        {!job && (
+          <form onSubmit={handleStart} className="space-y-4">
+            <CourseFileSelect courses={courses} loadingCourses={loadingCourses} courseId={courseId} setCourseId={setCourseId} fileIndex={fileIndex} setFileIndex={setFileIndex} />
+            <div>
+              <label className={labelClass}>Source PDF</label>
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                className="w-full text-xs text-slate-300 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-accent-600 file:text-white file:text-xs file:font-bold file:cursor-pointer"
+              />
+            </div>
+            {error && <div className="p-3 bg-rose-950/20 border border-rose-900/40 rounded-xl text-rose-400 text-xs font-semibold">{error}</div>}
+            <button
+              type="submit"
+              disabled={starting}
+              className="px-5 py-2.5 bg-accent-600 hover:bg-accent-500 disabled:bg-accent-900 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+            >
+              {starting ? 'Starting...' : 'Start Extraction'}
+            </button>
+          </form>
+        )}
+
+        {job && job.status !== 'done' && (
+          <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-xl space-y-2">
+            {job.status === 'pending' && <p className="text-xs text-slate-300 font-semibold">Starting extraction...</p>}
+            {job.status === 'extracting_index' && <p className="text-xs text-slate-300 font-semibold">Extracting topic index from the first pages...</p>}
+            {job.status === 'extracting_questions' && (
+              <div className="space-y-1.5">
+                <p className="text-xs text-slate-300 font-semibold">
+                  Processing chunk {job.chunksCompleted + 1} of {job.totalChunks} ({job.currentChunkRange})...
+                </p>
+                <p className="text-[11px] text-accent-400 font-bold">Questions found so far: {job.questionsFoundSoFar}</p>
+                {job.chunksFailed > 0 && (
+                  <p className="text-[11px] text-rose-400 font-bold">{job.chunksFailed} chunk(s) failed so far: {(job.failedChunkRanges || []).join(', ')}</p>
+                )}
+                <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800 mt-2">
+                  <div
+                    className="bg-accent-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, (job.chunksCompleted / Math.max(job.totalChunks, 1)) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            {job.status === 'error' && (
+              <div className="space-y-2">
+                <p className="text-xs text-rose-400 font-semibold">{job.error || 'Extraction failed.'}</p>
+                <button onClick={handleStartOver} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] font-bold cursor-pointer">Start Over</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <UploadSummary summary={saveSummary} />
+      </div>
+
+      {job && job.status === 'done' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h2 className="text-sm font-extrabold text-slate-100">Review Extracted Questions ({reviewRows.length})</h2>
+            <button onClick={handleStartOver} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer">Start New Extraction</button>
+          </div>
+
+          {job.chunksFailed > 0 && (
+            <div className="p-3 bg-amber-950/20 border border-amber-900/40 rounded-xl text-amber-400 text-xs font-semibold">
+              {job.chunksFailed} of {job.totalChunks} chunk(s) failed and were NOT analyzed: {(job.failedChunkRanges || []).join(', ')}. The results below are incomplete for those page ranges — fix the underlying issue (often API quota) and re-run extraction once resolved.
+            </div>
+          )}
+
+          {reviewRows.length === 0 ? (
+            <p className="text-xs text-slate-500">No questions were extracted from this PDF. Try a different file, or check that question headers are typed/printed text rather than handwritten.</p>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 flex-wrap p-3 bg-slate-950/40 border border-slate-800 rounded-xl">
+                <span className="text-[11px] text-slate-400 font-semibold">Assign all unassigned rows to:</span>
+                <select value={bulkTopic} onChange={(e) => setBulkTopic(e.target.value)} className="bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-2.5 py-1.5 text-xs">
+                  <option value="">Select topic...</option>
+                  {existingTopics.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <button onClick={applyBulkTopic} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] font-bold cursor-pointer">Apply</button>
+              </div>
+
+              <div className="divide-y divide-slate-800 border border-slate-800 rounded-xl overflow-hidden max-h-[32rem] overflow-y-auto">
+                {reviewRows.map((row, idx) => (
+                  <div key={idx} className={`px-4 py-3 flex flex-col md:flex-row gap-2 md:items-start ${row.discarded ? 'opacity-40' : ''}`}>
+                    <span className="text-[11px] text-slate-500 font-bold w-14 shrink-0 pt-1.5">Pg. {row.pageNumber}</span>
+                    <textarea
+                      value={row.questionText}
+                      onChange={(e) => updateRow(idx, { questionText: e.target.value })}
+                      disabled={row.discarded}
+                      rows={2}
+                      className="flex-1 bg-slate-950 border border-slate-800 focus:border-accent-500 text-slate-200 rounded-lg px-3 py-1.5 text-xs resize-none"
+                    />
+                    {row.isNewTopic ? (
+                      <input
+                        value={row.newTopicName}
+                        onChange={(e) => updateRow(idx, { newTopicName: e.target.value })}
+                        placeholder="New topic name"
+                        disabled={row.discarded}
+                        className="w-full md:w-44 bg-slate-950 border border-accent-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs shrink-0"
+                      />
+                    ) : (
+                      <select
+                        value={row.topicName}
+                        onChange={(e) => {
+                          if (e.target.value === '__new__') updateRow(idx, { isNewTopic: true, newTopicName: '' });
+                          else updateRow(idx, { topicName: e.target.value });
+                        }}
+                        disabled={row.discarded}
+                        className="w-full md:w-44 bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-1.5 text-xs shrink-0"
+                      >
+                        <option value="">Select topic...</option>
+                        {existingTopics.map((t) => <option key={t} value={t}>{t}</option>)}
+                        <option value="__new__">+ Create new topic...</option>
+                      </select>
+                    )}
+                    <label className="flex items-center gap-1.5 text-[10px] text-slate-400 font-semibold shrink-0 pt-2 cursor-pointer">
+                      <input type="checkbox" checked={row.discarded} onChange={(e) => updateRow(idx, { discarded: e.target.checked })} />
+                      Discard
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              {error && <div className="p-3 bg-rose-950/20 border border-rose-900/40 rounded-xl text-rose-400 text-xs font-semibold">{error}</div>}
+
+              <button
+                onClick={handleSave}
+                disabled={saving || activeCount === 0}
+                className="px-5 py-2.5 bg-accent-600 hover:bg-accent-500 disabled:bg-accent-900 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+              >
+                {saving ? 'Saving...' : `Save ${activeCount} Question${activeCount === 1 ? '' : 's'}`}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExtractPyqsTab() {
+  // Fetches its OWN filtered course list (only course+file combos that already have
+  // Topics/ProgressQuestions, i.e. "progress data uploaded") rather than using the
+  // unfiltered /api/courses/list fetch passed down from AdminProgressData.
+  const [enabledCourses, setEnabledCourses] = useState([]);
+  const [loadingEnabledCourses, setLoadingEnabledCourses] = useState(true);
+  const [courseId, setCourseId] = useState('');
+  const [fileIndex, setFileIndex] = useState(0);
+  const [pdfFile, setPdfFile] = useState(null);
+  const [starting, setStarting] = useState(false);
+  const [error, setError] = useState('');
+  const [job, setJob] = useState(null);
+  const [existingTopics, setExistingTopics] = useState([]);
+  const [reviewRows, setReviewRows] = useState([]);
+  const [bulkTag, setBulkTag] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveSummary, setSaveSummary] = useState(null);
+  const [existingPyqs, setExistingPyqs] = useState([]);
+  const [loadingExistingPyqs, setLoadingExistingPyqs] = useState(false);
+  const pollRef = useRef(null);
+
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
+
+  useEffect(() => stopPolling, []); // clear interval on unmount
+
+  useEffect(() => {
+    const fetchEnabledCourses = async () => {
+      try {
+        const res = await authedFetch('/api/progress/admin/progress-enabled-courses');
+        const data = await res.json();
+        if (res.ok) setEnabledCourses(data.courses || []);
+      } finally {
+        setLoadingEnabledCourses(false);
+      }
+    };
+    fetchEnabledCourses();
+  }, []);
+
+  const selectedCourse = enabledCourses.find((c) => c._id === courseId);
+
+  const refreshExistingPyqs = async () => {
+    if (!courseId) { setExistingPyqs([]); return; }
+    setLoadingExistingPyqs(true);
+    try {
+      const res = await authedFetch(`/api/progress/admin/pyqs?courseId=${courseId}&fileIndex=${fileIndex}`);
+      const data = await res.json();
+      if (res.ok) setExistingPyqs(data.pyqs || []);
+    } finally {
+      setLoadingExistingPyqs(false);
+    }
+  };
+
+  useEffect(() => { refreshExistingPyqs(); }, [courseId, fileIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchExistingTopics = async () => {
+    try {
+      const res = await authedFetch(`/api/progress/topics?courseId=${courseId}&fileIndex=${fileIndex}`);
+      const data = await res.json();
+      if (res.ok) setExistingTopics((data.topics || []).map((t) => t.name));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const poll = async (jobId) => {
+    try {
+      const res = await authedFetch(`/api/progress/admin/extract-pyqs/${jobId}/status`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch extraction status');
+      setJob(data);
+
+      if (data.status === 'done') {
+        stopPolling();
+        await fetchExistingTopics();
+        setReviewRows((data.extractedPyqs || []).map((q) => ({
+          pageNumber: q.pageNumber,
+          year: q.year,
+          questionText: q.questionText,
+          tag: q.suggestedTag || '',
+          discarded: false
+        })));
+      } else if (data.status === 'error') {
+        stopPolling();
+      }
+    } catch (err) {
+      console.error(err);
+      stopPolling();
+      setError(err.message || 'Failed to fetch extraction status.');
+    }
+  };
+
+  const handleStart = async (e) => {
+    e.preventDefault();
+    if (!courseId || !pdfFile) {
+      setError('Please select a course and a source PDF.');
+      return;
+    }
+    setStarting(true);
+    setError('');
+    setSaveSummary(null);
+    setReviewRows([]);
+
+    const formData = new FormData();
+    formData.append('courseId', courseId);
+    formData.append('fileIndex', String(fileIndex));
+    formData.append('pdf', pdfFile);
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/progress/admin/extract-pyqs/start', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to start extraction');
+      setJob({ status: 'pending' });
+      pollRef.current = setInterval(() => poll(data.jobId), 2500);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Failed to start extraction.');
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const handleStartOver = () => {
+    stopPolling();
+    setJob(null);
+    setReviewRows([]);
+    setError('');
+    setPdfFile(null);
+  };
+
+  const updateRow = (idx, updates) => {
+    setReviewRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...updates } : r)));
+  };
+
+  const applyBulkTag = () => {
+    if (!bulkTag) return;
+    setReviewRows((prev) => prev.map((r) =>
+      (!r.tag && !r.discarded) ? { ...r, tag: bulkTag } : r
+    ));
+  };
+
+  const handleSave = async () => {
+    const activeRows = reviewRows.filter((r) => !r.discarded);
+    if (activeRows.length === 0) {
+      setError('No PYQs to save (all rows discarded).');
+      return;
+    }
+    if (activeRows.some((r) => !r.tag)) {
+      setError('Every row needs a tag assigned before saving.');
+      return;
+    }
+    if (activeRows.some((r) => !r.questionText.trim())) {
+      setError('Every row needs non-empty question text.');
+      return;
+    }
+    if (activeRows.some((r) => !Number.isFinite(Number(r.year)) || Number(r.year) < 2001 || Number(r.year) > 2025)) {
+      setError('Every row needs a year between 2001 and 2025.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const pyqsPayload = activeRows.map((r) => ({
+        year: Number(r.year),
+        questionText: r.questionText.trim(),
+        pageNumber: r.pageNumber,
+        section: r.tag
+      }));
+      const res = await authedFetch('/api/progress/admin/pyqs/bulk-create', {
+        method: 'POST',
+        body: JSON.stringify({ courseId, fileIndex, pyqs: pyqsPayload })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save PYQs');
+      setSaveSummary(data);
+      setReviewRows([]);
+      setJob(null);
+      await refreshExistingPyqs();
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Failed to save PYQs.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDeletePyq = async (id) => {
     await authedFetch(`/api/progress/admin/pyqs/${id}`, { method: 'DELETE' });
-    await refreshPyqs(subject);
+    await refreshExistingPyqs();
   };
+
+  const activeCount = reviewRows.filter((r) => !r.discarded).length;
 
   return (
     <div className="space-y-6">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
-        <h2 className="text-sm font-extrabold text-slate-100 mb-1">Upload PYQs (CSV)</h2>
-        <p className="text-xs text-slate-400 mb-1">
-          CSV columns required: <span className="font-bold text-slate-300">question text</span>, <span className="font-bold text-slate-300">section</span>, <span className="font-bold text-slate-300">year</span>.
+        <h2 className="text-sm font-extrabold text-slate-100 mb-1">Extract PYQs from PDF</h2>
+        <p className="text-xs text-slate-400 mb-5">
+          Only courses/files that already have Topics & Questions uploaded are selectable below (their topics become the tag vocabulary for extracted PYQs). Upload a compiled "Previous Year Questions" PDF spanning many exam years — Gemini extracts every distinct question, keeps only years 2001-2025, and suggests a tag from the course's existing topics. Nothing is saved until you review and confirm below. Saving is additive — it never deletes existing PYQs for this course/file.
         </p>
-        <p className="text-[11px] text-amber-400 font-semibold mb-5">Uploading replaces all existing PYQs for the selected subject.</p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className={labelClass}>Subject</label>
-            <select value={subject} onChange={(e) => setSubject(e.target.value)} className={inputClass}>
-              <option value="">Select subject...</option>
-              <optgroup label="General Studies Modules">
-                {Object.entries(SUBJECT_NAMES).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-              </optgroup>
-              <optgroup label="Optional Subjects">
-                {Object.entries(OPTIONAL_NAMES).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-              </optgroup>
-            </select>
-          </div>
-
-          <div>
-            <label className={labelClass}>CSV File</label>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="w-full text-xs text-slate-300 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-accent-600 file:text-white file:text-xs file:font-bold file:cursor-pointer"
+        {!job && (
+          <form onSubmit={handleStart} className="space-y-4">
+            <CourseFileSelect
+              courses={enabledCourses}
+              loadingCourses={loadingEnabledCourses}
+              courseId={courseId}
+              setCourseId={setCourseId}
+              fileIndex={fileIndex}
+              setFileIndex={setFileIndex}
+              allowedFileIndexes={selectedCourse?.progressFileIndexes}
             />
+            {!loadingEnabledCourses && enabledCourses.length === 0 && (
+              <p className="text-xs text-amber-400 font-semibold">No courses have Topics/Questions uploaded yet. Use "Upload Topic/Question CSV" or "Extract Questions from PDF" first.</p>
+            )}
+            <div>
+              <label className={labelClass}>Source PDF (PYQ compilation)</label>
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                className="w-full text-xs text-slate-300 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-accent-600 file:text-white file:text-xs file:font-bold file:cursor-pointer"
+              />
+            </div>
+            {error && <div className="p-3 bg-rose-950/20 border border-rose-900/40 rounded-xl text-rose-400 text-xs font-semibold">{error}</div>}
+            <button
+              type="submit"
+              disabled={starting || !courseId}
+              className="px-5 py-2.5 bg-accent-600 hover:bg-accent-500 disabled:bg-accent-900 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+            >
+              {starting ? 'Starting...' : 'Start Extraction'}
+            </button>
+          </form>
+        )}
+
+        {job && job.status !== 'done' && (
+          <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-xl space-y-2">
+            {job.status === 'pending' && <p className="text-xs text-slate-300 font-semibold">Starting extraction...</p>}
+            {job.status === 'extracting_pyqs' && (
+              <div className="space-y-1.5">
+                <p className="text-xs text-slate-300 font-semibold">
+                  Processing chunk {job.chunksCompleted + job.chunksFailed + 1} of {job.totalChunks} ({job.currentChunkRange})...
+                </p>
+                <p className="text-[11px] text-accent-400 font-bold">PYQs found so far: {job.pyqsFoundSoFar}</p>
+                {job.chunksFailed > 0 && (
+                  <p className="text-[11px] text-rose-400 font-bold">{job.chunksFailed} chunk(s) failed so far: {(job.failedChunkRanges || []).join(', ')}</p>
+                )}
+                <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800 mt-2">
+                  <div
+                    className="bg-accent-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, ((job.chunksCompleted + job.chunksFailed) / Math.max(job.totalChunks, 1)) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            {job.status === 'error' && (
+              <div className="space-y-2">
+                <p className="text-xs text-rose-400 font-semibold">{job.error || 'Extraction failed.'}</p>
+                <button onClick={handleStartOver} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] font-bold cursor-pointer">Start Over</button>
+              </div>
+            )}
           </div>
+        )}
 
-          {error && <div className="p-3 bg-rose-950/20 border border-rose-900/40 rounded-xl text-rose-400 text-xs font-semibold">{error}</div>}
-
-          <button
-            type="submit"
-            disabled={uploading}
-            className="px-5 py-2.5 bg-accent-600 hover:bg-accent-500 disabled:bg-accent-900 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
-          >
-            {uploading ? 'Uploading...' : 'Upload'}
-          </button>
-        </form>
-
-        <UploadSummary summary={summary} />
+        <UploadSummary summary={saveSummary} />
       </div>
 
-      {subject && (
+      {job && job.status === 'done' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h2 className="text-sm font-extrabold text-slate-100">Review Extracted PYQs ({reviewRows.length})</h2>
+            <button onClick={handleStartOver} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer">Start New Extraction</button>
+          </div>
+
+          {job.chunksFailed > 0 && (
+            <div className="p-3 bg-amber-950/20 border border-amber-900/40 rounded-xl text-amber-400 text-xs font-semibold">
+              {job.chunksFailed} of {job.totalChunks} chunk(s) failed and were NOT analyzed: {(job.failedChunkRanges || []).join(', ')}. The results below are incomplete for those page ranges — fix the underlying issue (often API quota) and re-run extraction once resolved.
+            </div>
+          )}
+
+          {reviewRows.length === 0 ? (
+            <p className="text-xs text-slate-500">No PYQs (within 2001-2025) were extracted from this PDF.</p>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 flex-wrap p-3 bg-slate-950/40 border border-slate-800 rounded-xl">
+                <span className="text-[11px] text-slate-400 font-semibold">Assign all unassigned rows to:</span>
+                <select value={bulkTag} onChange={(e) => setBulkTag(e.target.value)} className="bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-2.5 py-1.5 text-xs">
+                  <option value="">Select tag...</option>
+                  {existingTopics.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <button onClick={applyBulkTag} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] font-bold cursor-pointer">Apply</button>
+              </div>
+
+              <div className="divide-y divide-slate-800 border border-slate-800 rounded-xl overflow-hidden max-h-[32rem] overflow-y-auto">
+                {reviewRows.map((row, idx) => (
+                  <div key={idx} className={`px-4 py-3 flex flex-col md:flex-row gap-2 md:items-start ${row.discarded ? 'opacity-40' : ''}`}>
+                    <span className="text-[11px] text-slate-500 font-bold w-14 shrink-0 pt-1.5">Pg. {row.pageNumber}</span>
+                    <input
+                      type="number"
+                      value={row.year}
+                      onChange={(e) => updateRow(idx, { year: e.target.value })}
+                      disabled={row.discarded}
+                      className="w-full md:w-20 bg-slate-950 border border-slate-800 focus:border-accent-500 text-slate-200 rounded-lg px-3 py-1.5 text-xs shrink-0"
+                    />
+                    <textarea
+                      value={row.questionText}
+                      onChange={(e) => updateRow(idx, { questionText: e.target.value })}
+                      disabled={row.discarded}
+                      rows={2}
+                      className="flex-1 bg-slate-950 border border-slate-800 focus:border-accent-500 text-slate-200 rounded-lg px-3 py-1.5 text-xs resize-none"
+                    />
+                    <select
+                      value={row.tag}
+                      onChange={(e) => updateRow(idx, { tag: e.target.value })}
+                      disabled={row.discarded}
+                      className="w-full md:w-44 bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-1.5 text-xs shrink-0"
+                    >
+                      <option value="">Unclassified</option>
+                      {existingTopics.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <label className="flex items-center gap-1.5 text-[10px] text-slate-400 font-semibold shrink-0 pt-2 cursor-pointer">
+                      <input type="checkbox" checked={row.discarded} onChange={(e) => updateRow(idx, { discarded: e.target.checked })} />
+                      Discard
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              {error && <div className="p-3 bg-rose-950/20 border border-rose-900/40 rounded-xl text-rose-400 text-xs font-semibold">{error}</div>}
+
+              <button
+                onClick={handleSave}
+                disabled={saving || activeCount === 0}
+                className="px-5 py-2.5 bg-accent-600 hover:bg-accent-500 disabled:bg-accent-900 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+              >
+                {saving ? 'Saving...' : `Save ${activeCount} PYQ${activeCount === 1 ? '' : 's'}`}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {courseId && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
-          <h2 className="text-sm font-extrabold text-slate-100 mb-4">Existing PYQs for {OPTIONAL_NAMES[subject] || SUBJECT_NAMES[subject] || subject}</h2>
-          {loadingPyqs ? (
+          <h2 className="text-sm font-extrabold text-slate-100 mb-4">Existing PYQs for this Course/File</h2>
+          {loadingExistingPyqs ? (
             <p className="text-xs text-slate-500">Loading...</p>
-          ) : pyqs.length === 0 ? (
+          ) : existingPyqs.length === 0 ? (
             <p className="text-xs text-slate-500">No PYQs yet.</p>
           ) : (
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {pyqs.map((p) => (
+              {existingPyqs.map((p) => (
                 <div key={p._id} className="flex items-center justify-between gap-3 p-3 bg-slate-950/40 border border-slate-800 rounded-xl">
                   <div className="min-w-0">
                     <p className="text-xs text-slate-200 truncate">{p.questionText}</p>
@@ -532,13 +1047,20 @@ export default function AdminProgressData() {
           onClick={() => setActiveSubTab('pyqs')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${activeSubTab === 'pyqs' ? 'bg-accent-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
         >
-          Upload PYQs CSV
+          Extract PYQs from PDF
+        </button>
+        <button
+          onClick={() => setActiveSubTab('extract')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${activeSubTab === 'extract' ? 'bg-accent-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+        >
+          Extract Questions from PDF
         </button>
       </div>
 
       {activeSubTab === 'upload' && <UploadTopicQuestionsTab courses={courses} loadingCourses={loadingCourses} />}
       {activeSubTab === 'manage' && <ManageTopicsTab courses={courses} loadingCourses={loadingCourses} />}
-      {activeSubTab === 'pyqs' && <UploadPyqsTab />}
+      {activeSubTab === 'pyqs' && <ExtractPyqsTab />}
+      {activeSubTab === 'extract' && <ExtractQuestionsTab courses={courses} loadingCourses={loadingCourses} />}
     </div>
   );
 }

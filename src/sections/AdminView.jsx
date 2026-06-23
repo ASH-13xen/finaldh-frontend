@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function AdminView() {
@@ -16,6 +18,10 @@ export default function AdminView() {
   const [userSearch, setUserSearch] = useState('');
   const [txnSearch, setTxnSearch] = useState('');
   const [txnStatusFilter, setTxnStatusFilter] = useState('all');
+  // Multi-select course filter. Empty array = no filter (show everyone). Entries are either
+  // a real courseId, '__others__' (unrecognized/stray course-id strings on a user that don't
+  // match any current Course), or '__no_course__' (interestedCourses is empty).
+  const [selectedCourseKeys, setSelectedCourseKeys] = useState([]);
 
   // Interactive States
   const [processingTxnId, setProcessingTxnId] = useState(null);
@@ -188,16 +194,102 @@ export default function AdminView() {
     return matchesSearch && matchesStatus;
   });
 
+  // Resolve a user's interestedCourses into the keys used by the filter/stats:
+  // a real courseId for an exact match, '__others__' for a stray/unrecognized course-id
+  // string (e.g. left over from a deleted/renamed course), or '__no_course__' if empty.
+  const getUserCourseKeys = (u) => {
+    const ic = u.interestedCourses || [];
+    if (ic.length === 0) return ['__no_course__'];
+    const keys = new Set();
+    for (const cid of ic) {
+      const matched = courses.find(c => c.courseId.toLowerCase() === (cid || '').toLowerCase());
+      keys.add(matched ? matched.courseId : '__others__');
+    }
+    return Array.from(keys);
+  };
+
+  const toggleCourseKey = (key) => {
+    setSelectedCourseKeys(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  };
+  const selectAllCourseKeys = () => setSelectedCourseKeys([...courses.map(c => c.courseId), '__others__', '__no_course__']);
+  const selectAllButOthers = () => setSelectedCourseKeys([...courses.map(c => c.courseId), '__no_course__']);
+  const clearCourseKeys = () => setSelectedCourseKeys([]);
+
   // Filtering Logic: Users
   const filteredUsers = users.filter(u => {
-    return (
+    const matchesSearch = (
       (u.name || '').toLowerCase().includes(userSearch.toLowerCase()) ||
       (u.fullName || '').toLowerCase().includes(userSearch.toLowerCase()) ||
       (u.email || '').toLowerCase().includes(userSearch.toLowerCase()) ||
       (u.mobileNumber || '').toLowerCase().includes(userSearch.toLowerCase()) ||
       (u.telegramUsername || '').toLowerCase().includes(userSearch.toLowerCase())
     );
+
+    // Empty selection = no course filter applied (show everyone). Otherwise ANY-match:
+    // a user matches if at least one of their resolved course keys is selected.
+    const matchesCourseFilter = selectedCourseKeys.length === 0 ||
+      getUserCourseKeys(u).some(k => selectedCourseKeys.includes(k));
+
+    return matchesSearch && matchesCourseFilter;
   });
+
+  // Per-course purchase counts (always computed over the full user list, independent of active filters)
+  const othersCount = users.filter(u => getUserCourseKeys(u).includes('__others__')).length;
+  const noCourseCount = users.filter(u => getUserCourseKeys(u).includes('__no_course__')).length;
+  const courseStatsList = [
+    ...courses.map(c => ({
+      key: c.courseId,
+      name: c.name,
+      subject: c.subject,
+      count: users.filter(u => (u.interestedCourses || []).some(cid => cid.toLowerCase() === c.courseId.toLowerCase())).length
+    })),
+    { key: '__others__', name: 'Others', subject: 'unrecognized course IDs', count: othersCount },
+    { key: '__no_course__', name: 'No Course Purchased', subject: '', count: noCourseCount }
+  ];
+
+  const handleExportPdf = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    doc.setFontSize(14);
+    doc.text('User Database Export', 40, 30);
+    doc.setFontSize(9);
+    doc.text(`Generated ${new Date().toLocaleString()} - ${filteredUsers.length} user(s)`, 40, 46);
+
+    const courseIdToName = new Map(courses.map(c => [c.courseId, c.name]));
+    const rows = filteredUsers.map(u => {
+      const limits = u.downloadLimits || [];
+      const totalDownloaded = limits.reduce((s, d) => s + (d.downloadedCount || 0), 0);
+      const totalAllowed = limits.reduce((s, d) => s + (d.allowedCount || 0), 0);
+      const courseLabels = (u.interestedCourses || []).map(cid => courseIdToName.get(cid) || cid).join(', ');
+      return [
+        u.fullName || u.name || '-',
+        u.email || '-',
+        u.mobileNumber || '-',
+        u.telegramUsername ? `@${u.telegramUsername}` : '-',
+        u.optionalSubject ? u.optionalSubject.replace('OptionalSubject', '') : '-',
+        courseLabels || 'None',
+        `${totalDownloaded}/${totalAllowed}`
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 60,
+      head: [['Name', 'Email', 'Mobile', 'Telegram', 'Optional Subject', 'Purchased Courses', 'Downloads']],
+      body: rows,
+      styles: { fontSize: 7, cellPadding: 4 },
+      headStyles: { fillColor: [30, 41, 59] },
+      columnStyles: {
+        0: { cellWidth: 90 }, 1: { cellWidth: 110 }, 2: { cellWidth: 60 },
+        3: { cellWidth: 60 }, 4: { cellWidth: 70 }, 5: { cellWidth: 'auto' }, 6: { cellWidth: 50 }
+      },
+      margin: { left: 40, right: 40 },
+      didDrawPage: () => {
+        doc.setFontSize(8);
+        doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber}`, doc.internal.pageSize.getWidth() - 60, doc.internal.pageSize.getHeight() - 20);
+      }
+    });
+
+    doc.save(`users-export-${Date.now()}.pdf`);
+  };
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
@@ -508,19 +600,72 @@ export default function AdminView() {
       ) : (
         // USER DATABASE VIEW
         <div className="space-y-4">
-          {/* User Search & Meta Row */}
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/40 border border-slate-800 p-4 rounded-2xl">
-            <div className="text-xs font-bold text-slate-350">
-              Showing <span className="text-white">{filteredUsers.length}</span> user profiles registered in database
+          {/* Per-course purchase stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            {courseStatsList.map((c) => (
+              <div key={c.key} className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 flex flex-col justify-center">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate" title={c.subject ? `${c.name} (${c.subject})` : c.name}>{c.name}</span>
+                <span className="text-lg font-black text-white mt-1">{c.count}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Advanced course filter: multi-select with Others/No-Course buckets + quick display modes */}
+          <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Course Filter {selectedCourseKeys.length > 0 && <span className="text-accent-400">({selectedCourseKeys.length} selected)</span>}
+              </span>
+              <div className="flex gap-2">
+                <button onClick={clearCourseKeys} className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer">Display All</button>
+                <button onClick={selectAllButOthers} className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer">All but Others</button>
+                <button onClick={selectAllCourseKeys} className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer">Select All</button>
+              </div>
             </div>
-            
-            <input
-              type="text"
-              placeholder="Search user email, full name, mobile, telegram..."
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-              className="w-full md:w-80 px-4 py-2 bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-200 placeholder:text-slate-650 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-accent-500 font-medium"
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-[180px] overflow-y-auto bg-slate-950/40 border border-slate-850 rounded-xl p-3">
+              {courseStatsList.map((c) => {
+                const checked = selectedCourseKeys.includes(c.key);
+                return (
+                  <button
+                    type="button"
+                    key={c.key}
+                    onClick={() => toggleCourseKey(c.key)}
+                    className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-left text-[11px] font-semibold transition cursor-pointer ${
+                      checked ? 'bg-accent-950/30 border-accent-600 text-accent-200' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <span className="truncate">{c.name} <span className="text-slate-500 font-normal">({c.count})</span></span>
+                    <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${checked ? 'bg-accent-600 border-accent-500' : 'border-slate-700'}`}>
+                      {checked && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" className="w-2 h-2 text-white"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* User Search & Meta Row */}
+          <div className="flex flex-col md:flex-row gap-3 items-center justify-between bg-slate-900/40 border border-slate-800 p-4 rounded-2xl">
+            <div className="text-xs font-bold text-slate-350 whitespace-nowrap">
+              Showing <span className="text-white">{filteredUsers.length}</span> user profile(s)
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2.5 w-full md:w-auto">
+              <input
+                type="text"
+                placeholder="Search user email, full name, mobile, telegram..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="w-full md:w-72 px-4 py-2 bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-200 placeholder:text-slate-650 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-accent-500 font-medium"
+              />
+
+              <button
+                onClick={handleExportPdf}
+                className="px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap"
+              >
+                Download as PDF
+              </button>
+            </div>
           </div>
 
           {/* User Database Sheet Table */}
