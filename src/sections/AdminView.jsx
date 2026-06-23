@@ -169,12 +169,16 @@ export default function AdminView() {
     }
   };
 
-  // Helper: zoom screenshot image
+  // Helper: zoom screenshot image. Screenshots are served from an authenticated API route
+  // (DB-backed, not a static file), so <img> needs the token as a query param since it
+  // can't send an Authorization header.
   const getImageUrl = (path) => {
     if (!path) return '';
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    const token = localStorage.getItem('token');
+    const withToken = (url) => (token ? `${url}${url.includes('?') ? '&' : '?'}token=${token}` : url);
+    if (path.startsWith('http://') || path.startsWith('https://')) return withToken(path);
     const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-    return `${apiBaseUrl.replace(/\/$/, '')}${path}`;
+    return withToken(`${apiBaseUrl.replace(/\/$/, '')}${path}`);
   };
 
   const copyToClipboard = (text) => {

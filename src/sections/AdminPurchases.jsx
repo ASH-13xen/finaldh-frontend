@@ -13,14 +13,18 @@ export default function AdminPurchases() {
   // Lightbox Image Zoom
   const [lightboxImage, setLightboxImage] = useState(null);
 
-  // Get full image URL by prepending backend server URL if path is relative
+  // Get full image URL by prepending backend server URL if path is relative.
+  // Screenshots are served from an authenticated API route now (DB-backed, not a static file),
+  // so <img> needs the token as a query param since it can't send an Authorization header.
   const getImageUrl = (path) => {
     if (!path) return '';
+    const token = localStorage.getItem('token');
+    const withToken = (url) => (token ? `${url}${url.includes('?') ? '&' : '?'}token=${token}` : url);
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
+      return withToken(path);
     }
     const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-    return `${apiBaseUrl.replace(/\/$/, '')}${path}`;
+    return withToken(`${apiBaseUrl.replace(/\/$/, '')}${path}`);
   };
 
   const fetchRequests = async () => {
