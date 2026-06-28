@@ -1095,26 +1095,30 @@ export default function UploadCourse() {
 
       {/* Add / Edit Modal Overlay */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl w-full max-w-lg space-y-6 relative transform transition-all duration-300">
-            {/* Close Button */}
-            <button 
-              onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 cursor-pointer"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-
-            <div>
-              <h2 className="text-xl font-extrabold text-white">
-                {editCourse ? 'Modify Course details' : 'Add New Course'}
-              </h2>
-              <p className="text-slate-400 text-xs mt-1 font-medium">
-                {editCourse ? 'Change details of the published course PDF.' : 'Publish a new course PDF to the directory.'}
-              </p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 py-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col relative transform transition-all duration-300 overflow-hidden">
+            {/* Header (sticky) */}
+            <div className="flex items-start justify-between gap-4 p-6 sm:p-8 pb-5 border-b border-slate-850 shrink-0">
+              <div>
+                <h2 className="text-xl font-extrabold text-white">
+                  {editCourse ? 'Modify Course details' : 'Add New Course'}
+                </h2>
+                <p className="text-slate-400 text-xs mt-1 font-medium">
+                  {editCourse ? 'Change details of the published course PDF.' : 'Publish a new course PDF to the directory.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="text-slate-400 hover:text-slate-200 cursor-pointer shrink-0"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-4">
+            <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 min-h-0">
+              {/* Scrollable body */}
+              <div className="space-y-4 p-6 sm:p-8 overflow-y-auto flex-1 min-h-0">
               {/* Course ID (e.g. GS1) */}
               <div>
                 <label htmlFor="modal-course-id" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Course ID (matches user Interested Course)</label>
@@ -1309,50 +1313,54 @@ export default function UploadCourse() {
                   Add Another PDF File
                 </button>
               </div>
+              </div>
 
-              {/* Progress Bar */}
-              {showProgress && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    <span>Uploading file...</span>
-                    <span>{uploadProgress}%</span>
+              {/* Footer (sticky): progress, notifications & actions always reachable */}
+              <div className="shrink-0 border-t border-slate-850 p-6 sm:p-8 pt-4 space-y-3">
+                {/* Progress Bar */}
+                {showProgress && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <span>Uploading file...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                      <div
+                        className="bg-accent-500 h-2.5 rounded-full transition-all duration-300 ease-out"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
-                    <div 
-                      className="bg-accent-500 h-2.5 rounded-full transition-all duration-300 ease-out" 
-                      style={{ width: `${uploadProgress}%` }}
-                    ></div>
+                )}
+
+                {/* Notification Boxes */}
+                {formError && (
+                  <div className="p-3 bg-rose-950/30 border border-rose-900/50 text-rose-400 text-[11px] font-semibold rounded-xl flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-rose-500"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span>{formError}</span>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Notification Boxes */}
-              {formError && (
-                <div className="p-3 bg-rose-950/30 border border-rose-900/50 text-rose-400 text-[11px] font-semibold rounded-xl flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-rose-500"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <span>{formError}</span>
-                </div>
-              )}
+                {successMsg && (
+                  <div className="p-3 bg-emerald-950/30 border border-emerald-900/50 text-emerald-400 text-[11px] font-semibold rounded-xl flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-emerald-500"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>{successMsg}</span>
+                  </div>
+                )}
 
-              {successMsg && (
-                <div className="p-3 bg-emerald-950/30 border border-emerald-900/50 text-emerald-400 text-[11px] font-semibold rounded-xl flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 text-emerald-500"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span>{successMsg}</span>
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <Button variant="primary" disabled={saving}>
+                    {saving ? 'Saving...' : 'Save Course'}
+                  </Button>
                 </div>
-              )}
-
-              {/* Actions */}
-              <div className="pt-2 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <Button variant="primary" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save Course'}
-                </Button>
               </div>
             </form>
           </div>
