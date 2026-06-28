@@ -65,6 +65,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
           pendingRequest={null}
           onPurchase={onRedirectToLogin}
           onTelegramNotify={onRedirectToLogin}
+          onSeeSample={handleSeeSample}
         />
       )}
 

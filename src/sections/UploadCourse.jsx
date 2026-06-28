@@ -100,6 +100,11 @@ export default function UploadCourse() {
   const [sampleFormError, setSampleFormError] = useState('');
   const [sampleUploadProgress, setSampleUploadProgress] = useState(0);
 
+  // Optional Subjects common description state
+  const [optionalDescription, setOptionalDescription] = useState('');
+  const [savingOptionalDescription, setSavingOptionalDescription] = useState(false);
+  const [loadingOptionalDescription, setLoadingOptionalDescription] = useState(true);
+
   // Toast notifications state
   const [toasts, setToasts] = useState([]);
   const showToast = (message, type = 'info') => {
@@ -199,7 +204,38 @@ export default function UploadCourse() {
     fetchCourses();
     fetchPendingRequests();
     fetchComboOffers();
+
+    fetch('/api/courses/site-content/optional_subjects_description')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => setOptionalDescription(data?.value || ''))
+      .catch(() => {})
+      .finally(() => setLoadingOptionalDescription(false));
   }, []);
+
+  const handleSaveOptionalDescription = async () => {
+    setSavingOptionalDescription(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/courses/site-content/optional_subjects_description', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ value: optionalDescription })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save description');
+      }
+      showToast('Optional Subjects description saved!', 'success');
+    } catch (err) {
+      console.error('Error saving optional subjects description:', err);
+      showToast(err.message || 'Error occurred while saving description.', 'error');
+    } finally {
+      setSavingOptionalDescription(false);
+    }
+  };
 
   // Open modal for adding a combo offer
   const handleOpenAddCombo = () => {
@@ -1018,6 +1054,41 @@ export default function UploadCourse() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Optional Subjects Description Section */}
+      <div className="mt-14 pt-10 border-t border-slate-800">
+        <div className="mb-6">
+          <h2 className="text-xl font-extrabold text-white tracking-tight">Optional Subjects Description</h2>
+          <p className="text-slate-400 text-xs mt-1 font-medium">
+            One shared description shown above the "Optional Subjects" section on the Purchase Courses page (visible to guests and logged-in students). Applies to all optional subject courses, so keep it generic — it won't mention any single subject by name.
+          </p>
+        </div>
+
+        {loadingOptionalDescription ? (
+          <div className="py-10 text-center">
+            <LoadingSpinner text="Loading description..." />
+          </div>
+        ) : (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-6 space-y-4">
+            <textarea
+              value={optionalDescription}
+              onChange={(e) => setOptionalDescription(e.target.value)}
+              placeholder="e.g. Every optional subject package includes topic-wise compiled notes, previous year question mapping, and quick revision boxes — structured the same way across all subjects so you can switch optionals without relearning a new format."
+              rows={5}
+              className="w-full px-4.5 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-accent-500 transition-all font-medium resize-y"
+            />
+            <div className="flex justify-end">
+              <button
+                onClick={handleSaveOptionalDescription}
+                disabled={savingOptionalDescription}
+                className="px-4 py-2.5 bg-accent-600 hover:bg-accent-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-md hover:shadow-accent-950/30"
+              >
+                {savingOptionalDescription ? 'Saving...' : 'Save Description'}
+              </button>
             </div>
           </div>
         )}

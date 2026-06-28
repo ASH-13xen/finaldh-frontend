@@ -404,6 +404,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
           pendingRequest={mmfPendingRequest}
           onPurchase={handleOpenPurchaseModal}
           onTelegramNotify={handleTelegramNotify}
+          onSeeSample={handleSeeSample}
         />
       )}
 

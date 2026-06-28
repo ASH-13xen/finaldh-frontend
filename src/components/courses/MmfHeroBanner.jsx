@@ -1,6 +1,6 @@
 import { MMF_FEATURES } from './courseHelpers';
 
-export default function MmfHeroBanner({ course, status, pendingRequest, onPurchase, onTelegramNotify }) {
+export default function MmfHeroBanner({ course, status, pendingRequest, onPurchase, onTelegramNotify, onSeeSample }) {
   return (
     <div className="mb-10 md:mb-14">
       <div className="bg-gradient-to-br from-accent-950/40 via-slate-900/60 to-slate-900/40 border border-accent-700/50 rounded-2xl p-5 md:p-10 shadow-2xl shadow-accent-950/20 relative overflow-hidden">
@@ -13,9 +13,20 @@ export default function MmfHeroBanner({ course, status, pendingRequest, onPurcha
             <h2 className="text-lg md:text-3xl font-black text-white tracking-tight mb-1.5">
               {course.name}
             </h2>
-            <p className="text-slate-300 text-xs md:text-sm font-medium mb-5">
+            <p className="text-slate-300 text-xs md:text-sm font-medium mb-3">
               Everything you need for GS Mains, compiled into one master file.
             </p>
+
+            {course.sampleFileUrl && (
+              <button
+                type="button"
+                onClick={() => onSeeSample(course)}
+                className="mb-5 text-[11px] md:text-xs font-bold text-accent-300 hover:text-accent-200 underline-offset-2 hover:underline cursor-pointer flex items-center gap-1.5"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                See Sample
+              </button>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
               {MMF_FEATURES.map((point, idx) => (
