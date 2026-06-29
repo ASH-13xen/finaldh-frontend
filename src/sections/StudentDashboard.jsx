@@ -224,6 +224,8 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   // Profile Gate Modal State
   const [pendingDownloadCourse, setPendingDownloadCourse] = useState(null); // { id, name }
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [downloadWarningOpen, setDownloadWarningOpen] = useState(false);
+  const [pendingDownloadParams, setPendingDownloadParams] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [telegramUsername, setTelegramUsername] = useState('');
@@ -514,8 +516,16 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     fetchCourses();
   }, []);
 
-  async function handleDownload(courseId, courseName, fileIndex = 0, skipModal = false) {
-    console.log(`[handleDownload] Initiated download process for courseId: ${courseId}, courseName: ${courseName}, fileIndex: ${fileIndex}, skipModal: ${skipModal}`);
+  const executeActualDownload = () => {
+    if (!pendingDownloadParams) return;
+    const { courseId, courseName, fileIndex } = pendingDownloadParams;
+    setDownloadWarningOpen(false);
+    setPendingDownloadParams(null);
+    handleDownload(courseId, courseName, fileIndex, true, true);
+  };
+
+  async function handleDownload(courseId, courseName, fileIndex = 0, skipModal = false, skipWarning = false) {
+    console.log(`[handleDownload] Initiating download warning gate verification for composite course: ${courseId}_${fileIndex} (skipModal: ${skipModal}, skipWarning: ${skipWarning})`);
     
     const targetCourse = courses.find(c => c.courseId && c.courseId.toLowerCase() === courseId.toLowerCase());
     const hasMultiplePdfs = targetCourse && targetCourse.fileUrls && targetCourse.fileUrls.length > 1;
@@ -534,6 +544,13 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       setOtpError('');
       setProfileError('');
       setProfileModalOpen(true);
+      return;
+    }
+
+    if (!skipWarning) {
+      console.log('[handleDownload] Interrupting download flow to display guidelines and best practices.');
+      setPendingDownloadParams({ courseId, courseName, fileIndex, compositeId });
+      setDownloadWarningOpen(true);
       return;
     }
 
@@ -1300,6 +1317,97 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Download Warning & Instructions Modal */}
+      {downloadWarningOpen && pendingDownloadParams && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-surface border border-border-default rounded-2xl w-full max-w-lg p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[95vh] overflow-y-auto text-text-primary">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-4 pb-3 border-b border-border-default">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 bg-status-warning-bg border border-status-warning-text/25 text-status-warning-text rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div>
+                  <h3 className="text-sm md:text-base font-sans font-extrabold text-text-primary">
+                    Security Stamp & Download Instructions
+                  </h3>
+                  <p className="text-[10px] text-text-secondary font-medium mt-0.5">
+                    For: {pendingDownloadParams.courseName}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setDownloadWarningOpen(false);
+                  setPendingDownloadParams(null);
+                }}
+                className="text-text-secondary hover:text-text-primary p-1.5 hover:bg-sunken rounded-xl transition cursor-pointer"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            {/* Content/Guidelines Body */}
+            <div className="space-y-4 text-xs font-medium leading-relaxed text-text-secondary">
+              <div className="bg-status-warning-bg border border-status-warning-text/30 p-3.5 rounded-xl space-y-2">
+                <h4 className="text-[11px] font-black text-status-warning-text uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-status-warning-text animate-ping"></span>
+                  CRITICAL: Do Not Refresh
+                </h4>
+                <p className="text-[10.5px] leading-relaxed text-text-secondary">
+                  Once generation starts, the backend will dynamically stamp your registration details (Name, Email, Phone, and tracking code) onto the pages. **Do not close, reload, or navigate away from this page** until the download triggers.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-bold text-text-primary uppercase tracking-wider">Best Practices for a Successful Download:</h4>
+                <ul className="space-y-2.5 list-none pl-1">
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-brand font-black shrink-0 mt-0.5">✓</span>
+                    <span><strong>Stable Connection:</strong> Ensure your internet connection is active and stable before starting.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-brand font-black shrink-0 mt-0.5">✓</span>
+                    <span><strong>Use Chrome or Safari:</strong> Recommended mobile and desktop browsers for seamless watermark rendering and auto-trigger download redirections.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="text-brand font-black shrink-0 mt-0.5">✓</span>
+                    <span><strong>Limit full? No problem:</strong> If your download fails or runs out of tries, don't worry! Click "Request Download" next to the PDF to ask for another slot and our administrators will approve it quickly.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-3 border-t border-border-default flex items-center gap-3">
+                <div className="p-2 bg-accent-soft-bg border border-accent-soft-border text-brand rounded-xl font-sans font-extrabold text-[10.5px] w-full text-center flex items-center justify-center gap-1">
+                  💬 Issue? Contact: <a href="https://t.me/tdhadmin" target="_blank" rel="noopener noreferrer" className="underline hover:text-brand-hover font-black">@TDHadmin on Telegram</a>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border-default mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setDownloadWarningOpen(false);
+                  setPendingDownloadParams(null);
+                }}
+                className="px-4 py-2 text-text-secondary hover:text-text-primary text-xs font-bold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeActualDownload}
+                className="px-6 py-2 bg-brand hover:bg-brand-hover text-text-on-accent rounded-xl text-xs font-bold transition shadow-md cursor-pointer font-semibold"
+              >
+                I Understand, Start Download
+              </button>
+            </div>
           </div>
         </div>
       )}
