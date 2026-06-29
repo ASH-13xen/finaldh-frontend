@@ -211,8 +211,8 @@ export default function ProgressSection({ onRedirectToBuy }) {
 
     if (newCompleted && rowRefs.current[question._id]) {
       gsap.fromTo(rowRefs.current[question._id],
-        { backgroundColor: 'rgba(124, 58, 237, 0.25)' },
-        { backgroundColor: 'rgba(124, 58, 237, 0)', duration: 0.6 });
+        { backgroundColor: 'rgba(13, 122, 86, 0.25)' },
+        { backgroundColor: 'rgba(13, 122, 86, 0)', duration: 0.6 });
     }
 
     try {
@@ -241,7 +241,7 @@ export default function ProgressSection({ onRedirectToBuy }) {
 
   if (loadingCourses) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-73px)] bg-slate-950">
+      <div className="flex items-center justify-center min-h-[calc(100vh-73px)] bg-page">
         <LoadingSpinner text="Loading your courses..." />
       </div>
     );
@@ -250,17 +250,17 @@ export default function ProgressSection({ onRedirectToBuy }) {
   const percent = totalQuestions > 0 ? Math.round((totalCompleted / totalQuestions) * 100) : 0;
 
   return (
-    <div className="w-full min-h-[calc(100vh-73px)] bg-slate-950">
+    <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-14 text-text-primary">
       {/* ===== Screen 1: no Progress-enabled courses ===== */}
       {!loadingCourses && progressCourses.length === 0 && (
         <div ref={screenContainerRef} className="w-full max-w-3xl mx-auto px-6 py-16 text-center">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12">
-            <h2 className="text-xl font-extrabold text-slate-100 mb-2">No Courses Available</h2>
-            <p className="text-sm text-slate-400 mb-6">Progress tracking isn't enabled for any course yet. Check back soon.</p>
-            {coursesError && <p className="text-rose-400 text-xs font-semibold mb-4">{coursesError}</p>}
+          <div className="bg-surface border border-border-default rounded-xl md:rounded-2xl p-8 md:p-12 shadow-sm">
+            <h2 className="text-xl font-display font-semibold text-text-primary mb-2">No Courses Available</h2>
+            <p className="text-xs md:text-sm text-text-secondary mb-6 font-medium">Progress tracking isn't enabled for any course yet. Check back soon.</p>
+            {coursesError && <p className="text-status-danger-text text-xs font-semibold mb-4">{coursesError}</p>}
             <button
               onClick={onRedirectToBuy}
-              className="px-5 py-2.5 bg-accent-600 hover:bg-accent-500 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+              className="px-5 py-2.5 bg-brand hover:bg-brand-hover text-text-on-accent rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
             >
               Visit Marketplace
             </button>
@@ -270,41 +270,41 @@ export default function ProgressSection({ onRedirectToBuy }) {
 
       {/* ===== Screen 2: course grid ===== */}
       {progressCourses.length > 0 && !activeCourse && (
-        <div ref={screenContainerRef} className="w-full max-w-7xl mx-auto px-6 py-10 md:py-14 flex flex-col gap-8">
-          <div className="border-b border-slate-800 pb-5">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-100 tracking-tight">Progress</h1>
-            <p className="text-slate-400 text-sm mt-1.5 font-medium">Pick a course to track your topic-by-topic study progress.</p>
+        <div ref={screenContainerRef} className="flex flex-col gap-6 md:gap-8">
+          <div className="mb-6 md:mb-10 border-b border-border-default pb-4 md:pb-6">
+            <h1 className="text-xl md:text-4xl font-display font-semibold text-text-primary tracking-tight">Progress</h1>
+            <p className="text-text-secondary text-xs md:text-sm mt-1.5 md:mt-2 font-medium">Pick a course to track your topic-by-topic study progress.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {progressCourses.map((course) => (
               <div
                 key={course._id}
                 onClick={() => course.unlocked ? setActiveCourse(course) : onRedirectToBuy()}
-                className={`relative bg-slate-900/50 border rounded-2xl p-6 flex flex-col justify-between transition-all duration-200 cursor-pointer group ${course.unlocked ? 'border-slate-800 hover:border-accent-500 hover:shadow-lg hover:-translate-y-0.5' : 'border-slate-800/70 opacity-80 hover:opacity-100'}`}
+                className={`relative bg-surface border rounded-xl md:rounded-2xl p-4 md:p-6 flex flex-col justify-between transition-all duration-300 cursor-pointer group shadow-sm ${course.unlocked ? 'border-border-default hover:border-brand/40 hover:shadow-lg hover:-translate-y-0.5' : 'border-border-subtle opacity-70 hover:opacity-100'}`}
               >
                 {!course.unlocked && (
-                  <span className="absolute top-4 right-4 flex items-center gap-1 text-[9px] font-bold text-amber-400 bg-amber-950/50 border border-amber-900/50 rounded px-2 py-0.5 uppercase tracking-wide">
+                  <span className="absolute top-4 right-4 flex items-center gap-1 text-[9px] font-bold text-status-warning-text bg-status-warning-bg border border-status-warning-text/25 rounded px-2 py-0.5 uppercase tracking-wide">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     Locked
                   </span>
                 )}
-                <div className="space-y-3">
-                  <span className="text-[9px] font-bold text-accent-400 bg-accent-950/50 border border-accent-900/50 rounded px-2.5 py-0.5 uppercase tracking-wide">
+                <div className="space-y-3 flex-grow">
+                  <span className="inline-block text-[9px] font-bold text-brand bg-accent-soft-bg border border-accent-soft-border rounded px-2.5 py-0.5 uppercase tracking-wide">
                     {course.subject}
                   </span>
-                  <h3 className="font-bold text-slate-100 text-sm group-hover:text-accent-400 transition-colors leading-relaxed">{course.name}</h3>
+                  <h3 className="font-display font-semibold text-text-primary text-sm md:text-base group-hover:text-brand transition-colors leading-relaxed">{course.name}</h3>
                 </div>
-                <div className="pt-6 mt-6 border-t border-slate-800 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500 font-semibold uppercase">
+                <div className="pt-4 mt-4 md:pt-6 md:mt-6 border-t border-border-default flex items-center justify-between">
+                  <span className="text-[10px] text-text-tertiary font-bold uppercase tracking-wider">
                     {getFileEntries(course).length} File{getFileEntries(course).length !== 1 ? 's' : ''}
                   </span>
                   {course.unlocked ? (
-                    <span className="text-xs font-bold text-accent-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    <span className="text-xs font-bold text-brand flex items-center gap-1 group-hover:translate-x-1 transition-transform">
                       View Progress
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </span>
                   ) : (
-                    <span className="text-xs font-bold text-amber-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    <span className="text-xs font-bold text-status-warning-text flex items-center gap-1 group-hover:translate-x-1 transition-transform">
                       Purchase to Unlock
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </span>
@@ -318,13 +318,16 @@ export default function ProgressSection({ onRedirectToBuy }) {
 
       {/* ===== Screen 3: file picker ===== */}
       {activeCourse && selectedFileIndex === null && (
-        <div ref={screenContainerRef} className="w-full max-w-5xl mx-auto px-6 py-10 md:py-14 flex flex-col gap-8">
-          <div className="border-b border-slate-800 pb-5 flex items-center justify-between">
+        <div ref={screenContainerRef} className="flex flex-col gap-6 md:gap-8">
+          <div className="mb-6 md:mb-10 border-b border-border-default pb-4 md:pb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-100 tracking-tight">{activeCourse.name}</h1>
-              <p className="text-slate-400 text-sm mt-1.5 font-medium">Pick a PDF to view its topics and questions.</p>
+              <h1 className="text-xl md:text-3xl font-display font-semibold text-text-primary tracking-tight">{activeCourse.name}</h1>
+              <p className="text-text-secondary text-xs md:text-sm mt-1.5 md:mt-2 font-medium">Pick a PDF to view its topics and questions.</p>
             </div>
-            <button onClick={() => setActiveCourse(null)} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold cursor-pointer">
+            <button
+              onClick={() => setActiveCourse(null)}
+              className="px-3 py-1.5 bg-accent-soft-bg border border-accent-soft-border hover:bg-accent-soft-border/50 text-brand rounded-lg text-xs font-bold transition cursor-pointer"
+            >
               Switch Course
             </button>
           </div>
@@ -336,17 +339,17 @@ export default function ProgressSection({ onRedirectToBuy }) {
                 <div
                   key={entry.index}
                   onClick={() => setSelectedFileIndex(entry.index)}
-                  className="bg-slate-900/50 border border-slate-800 hover:border-accent-500 rounded-2xl p-5 flex items-center justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
+                  className="bg-surface border border-border-default hover:border-brand/40 rounded-xl md:rounded-2xl p-4 md:p-5 flex items-center justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group shadow-sm"
                 >
                   <div className="min-w-0">
-                    <p className="font-bold text-slate-100 text-sm truncate group-hover:text-accent-400">{entry.name}</p>
+                    <p className="font-semibold text-text-primary text-sm truncate group-hover:text-brand transition-colors">{entry.name}</p>
                     {stats && !stats.loading ? (
-                      <p className="text-[11px] text-slate-500 mt-1">{stats.totalCompleted}/{stats.totalQuestions} questions completed ({pct}%)</p>
+                      <p className="text-[11px] text-text-secondary mt-1 font-medium">{stats.totalCompleted}/{stats.totalQuestions} questions completed ({pct}%)</p>
                     ) : (
-                      <p className="text-[11px] text-slate-600 mt-1">Loading progress...</p>
+                      <p className="text-[11px] text-text-tertiary mt-1 font-medium animate-pulse">Loading progress...</p>
                     )}
                   </div>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-accent-400 flex-shrink-0"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-brand flex-shrink-0 transition-transform group-hover:translate-x-1 duration-200"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </div>
               );
             })}
@@ -359,25 +362,35 @@ export default function ProgressSection({ onRedirectToBuy }) {
         <div ref={screenContainerRef} className="relative w-full overflow-hidden">
         <div className={`transition-[padding] duration-300 ${pyqPanelOpen ? 'pl-80 sm:pl-96' : 'pl-0'}`}>
           {/* Sticky progress bar */}
-          <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-6 py-4">
+          <div className="sticky top-0 z-30 bg-page/95 backdrop-blur border-b border-border-default px-6 py-4">
             <div className="max-w-4xl mx-auto flex flex-col gap-2">
               <div className="flex items-center justify-between text-xs">
-                <div className="font-bold text-slate-100 truncate">
+                <div className="font-bold text-text-primary truncate">
                   {activeCourse.name}
                   {getFileEntries(activeCourse).length > 1 && (
-                    <span className="text-slate-500 font-medium"> · {getFileEntries(activeCourse).find(e => e.index === selectedFileIndex)?.name}</span>
+                    <span className="text-text-tertiary font-medium"> · {getFileEntries(activeCourse).find(e => e.index === selectedFileIndex)?.name}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="font-bold text-accent-400">{totalCompleted}/{totalQuestions} ({percent}%)</span>
+                  <span className="font-bold text-brand">{totalCompleted}/{totalQuestions} ({percent}%)</span>
                   {getFileEntries(activeCourse).length > 1 && (
-                    <button onClick={() => setSelectedFileIndex(null)} className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer">Change File</button>
+                    <button
+                      onClick={() => setSelectedFileIndex(null)}
+                      className="px-2.5 py-1 bg-accent-soft-bg border border-accent-soft-border hover:bg-accent-soft-border/50 text-brand rounded-lg text-[10px] font-bold transition cursor-pointer"
+                    >
+                      Change File
+                    </button>
                   )}
-                  <button onClick={() => { setActiveCourse(null); setSelectedFileIndex(null); }} className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer">Switch Course</button>
+                  <button
+                    onClick={() => { setActiveCourse(null); setSelectedFileIndex(null); }}
+                    className="px-2.5 py-1 bg-accent-soft-bg border border-accent-soft-border hover:bg-accent-soft-border/50 text-brand rounded-lg text-[10px] font-bold transition cursor-pointer"
+                  >
+                    Switch Course
+                  </button>
                 </div>
               </div>
-              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                <div ref={fillBarRef} className="h-full bg-accent-500 rounded-full" style={{ width: '0%' }} />
+              <div className="w-full h-2 bg-sunken rounded-full overflow-hidden">
+                <div ref={fillBarRef} className="h-full bg-brand rounded-full" style={{ width: '0%' }} />
               </div>
             </div>
           </div>
@@ -388,51 +401,51 @@ export default function ProgressSection({ onRedirectToBuy }) {
               <div className="flex items-center justify-center py-16"><LoadingSpinner text="Loading topics..." /></div>
             )}
             {!loadingTopics && topicsError && (
-              <div className="p-4 bg-rose-950/20 border border-rose-900/40 rounded-xl text-rose-400 text-sm font-semibold">{topicsError}</div>
+              <div className="p-4 bg-status-danger-bg border border-status-danger-text/25 rounded-xl text-status-danger-text text-sm font-semibold">{topicsError}</div>
             )}
             {!loadingTopics && !topicsError && topics.length === 0 && (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-16 text-center text-slate-500">
+              <div className="bg-surface border border-border-default rounded-xl md:rounded-2xl p-16 text-center text-text-tertiary font-medium">
                 No topics have been added for this PDF yet. Check back soon.
               </div>
             )}
             {!loadingTopics && topics.map((topic) => {
               const isCollapsed = !!collapsedTopics[topic._id];
               return (
-              <div key={topic._id} className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+              <div key={topic._id} className="bg-surface border border-border-default rounded-xl md:rounded-2xl overflow-hidden shadow-sm">
                 <button
                   onClick={() => toggleTopicCollapsed(topic._id)}
-                  className="w-full px-5 py-3.5 border-b border-slate-800 flex items-center justify-between cursor-pointer hover:bg-slate-900/80 transition-colors text-left"
+                  className="w-full px-5 py-3.5 border-b border-border-default flex items-center justify-between cursor-pointer hover:bg-sunken/45 transition-colors text-left"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`w-3.5 h-3.5 text-slate-500 flex-shrink-0 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
-                    <h3 className="font-bold text-slate-100 text-sm truncate">{topic.name}</h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`w-3.5 h-3.5 text-text-tertiary flex-shrink-0 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
+                    <h3 className="font-bold text-text-primary text-sm truncate">{topic.name}</h3>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-semibold uppercase flex-shrink-0 ml-3">
+                  <span className="text-[10px] text-text-secondary font-bold uppercase flex-shrink-0 ml-3">
                     {topic.questions.filter(q => q.completed).length}/{topic.questions.length} done
                   </span>
                 </button>
                 {!isCollapsed && (
-                <div className="divide-y divide-slate-800">
+                <div className="divide-y divide-border-default">
                   {topic.questions.map((q) => (
                     <div
                       key={q._id}
                       ref={(el) => { rowRefs.current[q._id] = el; }}
-                      className="px-5 py-3.5 flex items-start gap-3"
+                      className="px-5 py-3.5 flex items-start gap-3 transition-colors"
                     >
                       <button
                         onClick={() => handleToggle(topic._id, q)}
-                        className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all ${q.completed ? 'bg-accent-600 border-accent-600' : 'bg-slate-950 border-slate-700 hover:border-accent-500'}`}
+                        className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all ${q.completed ? 'bg-brand border-brand' : 'bg-page border-border-default hover:border-brand'}`}
                       >
                         {q.completed && (
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>
                         )}
                       </button>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-medium ${q.completed ? 'text-slate-500 line-through' : 'text-slate-200'}`}>{q.questionText}</p>
+                        <p className={`text-sm font-medium ${q.completed ? 'text-text-tertiary line-through' : 'text-text-primary'}`}>{q.questionText}</p>
                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          <span className="text-[10px] text-slate-500 font-semibold">Pg. {q.pageNumber}</span>
+                          <span className="text-[10px] text-text-tertiary font-semibold">Pg. {q.pageNumber}</span>
                           {splitTagDisplay(q.tag).map((t, idx) => (
-                            <span key={idx} className="text-[9px] font-bold text-accent-400 bg-accent-950/40 border border-accent-900/40 rounded px-1.5 py-0.5">{t}</span>
+                            <span key={idx} className="text-[9px] font-bold text-brand bg-accent-soft-bg border border-accent-soft-border rounded px-1.5 py-0.5">{t}</span>
                           ))}
                         </div>
                       </div>
@@ -449,23 +462,23 @@ export default function ProgressSection({ onRedirectToBuy }) {
           {/* Persistent left PYQ panel */}
           <div
             ref={pyqPanelRef}
-            className="fixed left-0 top-[73px] bottom-0 w-80 sm:w-96 z-40 bg-slate-900 border-r border-slate-800 shadow-2xl flex flex-col"
+            className="fixed left-0 top-[73px] bottom-0 w-80 sm:w-96 z-40 bg-surface border-r border-border-default shadow-2xl flex flex-col"
             style={{ transform: 'translateX(-100%)' }}
           >
-            <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between flex-shrink-0">
-              <h3 className="font-bold text-slate-100 text-sm">Related PYQs</h3>
-              <button onClick={() => setPyqPanelOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
+            <div className="px-5 py-4 border-b border-border-default flex items-center justify-between flex-shrink-0">
+              <h3 className="font-display font-semibold text-text-primary text-sm">Related PYQs</h3>
+              <button onClick={() => setPyqPanelOpen(false)} className="text-text-secondary hover:text-text-primary cursor-pointer transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
               {pyqPanelLoading && <LoadingSpinner text="Loading PYQs..." />}
               {!pyqPanelLoading && pyqPanelItems.length === 0 && (
-                <p className="text-xs text-slate-500">Complete a question to see related PYQs here.</p>
+                <p className="text-xs text-text-tertiary font-medium">Complete a question to see related PYQs here.</p>
               )}
               {!pyqPanelLoading && groupPyqsBySection(pyqPanelItems).map(([section, items]) => (
                 <div key={section} className="space-y-2">
-                  <h4 className="text-[11px] font-bold text-accent-300 bg-accent-950/30 border border-accent-900/40 rounded-lg px-2.5 py-1.5 leading-snug">
+                  <h4 className="text-[11px] font-bold text-brand bg-accent-soft-bg border border-accent-soft-border rounded-lg px-2.5 py-1.5 leading-snug">
                     {section}
                   </h4>
                   <div className="flex flex-col gap-2">
@@ -482,7 +495,7 @@ export default function ProgressSection({ onRedirectToBuy }) {
           {!pyqPanelOpen && (
             <button
               onClick={() => setPyqPanelOpen(true)}
-              className="fixed left-0 top-1/2 -translate-y-1/2 z-40 bg-accent-600 hover:bg-accent-500 text-white text-[10px] font-bold px-2 py-3 rounded-r-lg shadow-lg cursor-pointer"
+              className="fixed left-0 top-1/2 -translate-y-1/2 z-40 bg-brand hover:bg-brand-hover text-text-on-accent text-[10px] font-bold px-2 py-3 rounded-r-lg shadow-lg cursor-pointer transition-colors"
               style={{ writingMode: 'vertical-rl' }}
             >
               PYQs
@@ -496,19 +509,19 @@ export default function ProgressSection({ onRedirectToBuy }) {
 
 function PyqPanelItem({ pyq, onToggle }) {
   return (
-    <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3.5 flex gap-2.5">
+    <div className="bg-sunken border border-border-subtle rounded-xl p-3.5 flex gap-2.5 shadow-sm">
       <button
         onClick={() => onToggle(pyq._id, pyq.completed)}
-        className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all ${pyq.completed ? 'bg-accent-600 border-accent-600' : 'bg-slate-950 border-slate-700 hover:border-accent-500'}`}
+        className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 cursor-pointer transition-all ${pyq.completed ? 'bg-brand border-brand' : 'bg-surface border-border-default hover:border-brand'}`}
       >
         {pyq.completed && (
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>
         )}
       </button>
-      <span className={`flex-shrink-0 mt-0.5 text-xs font-extrabold rounded-lg px-2 py-0.5 h-fit ${pyq.completed ? 'bg-slate-900 text-slate-500' : 'bg-accent-600/20 text-accent-300 border border-accent-600/40'}`}>
+      <span className={`flex-shrink-0 mt-0.5 text-xs font-extrabold rounded-lg px-2 py-0.5 h-fit ${pyq.completed ? 'bg-surface-raised text-text-tertiary' : 'bg-accent-soft-bg text-brand border border-accent-soft-border'}`}>
         {pyq.year}
       </span>
-      <p className={`text-xs leading-relaxed flex-1 min-w-0 ${pyq.completed ? 'text-slate-500 line-through' : 'text-slate-300'}`}>{pyq.questionText}</p>
+      <p className={`text-xs leading-relaxed flex-1 min-w-0 ${pyq.completed ? 'text-text-tertiary line-through' : 'text-text-secondary'}`}>{pyq.questionText}</p>
     </div>
   );
 }

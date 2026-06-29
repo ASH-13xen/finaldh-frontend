@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { ThemeProvider } from './contexts/ThemeContext.jsx'
 
 // Intercept fetch to prefix relative URLs with VITE_API_URL if defined
 const originalFetch = window.fetch;
@@ -67,7 +68,9 @@ window.fetch = async (input, init) => {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
   </StrictMode>,
 )
 

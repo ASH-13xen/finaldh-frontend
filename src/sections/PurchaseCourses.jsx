@@ -387,11 +387,11 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
   return (
     <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-14">
       {/* Header */}
-      <div className="mb-8 md:mb-12 border-b border-slate-800 pb-4 md:pb-6">
-        <h1 className="text-xl md:text-3xl font-extrabold text-white tracking-tight">
+      <div className="mb-8 md:mb-12 border-b border-border-default pb-4 md:pb-6">
+        <h1 className="text-xl md:text-4xl font-display font-semibold text-text-primary tracking-tight">
           Purchase Courses
         </h1>
-        <p className="text-slate-400 text-xs md:text-sm mt-1.5 font-medium">
+        <p className="text-text-secondary text-xs md:text-sm mt-1.5 md:mt-2 font-medium">
           Unlock standard study packages and syllabus guides directly. Simply
           make a UPI payment and upload your receipt for immediate access.
         </p>
@@ -461,21 +461,19 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
         pendingRequest={sampleStatusPendingRequest}
         onPurchase={handleOpenPurchaseModal}
         onTelegramNotify={handleTelegramNotify}
-      />
-
-      {/* Combo Course Picker Modal */}
+      />      {/* Combo Course Picker Modal */}
       {pickerCombo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[95vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-950/70 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-surface border border-border-default rounded-xl md:rounded-2xl w-full max-w-lg p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[95vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-5">
               <div>
-                <span className="text-[9px] font-bold text-accent-400 bg-accent-950 border border-accent-900 rounded px-1.5 py-0.5 uppercase tracking-wide">
+                <span className="text-[9px] font-bold text-brand bg-accent-soft-bg border border-accent-soft-border rounded px-1.5 py-0.5 uppercase tracking-wide">
                   Bundle Offer
                 </span>
-                <h3 className="text-base md:text-lg font-extrabold text-white mt-1.5 leading-snug">
+                <h3 className="text-base md:text-lg font-display font-semibold text-text-primary mt-1.5 leading-snug">
                   {pickerCombo.label}
                 </h3>
-                <p className="text-[11px] text-slate-400 mt-1 font-medium">
+                <p className="text-[11px] text-text-secondary mt-1 font-medium">
                   Choose exactly {pickerCombo.pickCount} paper
                   {pickerCombo.pickCount > 1 ? "s" : ""} below for a flat ₹
                   {pickerCombo.price}.
@@ -483,7 +481,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
               </div>
               <button
                 onClick={handleClosePicker}
-                className="text-slate-450 hover:text-white p-1 hover:bg-slate-800 rounded-lg transition"
+                className="text-text-secondary hover:text-text-primary p-1 hover:bg-sunken rounded-lg transition"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -515,20 +513,20 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                     onClick={() => togglePickerCourse(c.courseId)}
                     className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-left transition ${
                       checked
-                        ? "bg-accent-950/40 border-accent-600 text-accent-200 cursor-pointer"
+                        ? "bg-accent-soft-bg border-brand text-brand cursor-pointer font-semibold"
                         : disabled
-                          ? "bg-slate-950/40 border-slate-850 text-slate-500 cursor-not-allowed"
-                          : "bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700 cursor-pointer"
+                          ? "bg-sunken/50 border-border-subtle text-text-tertiary cursor-not-allowed"
+                          : "bg-surface border-border-default text-text-secondary hover:border-brand/40 cursor-pointer font-medium"
                     }`}
                   >
                     <span className="text-xs font-bold">{c.name}</span>
                     {owned ? (
-                      <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wide shrink-0">
+                      <span className="text-[9px] font-bold text-status-success-text uppercase tracking-wide shrink-0">
                         Already owned
                       </span>
                     ) : (
                       <span
-                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${checked ? "bg-accent-600 border-accent-500" : "border-slate-700"}`}
+                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${checked ? "bg-brand border-brand" : "border-border-default"}`}
                       >
                         {checked && (
                           <svg
@@ -551,7 +549,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
 
             {pickerCombo.requiredCourses.length > 0 && (
               <div className="mb-4">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1.5">
                   Always included
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -560,7 +558,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                     return (
                       <span
                         key={c.courseId}
-                        className={`text-[11px] font-bold rounded-lg px-3 py-1.5 border ${owned ? "bg-rose-950/30 border-rose-900/50 text-rose-400" : "bg-emerald-950/30 border-emerald-900/50 text-emerald-400"}`}
+                        className={`text-[11px] font-bold rounded-lg px-3 py-1.5 border ${owned ? "bg-status-danger-bg border-status-danger-text/25 text-status-danger-text" : "bg-status-success-bg border-status-success-text/25 text-status-success-text"}`}
                       >
                         {c.name}
                         {owned ? " (already owned)" : ""}
@@ -572,20 +570,20 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
             )}
 
             {pickerCombo.requiredCourses.some((c) => isOwned(c.courseId)) && (
-              <div className="p-3 bg-rose-950/20 border border-rose-900/40 text-rose-400 rounded-xl text-[11px] font-bold mb-4">
+              <div className="p-3 bg-status-danger-bg border border-status-danger-text/25 text-status-danger-text rounded-xl text-[11px] font-bold mb-4">
                 You already own a course that's always included in this bundle,
                 so it can't be purchased this way.
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-800">
-              <span className="text-[11px] font-bold text-slate-400">
+            <div className="flex items-center justify-between gap-3 pt-3 border-t border-border-default">
+              <span className="text-[11px] font-bold text-text-secondary">
                 {pickerSelectedIds.length} / {pickerCombo.pickCount} selected
               </span>
               <div className="flex gap-3">
                 <button
                   onClick={handleClosePicker}
-                  className="px-4 py-2 text-slate-400 hover:text-white text-xs font-bold transition cursor-pointer"
+                  className="px-4 py-2 text-text-secondary hover:text-text-primary text-xs font-bold transition cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -595,7 +593,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                     pickerSelectedIds.length !== pickerCombo.pickCount ||
                     pickerCombo.requiredCourses.some((c) => isOwned(c.courseId))
                   }
-                  className="px-5 py-2 bg-accent-600 hover:bg-accent-500 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                  className="px-5 py-2 bg-brand hover:bg-brand-hover disabled:bg-surface-raised disabled:border disabled:border-border-default disabled:text-text-tertiary text-text-on-accent rounded-xl text-xs font-bold transition cursor-pointer"
                 >
                   Continue to Payment
                 </button>
@@ -607,24 +605,24 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
 
       {/* Checkout Modal Form */}
       {(selectedCourse || comboPurchaseDraft) && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[95vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-950/70 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-surface border border-border-default rounded-xl md:rounded-2xl w-full max-w-lg p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[95vh] overflow-y-auto">
             {/* Header info */}
             <div className="flex justify-between items-start mb-6">
               <div>
-                <span className="text-[9px] font-bold text-accent-400 bg-accent-950 border border-accent-900 rounded px-1.5 py-0.5 uppercase tracking-wide">
+                <span className="text-[9px] font-bold text-brand bg-accent-soft-bg border border-accent-soft-border rounded px-1.5 py-0.5 uppercase tracking-wide">
                   UPI Payment Checkout
                 </span>
-                <h3 className="text-base md:text-lg font-extrabold text-white mt-1.5 leading-snug">
+                <h3 className="text-base md:text-lg font-display font-semibold text-text-primary mt-1.5 leading-snug">
                   Unlock: {checkoutName}
                 </h3>
-                <p className="text-[11px] text-slate-400 mt-1 font-medium">
+                <p className="text-[11px] text-text-secondary mt-1 font-medium">
                   Complete standard payment verification for access.
                 </p>
               </div>
               <button
                 onClick={handleClosePurchaseModal}
-                className="text-slate-450 hover:text-white p-1 hover:bg-slate-800 rounded-lg transition"
+                className="text-text-secondary hover:text-text-primary p-1 hover:bg-sunken rounded-lg transition"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -643,7 +641,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
             {successMessage ? (
               // Success Pending Screen
               <div className="py-8 text-center flex flex-col items-center justify-center space-y-4">
-                <div className="w-16 h-16 bg-accent-950/40 border border-accent-500/30 text-accent-400 rounded-full flex items-center justify-center shadow-lg relative animate-bounce">
+                <div className="w-16 h-16 bg-accent-soft-bg border border-accent-soft-border text-brand rounded-full flex items-center justify-center shadow-lg relative animate-bounce">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
@@ -656,10 +654,10 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
                 </div>
-                <h4 className="text-base font-extrabold text-white">
+                <h4 className="text-base font-display font-semibold text-text-primary">
                   Purchase Request Pending
                 </h4>
-                <p className="text-xs text-slate-400 max-w-xs leading-relaxed font-medium">
+                <p className="text-xs text-text-secondary max-w-xs leading-relaxed font-medium">
                   {successMessage}
                 </p>
                 {lastSubmittedRequest &&
@@ -674,7 +672,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                             e,
                           )
                         }
-                        className="w-full px-4 py-2.5 bg-accent-600 hover:bg-accent-550 text-white rounded-xl text-xs font-bold transition shadow-md hover:shadow-accent-950/20 cursor-pointer flex items-center justify-center gap-1.5"
+                        className="w-full px-4 py-2.5 bg-brand hover:bg-brand-hover text-text-on-accent rounded-xl text-xs font-bold transition shadow-md cursor-pointer flex items-center justify-center gap-1.5"
                       >
                         <svg
                           className="w-3.5 h-3.5 fill-current"
@@ -684,7 +682,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                         </svg>
                         Notify Admin on Telegram
                       </button>
-                      <p className="text-[10px] text-slate-500 mt-2 text-center font-medium leading-relaxed">
+                      <p className="text-[10px] text-text-tertiary mt-2 text-center font-medium leading-relaxed">
                         Notify us personally or request for the Telegram group
                         link.
                       </p>
@@ -692,7 +690,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                   )}
                 <button
                   onClick={handleClosePurchaseModal}
-                  className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer mt-4"
+                  className="px-6 py-2 bg-accent-soft-bg border border-accent-soft-border hover:bg-accent-soft-border/50 text-brand rounded-xl text-xs font-bold transition cursor-pointer mt-4"
                 >
                   Close Window
                 </button>
@@ -701,21 +699,21 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
               // Payment Form
               <form onSubmit={handleFormSubmit} className="space-y-5">
                 {/* Temporary Payment System Notice Banner */}
-                <div className="bg-accent-950/25 border border-accent-900/40 rounded-xl p-3 text-[10px] md:text-xs text-accent-300 leading-relaxed font-medium flex gap-2">
+                <div className="bg-accent-soft-bg border border-accent-soft-border rounded-xl p-3 text-[10px] md:text-xs text-text-secondary leading-relaxed font-medium flex gap-2">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2.5"
-                    className="w-4 h-4 text-accent-400 flex-shrink-0 mt-0.5"
+                    className="w-4 h-4 text-brand flex-shrink-0 mt-0.5"
                   >
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="16" x2="12" y2="12" />
                     <line x1="12" y1="9" x2="12.01" y2="9" />
                   </svg>
                   <div>
-                    <span className="font-bold text-accent-200 block mb-0.5">
+                    <span className="font-bold text-brand block mb-0.5">
                       Notice:
                     </span>
                     This is a temporary payment option. We are actively working
@@ -725,19 +723,19 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                 </div>
 
                 {modalError && (
-                  <div className="p-3 bg-rose-950/20 border border-rose-900/40 text-rose-500 rounded-xl text-xs font-bold leading-normal">
+                  <div className="p-3 bg-status-danger-bg border border-status-danger-text/25 text-status-danger-text rounded-xl text-xs font-bold leading-normal">
                     {modalError}
                   </div>
                 )}
 
                 {/* QR Display Area */}
-                <div className="bg-slate-950/80 border border-slate-850 rounded-2xl p-4 md:p-5 flex flex-col items-center text-center space-y-4 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent-500 to-transparent animate-pulse"></div>
+                <div className="bg-sunken border border-border-subtle rounded-2xl p-4 md:p-5 flex flex-col items-center text-center space-y-4 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand to-transparent animate-pulse"></div>
 
-                  <p className="text-xs text-slate-300 font-semibold leading-relaxed">
+                  <p className="text-xs text-text-secondary font-semibold leading-relaxed">
                     Scan the QR code below using GPay, PhonePe, Paytm, or any
                     UPI app to transfer{" "}
-                    <span className="text-accent-400 font-extrabold text-sm">
+                    <span className="text-brand font-extrabold text-sm">
                       ₹{checkoutPrice}
                     </span>
                     . Click the QR code to view it full size.
@@ -746,7 +744,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                   {/* QR Image Box with scanning-line effect */}
                   <div
                     onClick={() => setZoomQr(true)}
-                    className="relative p-2.5 bg-white rounded-xl shadow-xl group border border-slate-250 w-40 h-40 md:w-44 md:h-44 flex items-center justify-center cursor-zoom-in hover:border-accent-500/50 transition-colors"
+                    className="relative p-2.5 bg-white rounded-xl shadow-xl group border border-border-default w-40 h-40 md:w-44 md:h-44 flex items-center justify-center cursor-zoom-in hover:border-brand/40 transition-colors"
                   >
                     <img
                       src="/qr/payment_qr.jpg"
@@ -754,7 +752,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                       className="w-36 h-36 md:w-40 md:h-40 object-contain"
                     />
                     {/* Visual scan line animation */}
-                    <div className="absolute inset-x-2.5 h-[2px] bg-accent-500/80 animate-[scan_2s_ease-in-out_infinite] pointer-events-none shadow-[0_0_10px_#8b5cf6]"></div>
+                    <div className="absolute inset-x-2.5 h-[2px] bg-brand/80 animate-[scan_2s_ease-in-out_infinite] pointer-events-none shadow-[0_0_10px_var(--color-brand)]"></div>
                   </div>
                 </div>
 
@@ -762,13 +760,13 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                 <div className="space-y-4">
                   {/* UPI Txn ID */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    <label className="text-[10px] md:text-xs font-bold text-text-secondary uppercase tracking-wider">
                       UPI Transaction ID / Ref No. (12-Digit) (Optional)
                     </label>
                     <input
                       type="text"
                       maxLength={24}
-                      className="w-full bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition-all placeholder:text-slate-600"
+                      className="w-full bg-page border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand transition-all placeholder:text-text-tertiary"
                       placeholder="e.g. 123456789012"
                       value={upiTxnId}
                       onChange={(e) => {
@@ -782,22 +780,22 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
 
                   {/* Screenshot Uploader */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                    <label className="text-[10px] md:text-xs font-bold text-text-secondary uppercase tracking-wider block">
                       Upload Payment Screenshot
                     </label>
 
                     {screenshotPreview ? (
-                      <div className="relative rounded-xl border border-slate-800 bg-slate-950 p-2 flex items-center gap-3">
+                      <div className="relative rounded-xl border border-border-default bg-page p-2 flex items-center gap-3">
                         <img
                           src={screenshotPreview}
                           alt="Screenshot preview"
-                          className="w-12 h-12 rounded object-cover border border-slate-800"
+                          className="w-12 h-12 rounded object-cover border border-border-default"
                         />
                         <div className="flex-grow min-w-0">
-                          <p className="text-[11px] text-slate-350 font-bold truncate">
+                          <p className="text-[11px] text-text-secondary font-bold truncate">
                             {screenshot.name}
                           </p>
-                          <p className="text-[9px] text-slate-500 font-medium">
+                          <p className="text-[9px] text-text-tertiary font-medium">
                             {(screenshot.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
@@ -807,7 +805,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                             setScreenshot(null);
                             setScreenshotPreview("");
                           }}
-                          className="p-1 hover:bg-slate-800 text-slate-400 hover:text-rose-500 rounded-lg transition"
+                          className="p-1 hover:bg-sunken text-text-secondary hover:text-status-danger-text rounded-lg transition"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -823,7 +821,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                         </button>
                       </div>
                     ) : (
-                      <div className="relative border-2 border-dashed border-slate-800 hover:border-accent-500/50 rounded-xl bg-slate-950 transition cursor-pointer">
+                      <div className="relative border-2 border-dashed border-border-default hover:border-brand/50 rounded-xl bg-page hover:bg-sunken/30 transition cursor-pointer">
                         <input
                           type="file"
                           accept="image/*"
@@ -837,16 +835,16 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="1.8"
-                            className="w-8 h-8 text-slate-500 mx-auto mb-1.5"
+                            className="w-8 h-8 text-text-tertiary mx-auto mb-1.5"
                           >
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                             <polyline points="17 8 12 3 7 8" />
                             <line x1="12" y1="3" x2="12" y2="15" />
                           </svg>
-                          <p className="text-[11px] text-accent-400 font-bold">
+                          <p className="text-[11px] text-brand font-bold">
                             Click to upload or drag payment receipt
                           </p>
-                          <p className="text-[9px] text-slate-500 font-medium">
+                          <p className="text-[9px] text-text-tertiary font-medium">
                             Supports PNG, JPG, JPEG (Max 10MB)
                           </p>
                         </div>
@@ -856,18 +854,18 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                 </div>
 
                 {/* Footer Buttons */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-border-default">
                   <button
                     type="button"
                     onClick={handleClosePurchaseModal}
-                    className="px-4 py-2 text-slate-400 hover:text-white text-xs font-bold transition cursor-pointer"
+                    className="px-4 py-2 text-text-secondary hover:text-text-primary text-xs font-bold transition cursor-pointer"
                     disabled={submitting}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2 bg-accent-600 hover:bg-accent-500 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition shadow-md hover:shadow-accent-950/20 cursor-pointer flex items-center justify-center gap-1.5"
+                    className="px-6 py-2 bg-brand hover:bg-brand-hover disabled:bg-surface-raised disabled:border disabled:border-border-default disabled:text-text-tertiary text-text-on-accent rounded-xl text-xs font-bold transition shadow-md cursor-pointer flex items-center justify-center gap-1.5"
                     disabled={submitting}
                   >
                     {submitting
@@ -884,12 +882,12 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
       {/* QR Lightbox Zoom Modal */}
       {zoomQr && (
         <div
-          className="fixed inset-0 z-[150] bg-slate-950/95 flex flex-col items-center justify-center p-4 cursor-zoom-out"
+          className="fixed inset-0 z-[150] bg-ink-950/95 flex flex-col items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setZoomQr(false)}
         >
           <button
             onClick={() => setZoomQr(false)}
-            className="absolute top-4 right-4 text-slate-350 hover:text-white p-2 bg-slate-900/80 border border-slate-800 rounded-full hover:bg-slate-800 transition"
+            className="absolute top-4 right-4 text-text-secondary hover:text-text-primary p-2 bg-surface/80 border border-border-default rounded-full hover:bg-sunken transition"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -907,11 +905,11 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
           <img
             src="/qr/payment_qr.jpg"
             alt="UPI Payment QR Code Zoomed"
-            className="max-w-full max-h-[80vh] object-contain rounded-2xl border border-slate-850 shadow-2xl p-4 bg-white"
+            className="max-w-full max-h-[80vh] object-contain rounded-2xl border border-border-default shadow-2xl p-4 bg-white"
             onClick={(e) => e.stopPropagation()}
           />
 
-          <div className="text-slate-400 text-xs mt-4 font-bold uppercase tracking-wider select-none bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-xl">
+          <div className="text-text-secondary text-xs mt-4 font-bold uppercase tracking-wider select-none bg-surface/60 border border-border-default px-3 py-1.5 rounded-xl">
             Click outside QR code to close
           </div>
         </div>

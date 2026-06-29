@@ -150,10 +150,12 @@ const drawSecurityWarningPage = (page, user, course, font, boldFont, rgb) => {
   currentY -= 20;
 
   const warningParagraphs = [
-    "1. This textbook / e-book is a licensed publication of The Dark Horse UPSC. It is registered exclusively to the user specified in the registration details above. This copy is authorized only for their personal educational use.",
+    "1. LICENSED USE",
+    "This document is uniquely registered to the individual named above and is intended solely for the registered user’s personal educational use.",
     "2. PROHIBITED SHARING: It is strictly prohibited to share, publish, distribute, resell, or upload this PDF to any private/public forum, website, Telegram channel, Google Drive, WhatsApp group, or social media platform.",
     "3. SECURITY TRACING: This document is embedded with active visible watermarks and dynamic, invisible steganographic tracking signatures. Any leaked copies found online will be auto-scanned to retrieve these tracking IDs.",
-    "4. LEGAL CONSEQUENCES: Sharing or distributing this material constitutes intellectual property theft and copyright infringement. Violations will result in immediate termination of account access without refund and legal prosecution under the Indian Copyright Act, 1957."
+    "4. LEGAL CONSEQUENCES",
+    "Unauthorized sharing, distribution and reproduction of this document constitutes a breach of this license agreement. Violations will result in immediate termination of access without refund and initiation of appropriate legal proceedings."
   ];
 
   warningParagraphs.forEach(p => {
@@ -188,24 +190,24 @@ function CourseSkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
       {[1, 2, 3, 4].map((i) => (
-        <div 
-          key={i} 
-          className="bg-slate-900/30 border border-slate-800/80 rounded-xl md:rounded-2xl p-4 md:p-6 flex flex-col justify-between h-[190px] md:h-[230px] animate-pulse"
+        <div
+          key={i}
+          className="bg-surface border border-border-default rounded-xl md:rounded-2xl p-4 md:p-6 flex flex-col justify-between h-[190px] md:h-[230px] animate-pulse"
         >
           <div className="space-y-3 md:space-y-4">
             <div className="flex items-center justify-between">
-              <div className="h-3.5 md:h-4 w-14 md:w-16 bg-slate-800 rounded-md"></div>
-              <div className="h-3.5 md:h-4 w-10 md:w-12 bg-slate-800 rounded-md"></div>
+              <div className="h-3.5 md:h-4 w-14 md:w-16 bg-surface-raised rounded-md"></div>
+              <div className="h-3.5 md:h-4 w-10 md:w-12 bg-surface-raised rounded-md"></div>
             </div>
             <div className="space-y-1.5 md:space-y-2">
-              <div className="h-3.5 md:h-4 w-3/4 bg-slate-800 rounded-md"></div>
-              <div className="h-3 md:h-3 w-1/2 bg-slate-800 rounded-md"></div>
+              <div className="h-3.5 md:h-4 w-3/4 bg-surface-raised rounded-md"></div>
+              <div className="h-3 md:h-3 w-1/2 bg-surface-raised rounded-md"></div>
             </div>
-            <div className="h-7 md:h-8 w-full bg-slate-950/60 rounded-lg md:rounded-xl border border-slate-900/50 mt-1"></div>
+            <div className="h-7 md:h-8 w-full bg-sunken rounded-lg md:rounded-xl border border-border-subtle mt-1"></div>
           </div>
-          <div className="pt-3 md:pt-4 border-t border-slate-850/60 flex items-center justify-between gap-3 md:gap-4">
-            <div className="h-3.5 md:h-4 w-16 md:w-20 bg-slate-800 rounded-full"></div>
-            <div className="h-6 md:h-7 w-24 md:w-28 bg-slate-800 rounded-lg md:rounded-xl"></div>
+          <div className="pt-3 md:pt-4 border-t border-border-default flex items-center justify-between gap-3 md:gap-4">
+            <div className="h-3.5 md:h-4 w-16 md:w-20 bg-surface-raised rounded-full"></div>
+            <div className="h-6 md:h-7 w-24 md:w-28 bg-surface-raised rounded-lg md:rounded-xl"></div>
           </div>
         </div>
       ))}
@@ -741,59 +743,59 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   return (
     <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-14">
       {/* Dashboard Header */}
-      <div className="mb-6 md:mb-10 border-b border-slate-800/80 pb-4 md:pb-6">
-        <h1 className="text-lg md:text-3xl font-extrabold text-white tracking-tight flex flex-wrap items-center gap-x-1.5 md:gap-x-2 gap-y-0.5 md:gap-y-1">
+      <div className="mb-6 md:mb-10 border-b border-border-default pb-4 md:pb-6">
+        <h1 className="text-xl md:text-4xl font-display font-semibold text-text-primary tracking-tight flex flex-wrap items-center gap-x-1.5 md:gap-x-2 gap-y-0.5 md:gap-y-1">
           <span>{getGreeting()},</span>
-          <span className="bg-gradient-to-r from-accent-400 via-accent-300 to-purple-400 bg-clip-text text-transparent capitalize">
+          <span className="text-brand capitalize">
             {currentUser?.fullName?.split(' ')[0] || currentUser?.name || 'Scholar'}
           </span>
         </h1>
-        <p className="text-slate-400 text-xs md:text-sm mt-1 md:mt-1.5 font-medium">Access and download study materials matching your learning preferences.</p>
+        <p className="text-text-secondary text-xs md:text-sm mt-1.5 md:mt-2 font-medium">Access and download study materials matching your learning preferences.</p>
       </div>
 
       {/* Profile summary banner */}
-      <div className="bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-accent-950/15 border border-slate-800/70 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-xl mb-6 md:mb-10 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-surface via-surface to-accent-soft-bg border border-border-default rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm mb-6 md:mb-10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-accent-500/5 rounded-full blur-3xl pointer-events-none"></div>
         <div className="space-y-3 md:space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 md:gap-2.5">
-              <div className="p-1 md:p-1.5 bg-accent-550/10 border border-accent-900/40 text-accent-400 rounded-md md:rounded-lg">
+              <div className="p-1 md:p-1.5 bg-accent-soft-bg border border-accent-soft-border text-brand rounded-md md:rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 md:w-4 md:h-4"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
               </div>
-              <h2 className="text-[10px] md:text-xs font-bold text-slate-350 uppercase tracking-wider md:tracking-widest">My Enrolled Courses</h2>
+              <h2 className="text-[10px] md:text-xs font-sans font-bold text-text-secondary uppercase tracking-wider md:tracking-widest">My Enrolled Courses</h2>
             </div>
             {interestedList.length > 0 && (
-              <span className="text-[8px] md:text-[10px] px-2 md:px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 md:gap-1.5 self-start sm:self-auto">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+              <span className="text-[8px] md:text-[10px] px-2 md:px-2.5 py-0.5 bg-status-success-bg border border-status-success-text/25 text-status-success-text rounded-full font-bold uppercase tracking-wider flex items-center gap-1 md:gap-1.5 self-start sm:self-auto">
+                <span className="w-1.5 h-1.5 bg-status-success-text rounded-full animate-pulse"></span>
                 {interestedList.length} Active {interestedList.length === 1 ? 'Course' : 'Courses'}
               </span>
             )}
           </div>
-          
+
           <div className="flex flex-wrap gap-1.5 md:gap-2.5">
             {interestedList.length > 0 ? (
               interestedList.map((courseId, index) => {
                 const courseDetail = courses.find(c => c.courseId && typeof c.courseId === 'string' && c.courseId.toLowerCase() === courseId.toLowerCase());
                 const dispName = courseDetail ? courseDetail.name : courseId;
-                
+
                 return (
-                  <div 
+                  <div
                     key={index}
-                    className="group/pill relative flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-slate-950/60 hover:bg-accent-950/20 border border-slate-850 hover:border-accent-500/30 rounded-lg md:rounded-xl text-[10px] md:text-xs text-accent-300 hover:text-accent-250 font-bold shadow-sm transition-all duration-300 cursor-default hover:scale-[1.02]"
+                    className="group/pill relative flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-sunken hover:bg-accent-soft-bg border border-border-default hover:border-brand/30 rounded-lg md:rounded-xl text-[10px] md:text-xs text-text-secondary hover:text-brand font-bold shadow-sm transition-all duration-300 cursor-default hover:scale-[1.02]"
                   >
-                    <span className="w-1.5 h-1.5 bg-accent-500 rounded-full group-hover/pill:bg-accent-400 transition-colors"></span>
+                    <span className="w-1.5 h-1.5 bg-brand rounded-full transition-colors"></span>
                     <span>{courseId}</span>
                     {courseDetail && (
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 md:w-56 hidden group-hover/pill:block bg-slate-950 border border-slate-800 text-[9px] md:text-[10px] text-slate-400 rounded-lg p-2 md:p-2.5 shadow-2xl z-30 leading-normal pointer-events-none text-center">
-                        <span className="font-bold text-slate-200 block truncate">{dispName}</span>
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1 border-4 border-transparent border-b-slate-950"></div>
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 md:w-56 hidden group-hover/pill:block bg-surface border border-border-default text-[9px] md:text-[10px] text-text-secondary rounded-lg p-2 md:p-2.5 shadow-2xl z-30 leading-normal pointer-events-none text-center">
+                        <span className="font-bold text-text-primary block truncate">{dispName}</span>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1 border-4 border-transparent border-b-border-default"></div>
                       </div>
                     )}
                   </div>
                 );
               })
             ) : (
-              <span className="text-xs text-slate-500 font-medium italic">No courses linked to your profile yet.</span>
+              <span className="text-xs text-text-tertiary font-medium italic">No courses linked to your profile yet.</span>
             )}
           </div>
         </div>
@@ -803,26 +805,26 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       {loading ? (
         <CourseSkeleton />
       ) : error ? (
-        <div className="py-12 text-center bg-rose-950/20 border border-rose-900/50 rounded-2xl p-6">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-8 h-8 text-rose-500 mx-auto mb-3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <h3 className="font-bold text-white">Failed to load courses</h3>
-          <p className="text-xs text-slate-400 mt-1">{error}</p>
+        <div className="py-12 text-center bg-status-danger-bg border border-status-danger-text/25 rounded-2xl p-6">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-8 h-8 text-status-danger-text mx-auto mb-3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <h3 className="font-bold text-text-primary">Failed to load courses</h3>
+          <p className="text-xs text-text-secondary mt-1">{error}</p>
         </div>
       ) : matchedCourses.length === 0 ? (
-        <div className="py-10 md:py-16 text-center text-slate-555 border border-dashed border-slate-800/80 rounded-xl md:rounded-2xl bg-slate-900/30 p-6 md:p-8">
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-900/50 border border-slate-800/60 rounded-lg md:rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 text-slate-400">
+        <div className="py-10 md:py-16 text-center border border-dashed border-border-default rounded-xl md:rounded-2xl bg-surface-raised p-6 md:p-8">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-surface border border-border-default rounded-lg md:rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 text-text-tertiary">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 md:w-6 md:h-6"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="12" r="3"/></svg>
           </div>
-          <h3 className="font-bold text-slate-300 text-xs md:text-sm">No matched courses found</h3>
-          <p className="text-[11px] md:text-xs text-slate-500 mt-1 md:mt-1.5 max-w-md mx-auto font-medium">
+          <h3 className="font-bold text-text-secondary text-xs md:text-sm">No matched courses found</h3>
+          <p className="text-[11px] md:text-xs text-text-tertiary mt-1 md:mt-1.5 max-w-md mx-auto font-medium">
             There are currently no uploaded courses matching your profile's taken courses ({interestedList.join(', ') || 'none'}).
           </p>
         </div>
       ) : (
         <div className="space-y-6">
           <div className="flex items-center justify-between pb-1">
-            <h2 className="text-sm md:text-base font-extrabold text-slate-200">Downloadable Resources</h2>
-            <span className="text-[9px] md:text-[11px] font-bold text-slate-500 uppercase tracking-wider md:tracking-widest">{matchedCourses.length} Courses Available</span>
+            <h2 className="text-base md:text-lg font-display font-semibold text-text-primary">Downloadable Resources</h2>
+            <span className="text-[9px] md:text-[11px] font-bold text-text-tertiary uppercase tracking-wider md:tracking-widest">{matchedCourses.length} Courses Available</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -837,42 +839,54 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                 : pdfUrls.map((_, idx) => idx);
 
               return (
-                <div 
+                <div
                   key={course._id}
                   onMouseMove={handleMouseMove}
                   style={{ '--mouse-x': '0px', '--mouse-y': '0px' }}
-                  className="course-card relative overflow-hidden bg-slate-900/40 backdrop-blur-md border border-slate-800/80 hover:border-slate-700/60 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-md flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.35)] hover:shadow-accent-950/10 transition-all duration-300 transform hover:-translate-y-0.5 before:absolute before:inset-0 before:z-0 before:pointer-events-none before:rounded-xl md:before:rounded-2xl before:bg-[radial-gradient(400px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(139,92,246,0.06),transparent_60%)]"
+                  className="course-card relative overflow-hidden bg-surface border border-border-default hover:border-brand/40 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm flex flex-col justify-between hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 before:absolute before:inset-0 before:z-0 before:pointer-events-none before:rounded-xl md:before:rounded-2xl before:bg-[radial-gradient(400px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(13,122,86,0.08),transparent_60%)]"
                 >
                   <div className="relative z-10 flex-grow flex flex-col justify-between space-y-4">
                     <div>
                       {/* Course Title */}
-                      <h3 className="text-base md:text-2xl font-black text-slate-100 hover:text-white leading-tight tracking-wide transition-colors duration-200">
+                      <h3 className="text-lg md:text-2xl font-display font-semibold text-text-primary hover:text-brand leading-tight transition-colors duration-200">
                         {course.name}
                       </h3>
-                      
+
                       {/* Password Info */}
-                      <p className="text-[10px] md:text-xs text-slate-400 mt-1 md:mt-2 font-medium tracking-wide">
+                      <p className="text-[10px] md:text-xs text-text-secondary mt-1 md:mt-2 font-medium tracking-wide">
                         PDF password: {currentUser?.mobileNumber ? (
-                          <span className="text-accent-400 font-bold">{currentUser.mobileNumber.replace(/\D/g, '').slice(-10)}</span>
+                          <span className="text-brand font-bold">{currentUser.mobileNumber.replace(/\D/g, '').slice(-10)}</span>
                         ) : (
-                          <span className="text-accent-400/60 italic font-semibold">your contact number (without +91)</span>
+                          <span className="text-brand/60 italic font-semibold">your contact number (without +91)</span>
                         )}
                       </p>
+
+                      {course.telegramGroupLink && (
+                        <a
+                          href={course.telegramGroupLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-accent-soft-bg border border-accent-soft-border text-brand hover:text-brand-hover rounded-lg text-[10px] md:text-xs font-bold shadow transition-all hover:scale-[1.02] cursor-pointer"
+                        >
+                          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4 10-10S17.52 2 12 2zm4.64 6.8c-.15.75-.85 3.79-1.2 5.68-.15.8-.45 1.07-.73 1.1-.63.06-1.11-.42-1.72-.82-.96-.63-1.51-1.02-2.44-1.63-1.08-.71-.38-1.1.24-1.74.16-.17 3.01-2.76 3.07-3.01.01-.03.01-.14-.05-.2-.06-.06-.15-.04-.21-.03-.1.02-1.61 1.02-4.56 3.02-.43.3-.82.45-1.17.44-.39-.01-1.15-.22-1.71-.41-.69-.23-1.24-.35-1.19-.74.03-.2.3-.41.82-.63 3.2-1.39 5.34-2.31 6.42-2.75 3.07-1.28 3.7-1.5 4.12-1.5.09 0 .3.02.43.13.11.09.14.22.15.31-.01.07.01.21-.01.29z" /></svg>
+                          Join Telegram Group
+                        </a>
+                      )}
                     </div>
 
                     {/* PDF items list */}
-                    <div className="pt-3 md:pt-4 border-t border-slate-850/60">
+                    <div className="pt-3 md:pt-4 border-t border-border-default">
                       <button
                         type="button"
                         onClick={() => setExpandedCourses(prev => ({ ...prev, [course._id]: !isExpanded }))}
                         className="w-full flex items-center justify-between gap-2 cursor-pointer group/pdfheader"
                       >
-                        <span className="text-[10px] md:text-xs font-bold text-slate-300 uppercase tracking-wider group-hover/pdfheader:text-white transition-colors">
+                        <span className="text-[10px] md:text-xs font-bold text-text-secondary uppercase tracking-wider group-hover/pdfheader:text-text-primary transition-colors">
                           {pdfUrls.length} PDF{pdfUrls.length !== 1 ? 's' : ''}
                         </span>
                         <svg
                           xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                          className={`w-3.5 h-3.5 text-slate-400 group-hover/pdfheader:text-white transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                          className={`w-3.5 h-3.5 text-text-tertiary group-hover/pdfheader:text-text-primary transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                         >
                           <polyline points="6 9 12 15 18 9"/>
                         </svg>
@@ -886,12 +900,12 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                               value={pdfSearch[course._id] || ''}
                               onChange={(e) => setPdfSearch(prev => ({ ...prev, [course._id]: e.target.value }))}
                               placeholder="Search PDFs by name..."
-                              className="w-full px-3 py-2 bg-slate-950 border border-slate-850 rounded-lg text-[11px] text-slate-200 placeholder:text-slate-550 focus:outline-none focus:border-accent-500 transition-all font-medium"
+                              className="w-full px-3 py-2 bg-page border border-border-default rounded-lg text-[11px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand transition-all font-medium"
                             />
                           )}
 
                           {visibleIndices.length === 0 ? (
-                            <p className="text-[11px] text-slate-500 font-semibold text-center py-3">No PDFs match your search.</p>
+                            <p className="text-[11px] text-text-tertiary font-semibold text-center py-3">No PDFs match your search.</p>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {visibleIndices.map((idx) => {
@@ -908,33 +922,33 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                 const hasPendingRequest = pdfRequests.some(r => r.status === 'pending');
 
                                 return (
-                                  <div key={idx} className="bg-slate-950/40 border border-slate-850/60 rounded-xl p-3 space-y-2.5 flex flex-col justify-between">
+                                  <div key={idx} className="bg-sunken border border-border-subtle rounded-xl p-3 space-y-2.5 flex flex-col justify-between">
                                     <div className="flex justify-between items-start gap-2">
-                                      <span className="text-[11px] md:text-xs font-bold text-slate-200 leading-snug">
+                                      <span className="text-[11px] md:text-xs font-bold text-text-primary leading-snug">
                                         {fileDisplayName}
                                       </span>
-                                      <span className="text-[9px] md:text-[10px] text-slate-450 shrink-0 font-semibold uppercase tracking-wider">
+                                      <span className="text-[9px] md:text-[10px] text-text-tertiary shrink-0 font-semibold uppercase tracking-wider tabular-nums">
                                         {downloadedCount} of {allowedCount} used
                                       </span>
                                     </div>
 
                                     <div>
                                       {isLimitReached ? (
-                                        <div className="flex items-center justify-between gap-2.5 w-full">
-                                          <span className="text-[9px] md:text-[10px] text-rose-400 font-bold whitespace-nowrap bg-rose-950/20 border border-rose-900/30 rounded px-1.5 py-0.5">
+                                        <div className="flex flex-col gap-2 w-full">
+                                          <span className="text-[9px] md:text-[10px] text-status-danger-text font-bold text-center bg-status-danger-bg border border-status-danger-text/25 rounded px-1.5 py-1">
                                             locked count full
                                           </span>
                                           {hasPendingRequest ? (
                                             <button
                                               disabled
-                                              className="px-3 py-1 bg-slate-850 text-slate-500 rounded-lg text-[10px] font-bold cursor-not-allowed whitespace-nowrap border border-slate-800"
+                                              className="w-full py-1.5 bg-surface-raised text-text-tertiary rounded-lg text-[10px] font-bold cursor-not-allowed border border-border-default"
                                             >
                                               request pending
                                             </button>
                                           ) : (
                                             <button
                                               onClick={() => handleOpenRequestModal(compositeId, `${course.name} - ${fileDisplayName}`)}
-                                              className="px-3 py-1 bg-accent-950/40 hover:bg-accent-900/40 border border-accent-850/80 text-accent-400 rounded-lg text-[10px] font-bold transition duration-200 cursor-pointer whitespace-nowrap"
+                                              className="w-full py-1.5 bg-accent-soft-bg hover:bg-accent-soft-border border border-accent-soft-border text-brand rounded-lg text-[10px] font-bold transition duration-200 cursor-pointer"
                                             >
                                               request download
                                             </button>
@@ -947,7 +961,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                           if (status.isError) {
                                             return (
                                               <div className="flex flex-col gap-1 w-full">
-                                                <span className="text-[10px] text-rose-500 font-bold text-center animate-pulse">
+                                                <span className="text-[10px] text-status-danger-text font-bold text-center animate-pulse">
                                                   {status.errorMsg}
                                                 </span>
                                               </div>
@@ -957,9 +971,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                           return (
                                             <div className="flex flex-col gap-2 w-full">
                                               {!status.isSuccess && (
-                                                <div className="flex flex-col gap-1 bg-rose-950/25 border border-rose-900/60 rounded-lg p-2.5 animate-pulse">
-                                                  <div className="flex items-center gap-1 text-rose-400 font-black text-[8px] uppercase tracking-wider">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-rose-500"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                                <div className="flex flex-col gap-1 bg-status-warning-bg border border-status-warning-text/30 rounded-lg p-2.5 animate-pulse">
+                                                  <div className="flex items-center gap-1 text-status-warning-text font-black text-[8px] uppercase tracking-wider">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                                                     <span>Processing Watermarks -- Do Not Refresh</span>
                                                   </div>
                                                 </div>
@@ -971,7 +985,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                               />
                                               <button
                                                 disabled
-                                                className="w-full py-1 bg-slate-850/85 text-slate-500 rounded-lg text-[10px] font-bold cursor-wait"
+                                                className="w-full py-1 bg-surface-raised text-text-tertiary rounded-lg text-[10px] font-bold cursor-wait"
                                               >
                                                 {status.isSuccess ? 'completed' : 'processing...'}
                                               </button>
@@ -983,7 +997,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                               console.log(`[UI Click] Clicked download for composite: ${compositeId}`);
                                               handleDownload(course.courseId, course.name, idx);
                                             }}
-                                            className="w-full inline-flex items-center justify-center gap-1 py-1.5 bg-accent-600 hover:bg-accent-550 text-white rounded-lg text-[10px] font-bold transition shadow cursor-pointer"
+                                            className="w-full inline-flex items-center justify-center gap-1 py-1.5 bg-brand hover:bg-brand-hover text-text-on-accent rounded-lg text-[10px] font-bold transition shadow cursor-pointer"
                                           >
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                             Download PDF
@@ -1008,24 +1022,24 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       )}
 
       {/* Help / Support Footer */}
-      <div className="mt-12 md:mt-16 pt-6 border-t border-slate-850/60 text-center">
-        <p className="text-sm md:text-base text-slate-200 font-extrabold tracking-wide flex flex-col sm:flex-row items-center justify-center gap-2">
+      <div className="mt-12 md:mt-16 pt-6 border-t border-border-default text-center">
+        <p className="text-sm md:text-base text-text-primary font-sans font-extrabold tracking-wide flex flex-col sm:flex-row items-center justify-center gap-2">
           <span>In case of any issue, contact us on Telegram:</span>
           <span className="flex items-center gap-2">
             <a
               href="https://t.me/tdhadmin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-950/45 border border-accent-900/60 text-accent-400 hover:text-accent-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-soft-bg border border-accent-soft-border text-brand hover:text-brand-hover rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
             >
               Telegram App (Mobile)
             </a>
-            <span className="text-slate-700 font-medium hidden sm:inline">|</span>
+            <span className="text-text-tertiary font-medium hidden sm:inline">|</span>
             <a
               href="https://web.telegram.org/k/#@tdhadmin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-950/45 border border-accent-900/60 text-accent-400 hover:text-accent-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-soft-bg border border-accent-soft-border text-brand hover:text-brand-hover rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
             >
               Telegram Web
             </a>
@@ -1035,21 +1049,21 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
       {/* Request Additional Download Modal Overlay */}
       {showRequestModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl md:rounded-2xl w-full max-w-md p-4 md:p-6 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-sm md:text-base font-extrabold text-white mb-1.5 md:mb-2">Request Additional Download</h3>
-            <p className="text-[10px] md:text-xs text-slate-400 mb-3 md:mb-4 font-medium">
-              Please specify a reason for requesting another download of <span className="text-accent-400 font-bold">{requestModalCourseName}</span>.
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-950/70 backdrop-blur-sm px-4">
+          <div className="bg-surface border border-border-default rounded-xl md:rounded-2xl w-full max-w-md p-4 md:p-6 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-sm md:text-base font-sans font-extrabold text-text-primary mb-1.5 md:mb-2">Request Additional Download</h3>
+            <p className="text-[10px] md:text-xs text-text-secondary mb-3 md:mb-4 font-medium">
+              Please specify a reason for requesting another download of <span className="text-brand font-bold">{requestModalCourseName}</span>.
             </p>
-            
+
             {requestErrorMsg && (
-              <div className="p-2 md:p-2.5 bg-rose-950/20 border border-rose-900/30 text-rose-500 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold mb-3 md:mb-4">
+              <div className="p-2 md:p-2.5 bg-status-danger-bg border border-status-danger-text/25 text-status-danger-text rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold mb-3 md:mb-4">
                 {requestErrorMsg}
               </div>
             )}
 
             <textarea
-              className="w-full h-20 md:h-24 bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-lg md:rounded-xl p-2.5 md:p-3 text-[11px] md:text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition-all duration-200 placeholder:text-slate-600 resize-none"
+              className="w-full h-20 md:h-24 bg-page border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-lg md:rounded-xl p-2.5 md:p-3 text-[11px] md:text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand transition-all duration-200 placeholder:text-text-tertiary resize-none"
               placeholder="Type your reason here... (reason cannot be empty)"
               value={requestReason}
               onChange={(e) => {
@@ -1058,20 +1072,20 @@ export default function StudentDashboard({ user, onUserUpdate }) {
               }}
             />
 
-            <div className="flex items-center justify-end gap-2 md:gap-3 mt-4 md:mt-5 pt-3 md:pt-4 border-t border-slate-850/60">
+            <div className="flex items-center justify-end gap-2 md:gap-3 mt-4 md:mt-5 pt-3 md:pt-4 border-t border-border-default">
               <button
                 onClick={() => {
                   setShowRequestModal(false);
                   setRequestReason('');
                   setRequestErrorMsg('');
                 }}
-                className="px-3 py-1.5 md:px-4 md:py-2 text-slate-400 hover:text-slate-200 text-[10px] md:text-xs font-bold transition cursor-pointer"
+                className="px-3 py-1.5 md:px-4 md:py-2 text-text-secondary hover:text-text-primary text-[10px] md:text-xs font-bold transition cursor-pointer"
               >
                 cancel
               </button>
               <button
                 onClick={handleSubmitRequest}
-                className="px-3 py-1.5 md:px-4 md:py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold transition shadow-md hover:shadow-accent-950/20 cursor-pointer"
+                className="px-3 py-1.5 md:px-4 md:py-2 bg-brand hover:bg-brand-hover text-text-on-accent rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold transition shadow-md hover:shadow-lg cursor-pointer"
               >
                 send
               </button>
@@ -1082,54 +1096,54 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
       {/* Profile Gate Verification Modal */}
       {profileModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[95vh] overflow-y-auto">
-            
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-surface border border-border-default rounded-2xl w-full max-w-lg p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[95vh] overflow-y-auto">
+
             {/* Header */}
-            <div className="flex justify-between items-start mb-5 pb-3 border-b border-slate-800">
+            <div className="flex justify-between items-start mb-5 pb-3 border-b border-border-default">
               <div>
-                <span className="text-[9px] font-bold text-accent-400 bg-accent-950 border border-accent-900 rounded px-1.5 py-0.5 uppercase tracking-wide">
+                <span className="text-[9px] font-bold text-brand bg-accent-soft-bg border border-accent-soft-border rounded px-1.5 py-0.5 uppercase tracking-wide">
                   Account Verification
                 </span>
-                <h3 className="text-base md:text-lg font-extrabold text-white mt-1.5 leading-snug">
+                <h3 className="text-base md:text-lg font-sans font-extrabold text-text-primary mt-1.5 leading-snug">
                   Complete Account Profile
                 </h3>
-                <p className="text-[11px] text-slate-400 mt-1 font-medium">
+                <p className="text-[11px] text-text-secondary mt-1 font-medium">
                   We need a few details to register your secure PDF license.
                 </p>
               </div>
-              <button 
+              <button
                 onClick={handleCloseProfileModal}
-                className="text-slate-450 hover:text-white p-1 hover:bg-slate-800 rounded-lg transition"
+                className="text-text-tertiary hover:text-text-primary p-1 hover:bg-surface-raised rounded-lg transition"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
 
             {profileError && (
-              <div className="p-3 bg-rose-950/20 border border-rose-900/40 text-rose-500 rounded-xl text-xs font-bold leading-normal mb-4">
+              <div className="p-3 bg-status-danger-bg border border-status-danger-text/30 text-status-danger-text rounded-xl text-xs font-bold leading-normal mb-4">
                 {profileError}
               </div>
             )}
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
-              
+
               {/* Name Fields (First and Last Name) */}
               <div className="space-y-1.5">
-                <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                <label className="text-[10px] md:text-xs font-bold text-text-secondary uppercase tracking-wider block">
                   Full Name (First and Last Name Required)
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input
                     type="text"
-                    className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition"
+                    className="bg-page border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand transition"
                     placeholder="First Name (e.g. Rahul)"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value.replace(/\s/g, ''))}
                   />
                   <input
                     type="text"
-                    className="bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition"
+                    className="bg-page border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand transition"
                     placeholder="Last Name (e.g. Sharma)"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value.replace(/\s/g, ''))}
@@ -1139,14 +1153,14 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
               {/* Telegram Username */}
               <div className="space-y-1.5">
-                <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                <label className="text-[10px] md:text-xs font-bold text-text-secondary uppercase tracking-wider block">
                   Telegram Username (without @)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-2.5 text-xs font-bold text-slate-500">@</span>
+                  <span className="absolute left-4 top-2.5 text-xs font-bold text-text-tertiary">@</span>
                   <input
                     type="text"
-                    className="w-full bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-xl pl-8 pr-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition"
+                    className="w-full bg-page border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl pl-8 pr-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand transition"
                     placeholder="username"
                     value={telegramUsername}
                     onChange={(e) => setTelegramUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
@@ -1156,7 +1170,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
               {/* Phone Verification Section */}
               <div className="space-y-1.5">
-                <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                <label className="text-[10px] md:text-xs font-bold text-text-secondary uppercase tracking-wider block">
                   Phone Number
                 </label>
                 {isPhoneValid ? (
@@ -1164,29 +1178,29 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                     <input
                       type="text"
                       disabled
-                      className="w-full bg-slate-950/60 border border-slate-850/80 text-slate-400 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none opacity-80 cursor-not-allowed"
+                      className="w-full bg-sunken border border-border-subtle text-text-secondary rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none opacity-80 cursor-not-allowed"
                       value={mobileNumber || currentUser?.mobileNumber || ''}
                     />
-                    <div className="absolute right-3.5 top-2.5 flex items-center gap-1 bg-emerald-950/40 border border-emerald-900/50 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 text-emerald-400"><polyline points="20 6 9 17 4 12"/></svg>
+                    <div className="absolute right-3.5 top-2.5 flex items-center gap-1 bg-status-success-bg border border-status-success-text/25 text-status-success-text text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>
                       Verified
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2.5 border border-slate-800 bg-slate-950/40 rounded-xl p-3.5 mt-2">
+                  <div className="space-y-2.5 border border-border-default bg-sunken rounded-xl p-3.5 mt-2">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-accent-550/15 border border-accent-900/40 text-accent-400 rounded-lg">
+                      <div className="p-1.5 bg-accent-soft-bg border border-accent-soft-border text-brand rounded-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       </div>
                       <div>
-                        <h4 className="text-xs font-extrabold text-slate-200">Phone Verification</h4>
-                        <p className="text-[10px] text-slate-450 mt-0.5">Link and verify your phone number using Firebase SMS OTP.</p>
+                        <h4 className="text-xs font-extrabold text-text-primary">Phone Verification</h4>
+                        <p className="text-[10px] text-text-tertiary mt-0.5">Link and verify your phone number using Firebase SMS OTP.</p>
                       </div>
                     </div>
 
                     {otpError && (
                       <div className="space-y-2">
-                        <div className="p-2.5 bg-rose-950/20 border border-rose-900/40 text-rose-500 rounded-lg text-[10px] font-bold">
+                        <div className="p-2.5 bg-status-danger-bg border border-status-danger-text/30 text-status-danger-text rounded-lg text-[10px] font-bold">
                           {otpError}
                         </div>
                         <button
@@ -1197,7 +1211,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                             setOtpError('');
                             setOtpSent(false);
                           }}
-                          className="text-[10px] text-accent-400 hover:text-accent-300 font-bold underline cursor-pointer block text-center w-full"
+                          className="text-[10px] text-brand hover:text-brand-hover font-bold underline cursor-pointer block text-center w-full"
                         >
                           Bypass Phone Verification (Dev Mode)
                         </button>
@@ -1205,8 +1219,8 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                     )}
 
                     {phoneVerified ? (
-                      <div className="flex items-center gap-2 py-1.5 text-emerald-400 font-bold text-xs bg-emerald-950/20 border border-emerald-900/30 rounded-xl px-3 justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="w-4 h-4 text-emerald-500"><polyline points="20 6 9 17 4 12"/></svg>
+                      <div className="flex items-center gap-2 py-1.5 text-status-success-text font-bold text-xs bg-status-success-bg border border-status-success-text/25 rounded-xl px-3 justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
                         Phone Number Verified (+{mobileNumber.replace(/\D/g, '')})
                       </div>
                     ) : (
@@ -1216,7 +1230,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                           <input
                             type="tel"
                             disabled={otpSent}
-                            className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition disabled:opacity-50"
+                            className="flex-grow bg-page border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand transition disabled:opacity-50"
                             placeholder="Phone Number (e.g. +918253085278)"
                             value={mobileNumber}
                             onChange={(e) => setMobileNumber(e.target.value)}
@@ -1225,7 +1239,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                             type="button"
                             onClick={handleSendOtp}
                             disabled={isOtpGenerating || otpSent || !mobileNumber.trim()}
-                            className="px-4 py-2 bg-accent-600 hover:bg-accent-550 disabled:bg-slate-850 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
+                            className="px-4 py-2 bg-brand hover:bg-brand-hover disabled:bg-surface-raised disabled:text-text-tertiary text-text-on-accent rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
                           >
                             {isOtpGenerating ? 'Sending...' : otpSent ? 'SMS Sent' : 'Send OTP'}
                           </button>
@@ -1240,7 +1254,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                             <input
                               type="text"
                               maxLength={6}
-                              className="flex-grow bg-slate-950 border border-slate-850 hover:border-slate-750 focus:border-accent-500 text-slate-100 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-accent-500 transition"
+                              className="flex-grow bg-page border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand transition"
                               placeholder="Enter 6-Digit OTP Code"
                               value={otpCode}
                               onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
@@ -1249,7 +1263,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                               type="button"
                               onClick={handleVerifyOtp}
                               disabled={otpVerifying || otpCode.length < 6}
-                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-550 disabled:bg-slate-850 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
+                              className="px-4 py-2 bg-brand hover:bg-brand-hover disabled:bg-surface-raised disabled:text-text-tertiary text-text-on-accent rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
                             >
                               {otpVerifying ? 'Verifying...' : 'Verify OTP'}
                             </button>
@@ -1262,18 +1276,18 @@ export default function StudentDashboard({ user, onUserUpdate }) {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800 mt-6">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-default mt-6">
                 <button
                   type="button"
                   onClick={handleCloseProfileModal}
-                  className="px-4 py-2 text-slate-400 hover:text-white text-xs font-bold transition cursor-pointer"
+                  className="px-4 py-2 text-text-secondary hover:text-text-primary text-xs font-bold transition cursor-pointer"
                   disabled={profileSubmitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-accent-600 hover:bg-accent-550 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+                  className="px-6 py-2 bg-brand hover:bg-brand-hover disabled:bg-surface-raised disabled:text-text-tertiary text-text-on-accent rounded-xl text-xs font-bold transition shadow-md cursor-pointer flex items-center justify-center gap-1.5"
                   disabled={
                     profileSubmitting ||
                     !firstName.trim() ||

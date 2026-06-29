@@ -1,15 +1,61 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import CourseCard from './CourseCard';
 import { isGsCoreSubject, isOptionalSubject, OPTIONAL_NAMES } from './courseHelpers';
+import { gsap, prefersReducedMotion } from '../../lib/gsapSetup';
+
+const PullQuote = ({ children }) => (
+  <div className="mb-6 border-l-2 border-brand/40 pl-4 md:pl-6 py-1">
+    <p className="font-display italic text-sm md:text-base text-text-secondary leading-relaxed whitespace-pre-line">
+      {children}
+    </p>
+  </div>
+);
+
+const useGridReveal = (deps) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current || !ref.current.children.length || prefersReducedMotion()) return;
+    // fromTo (not from) — this effect can legitimately re-run more than once as course
+    // data loads (dependency array changes) and under React StrictMode's dev-only
+    // double-invoke. gsap.from() captures the element's CURRENT value as its implicit
+    // end-state; if an earlier run already left opacity at 0, a later .from({opacity:0})
+    // call would animate 0 -> 0 (progressing fully, but visually static). Explicit
+    // fromTo has no such ambiguity regardless of how many times this runs.
+    const tween = gsap.fromTo(
+      ref.current.children,
+      { opacity: 0, y: 20 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.5,
+        stagger: 0.06,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: ref.current,
+          start: 'top 90%',
+          toggleActions: 'play none none none',
+        },
+      },
+    );
+    return () => tween.kill();
+  }, deps);
+  return ref;
+};
 
 export default function CategorizedCourseGrid({ courses, getCourseStatus, getPendingRequest, onPurchase, onTelegramNotify, onSeeSample }) {
   const [optionalSearch, setOptionalSearch] = useState('');
   const [optionalDescription, setOptionalDescription] = useState('');
+  const [gsCoreDescription, setGsCoreDescription] = useState('');
 
   useEffect(() => {
     fetch('/api/courses/site-content/optional_subjects_description')
       .then((res) => res.ok ? res.json() : null)
       .then((data) => setOptionalDescription(data?.value || ''))
+      .catch(() => {});
+
+    fetch('/api/courses/site-content/gs_core_description')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => setGsCoreDescription(data?.value || ''))
       .catch(() => {});
   }, []);
 
@@ -24,6 +70,10 @@ export default function CategorizedCourseGrid({ courses, getCourseStatus, getPen
         return (c.name || '').toLowerCase().includes(optionalSearchTerm) || display.includes(optionalSearchTerm);
       })
     : optionalCourses;
+
+  const optionalGridRef = useGridReveal([filteredOptionalCourses.length]);
+  const gsCoreGridRef = useGridReveal([gsCoreCourses.length]);
+  const otherGridRef = useGridReveal([otherCourses.length]);
 
   const renderCard = (course) => (
     <CourseCard
@@ -43,10 +93,10 @@ export default function CategorizedCourseGrid({ courses, getCourseStatus, getPen
         <div>
           <div className="mb-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
-              <h2 className="text-base md:text-xl font-extrabold text-white tracking-tight">
+              <h2 className="text-xl md:text-2xl font-display font-semibold text-text-primary tracking-tight">
                 Optional Subjects
               </h2>
-              <p className="text-slate-400 text-xs md:text-sm mt-1 font-medium">
+              <p className="text-text-secondary text-xs md:text-sm mt-1 font-medium">
                 Choose your optional from {optionalCourses.length} available subjects.
               </p>
             </div>
@@ -55,26 +105,18 @@ export default function CategorizedCourseGrid({ courses, getCourseStatus, getPen
               value={optionalSearch}
               onChange={(e) => setOptionalSearch(e.target.value)}
               placeholder="Search optional subjects..."
-              className="w-full sm:w-64 px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder:text-slate-550 focus:outline-none focus:border-accent-500 transition-all font-medium"
+              className="w-full sm:w-64 px-3.5 py-2 bg-surface border border-border-default rounded-xl text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand transition-all font-medium"
             />
           </div>
 
-          {optionalDescription && (
-            <div className="mb-6 bg-gradient-to-br from-emerald-950/40 via-slate-900/60 to-slate-900/40 border border-emerald-800/50 rounded-2xl p-4 md:p-6 flex items-start gap-3 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent"></div>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-              <p className="text-slate-300 text-xs md:text-sm font-medium leading-relaxed whitespace-pre-line">
-                {optionalDescription}
-              </p>
-            </div>
-          )}
+          {optionalDescription && <PullQuote>{optionalDescription}</PullQuote>}
 
           {filteredOptionalCourses.length === 0 ? (
-            <p className="text-sm text-slate-500 font-semibold text-center py-8 border border-dashed border-slate-800 rounded-2xl bg-slate-900/20">
+            <p className="text-sm text-text-tertiary font-semibold text-center py-8 border border-dashed border-border-default rounded-2xl bg-surface-raised">
               No optional subjects match your search.
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div ref={optionalGridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredOptionalCourses.map(renderCard)}
             </div>
           )}
@@ -84,14 +126,17 @@ export default function CategorizedCourseGrid({ courses, getCourseStatus, getPen
       {gsCoreCourses.length > 0 && (
         <div>
           <div className="mb-5">
-            <h2 className="text-base md:text-xl font-extrabold text-white tracking-tight">
+            <h2 className="text-xl md:text-2xl font-display font-semibold text-text-primary tracking-tight">
               GS Core Papers
             </h2>
-            <p className="text-slate-400 text-xs md:text-sm mt-1 font-medium">
+            <p className="text-text-secondary text-xs md:text-sm mt-1 font-medium">
               GS-1 through GS-4, Essay, and the all-in-one Mains Master File.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+          {gsCoreDescription && <PullQuote>{gsCoreDescription}</PullQuote>}
+
+          <div ref={gsCoreGridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {gsCoreCourses.map(renderCard)}
           </div>
         </div>
@@ -100,11 +145,11 @@ export default function CategorizedCourseGrid({ courses, getCourseStatus, getPen
       {otherCourses.length > 0 && (
         <div>
           <div className="mb-5">
-            <h2 className="text-base md:text-xl font-extrabold text-white tracking-tight">
+            <h2 className="text-xl md:text-2xl font-display font-semibold text-text-primary tracking-tight">
               Other Courses
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div ref={otherGridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {otherCourses.map(renderCard)}
           </div>
         </div>

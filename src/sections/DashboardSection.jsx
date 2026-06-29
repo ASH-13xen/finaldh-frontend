@@ -61,7 +61,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
   }, [activeTab]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-page text-text-primary flex flex-col">
       {/* Navbar Header */}
       <Navbar user={user} onLogout={onLogout} activeTab={activeTab} setActiveTab={setActiveTab} />
 

@@ -48,12 +48,13 @@ export default function BuyCourses({ onRedirectToLogin }) {
   const mmfCourse = courses.find((c) => c.subject === 'All GS');
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-14">
-      <div className="mb-8 md:mb-12 border-b border-slate-800 pb-4 md:pb-6">
-        <h1 className="text-xl md:text-3xl font-extrabold text-white tracking-tight">
-          Purchase Courses
+    <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-16">
+      <div className="mb-12 md:mb-20 border-b border-border-default pb-6 md:pb-10">
+        <span className="text-[11px] font-sans font-bold uppercase tracking-widest text-brand block mb-2">Study Material</span>
+        <h1 className="text-3xl md:text-5xl font-display font-semibold text-text-primary tracking-tight leading-tight">
+          Choose your papers.
         </h1>
-        <p className="text-slate-400 text-xs md:text-sm mt-1.5 font-medium">
+        <p className="text-text-secondary text-sm md:text-base mt-3 font-medium max-w-xl">
           Unlock standard study packages and syllabus guides directly. Sign in to make a UPI payment and upload your receipt for immediate access.
         </p>
       </div>
@@ -78,12 +79,12 @@ export default function BuyCourses({ onRedirectToLogin }) {
       )}
 
       {loading ? (
-        <div className="py-16 text-center bg-slate-900/40 border border-slate-800/80 rounded-2xl">
+        <div className="py-16 text-center bg-surface-raised border border-border-default rounded-2xl">
           <LoadingSpinner text="Loading courses..." />
         </div>
       ) : courses.length === 0 ? (
-        <div className="py-16 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/20">
-          <p className="text-sm text-slate-400 font-semibold">
+        <div className="py-16 text-center border border-dashed border-border-default rounded-2xl bg-surface-raised">
+          <p className="text-sm text-text-secondary font-semibold">
             No courses are currently available for purchase.
           </p>
         </div>
@@ -108,24 +109,24 @@ export default function BuyCourses({ onRedirectToLogin }) {
       />
 
       {/* Footer */}
-      <div className="mt-10 pt-6 border-t border-slate-800/60 text-center">
-        <p className="text-sm text-slate-200 font-extrabold tracking-wide flex flex-col sm:flex-row items-center justify-center gap-2">
+      <div className="mt-10 pt-6 border-t border-border-default text-center">
+        <p className="text-sm text-text-primary font-sans font-extrabold tracking-wide flex flex-col sm:flex-row items-center justify-center gap-2">
           <span>In case of any issue, contact us on Telegram:</span>
           <span className="flex items-center gap-2">
             <a
               href="https://t.me/tdhadmin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-950/45 border border-accent-900/60 text-accent-400 hover:text-accent-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-soft-bg border border-accent-soft-border text-brand hover:text-brand-hover rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
             >
               Telegram App (Mobile)
             </a>
-            <span className="text-slate-700 font-medium hidden sm:inline">|</span>
+            <span className="text-text-tertiary font-medium hidden sm:inline">|</span>
             <a
               href="https://web.telegram.org/k/#@tdhadmin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-950/45 border border-accent-900/60 text-accent-400 hover:text-accent-300 rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-soft-bg border border-accent-soft-border text-brand hover:text-brand-hover rounded-lg text-xs font-black shadow transition-all hover:scale-[1.02] cursor-pointer"
             >
               Telegram Web
             </a>

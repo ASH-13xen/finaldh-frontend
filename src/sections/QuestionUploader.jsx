@@ -193,7 +193,7 @@ export default function QuestionUploader({ syllabusData }) {
               </div>
             )}
 
-            <Button onClick={handleUpload} variant="primary" disabled={uploading || !subject || !file}>
+            <Button onClick={handleUpload} variant="primary" fullWidth disabled={uploading || !subject || !file}>
               {uploading ? 'Processing File...' : 'Upload & Parse PDF'}
             </Button>
           </form>

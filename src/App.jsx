@@ -160,21 +160,21 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-slate-100 gap-6">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-page text-text-primary gap-6">
         <div className="flex flex-col items-center gap-2">
-          <span className="text-xl font-black text-white tracking-tight">
+          <span className="text-xl font-display font-semibold tracking-tight">
             The Dark Horse UPSC
           </span>
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">
+          <span className="text-[11px] font-sans font-semibold text-text-tertiary uppercase tracking-widest">
             Study Portal
           </span>
         </div>
-        <div className="w-10 h-10 border-4 border-slate-800 border-t-accent-500 rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-border-default border-t-brand rounded-full animate-spin" />
         <div className="flex flex-col items-center gap-1">
-          <p className="text-sm font-semibold text-slate-300 animate-pulse">
+          <p className="text-sm font-sans font-semibold text-text-secondary animate-pulse">
             Verifying user...
           </p>
-          <p className="text-[11px] text-slate-600 font-medium">
+          <p className="text-[11px] text-text-tertiary font-medium">
             This may take up to 30 seconds on first load
           </p>
         </div>
@@ -204,7 +204,7 @@ function App() {
     activeTab === "upload_course"
   ) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      <div className="min-h-screen bg-page text-text-primary flex flex-col">
         <Navbar
           user={null}
           onLogout={handleLogout}

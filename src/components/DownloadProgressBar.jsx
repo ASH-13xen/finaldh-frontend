@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { gsap } from '../lib/gsapSetup';
 
 export default function DownloadProgressBar({ step, isDownloading, downloadPercent }) {
   const [stepCounter, setStepCounter] = useState(0);
+  const fillRef = useRef(null);
 
   useEffect(() => {
     if (step > stepCounter) {
@@ -25,12 +27,14 @@ export default function DownloadProgressBar({ step, isDownloading, downloadPerce
     progressPercent = Math.round((stepCounter / 9) * 100);
   }
 
+  useEffect(() => {
+    if (!fillRef.current) return;
+    gsap.to(fillRef.current, { width: `${progressPercent}%`, duration: 0.5, ease: 'power3.out' });
+  }, [progressPercent]);
+
   return (
-    <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden mt-1 border border-slate-800/80">
-      <div 
-        className="bg-gradient-to-r from-accent-500 to-accent-400 h-2 rounded-full transition-all duration-350" 
-        style={{ width: `${progressPercent}%` }}
-      ></div>
+    <div className="w-full bg-sunken rounded-full h-2 overflow-hidden mt-1 border border-border-subtle">
+      <div ref={fillRef} className="bg-gradient-to-r from-brand to-accent-400 h-2 rounded-full" style={{ width: '0%' }}></div>
     </div>
   );
 }

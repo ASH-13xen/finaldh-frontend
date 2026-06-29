@@ -1,16 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400..800&display=swap');
 @import "tailwindcss";
 
-/* Single brand accent for the whole app - swap these values to retheme everything at once. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Editorial Academic Premium theme. Raw palette ramps live in @theme; semantic
+   tokens that flip between light/dark live as plain custom properties below,
+   then get bridged back into Tailwind's color namespace via @theme inline so
+   components can use them as ordinary utilities (bg-page, text-text-primary, etc). */
 @theme {
-  --color-accent-50: #f5f3ff;
-  --color-accent-100: #ede9fe;
-  --color-accent-200: #ddd6fe;
-  --color-accent-300: #c4b5fd;
-  --color-accent-400: #a78bfa;
-  --color-accent-500: #8b5cf6;
-  --color-accent-600: #7c3aed;
-  --color-accent-700: #6d28d9;
-  --color-accent-800: #5b21b6;
-  --color-accent-900: #4c1d95;
-  --color-accent-950: #2e1065;
+  /* Brand accent — deep emerald. Existing accent-* utility classes used across
+     the whole app keep working unchanged and simply render emerald instead of violet. */
+  --color-accent-50: #ecfdf5;
+  --color-accent-100: #d1fae5;
+  --color-accent-200: #a7f3d0;
+  --color-accent-300: #6ee7b7;
+  --color-accent-400: #34d399;
+  --color-accent-500: #129b6e;
+  --color-accent-600: #0d7a56;
+  --color-accent-700: #0a5f43;
+  --color-accent-800: #0c4a35;
+  --color-accent-900: #0a3a2a;
+  --color-accent-950: #04211a;
+
+  /* Warm paper-white ramp (light mode neutrals) */
+  --color-paper-0: #fdfbf7;
+  --color-paper-50: #f9f5ee;
+  --color-paper-100: #f3ecdf;
+  --color-paper-200: #e8ddc8;
+  --color-paper-300: #d8c9a8;
+
+  /* Deep ink ramp (dark mode neutrals — warm near-black, not slate-gray) */
+  --color-ink-950: #14110d;
+  --color-ink-900: #1c1814;
+  --color-ink-800: #272220;
+  --color-ink-700: #34302c;
+  --color-ink-600: #4a443d;
+  --color-ink-400: #8a8175;
+  --color-ink-200: #cfc6b6;
+
+  --font-display: "Fraunces", "Source Serif 4", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+/* Semantic tokens — light mode (default) */
+:root {
+  --bg-page: var(--color-paper-0);
+  --bg-surface: #ffffff;
+  --bg-surface-raised: var(--color-paper-50);
+  --bg-sunken: var(--color-paper-100);
+
+  --border-default: var(--color-paper-300);
+  --border-subtle: var(--color-paper-200);
+
+  --text-primary: #1f1a14;
+  --text-secondary: #5c5447;
+  --text-tertiary: #8c8270;
+  --text-on-accent: #ffffff;
+
+  --accent: var(--color-accent-600);
+  --accent-hover: var(--color-accent-700);
+  --accent-soft-bg: var(--color-accent-50);
+  --accent-soft-border: var(--color-accent-200);
+
+  --status-success-bg: #ecfdf5;
+  --status-success-text: #047857;
+  --status-warning-bg: #fffbeb;
+  --status-warning-text: #b45309;
+  --status-danger-bg: #fef2f2;
+  --status-danger-text: #b91c1c;
+}
+
+/* Semantic tokens — dark mode overrides */
+.dark {
+  --bg-page: var(--color-ink-950);
+  --bg-surface: var(--color-ink-900);
+  --bg-surface-raised: var(--color-ink-800);
+  --bg-sunken: #0e0c09;
+
+  --border-default: var(--color-ink-700);
+  --border-subtle: var(--color-ink-800);
+
+  --text-primary: #f3ede2;
+  --text-secondary: var(--color-ink-200);
+  --text-tertiary: var(--color-ink-400);
+  --text-on-accent: #ffffff;
+
+  --accent: var(--color-accent-400);
+  --accent-hover: var(--color-accent-300);
+  --accent-soft-bg: var(--color-accent-950);
+  --accent-soft-border: var(--color-accent-800);
+
+  --status-success-bg: rgba(16, 185, 129, 0.12);
+  --status-success-text: #34d399;
+  --status-warning-bg: rgba(245, 158, 11, 0.12);
+  --status-warning-text: #fbbf24;
+  --status-danger-bg: rgba(239, 68, 68, 0.12);
+  --status-danger-text: #f87171;
+}
+
+/* Bridge semantic tokens into Tailwind's color namespace (requires `inline`
+   since these reference runtime custom properties, not static literals). */
+@theme inline {
+  --color-page: var(--bg-page);
+  --color-surface: var(--bg-surface);
+  --color-surface-raised: var(--bg-surface-raised);
+  --color-sunken: var(--bg-sunken);
+  --color-border-default: var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-on-accent: var(--text-on-accent);
+  --color-brand: var(--accent);
+  --color-brand-hover: var(--accent-hover);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-text: var(--status-success-text);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-text: var(--status-warning-text);
+  --color-status-danger-bg: var(--status-danger-bg);
+  --color-status-danger-text: var(--status-danger-text);
+}
+
+body {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
 }
