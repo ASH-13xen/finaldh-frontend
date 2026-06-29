@@ -9,6 +9,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
+const apiBaseUrl = import.meta.env.VITE_API_URL || window.location.origin;
+
 export default function SamplePreviewSection({ activeSampleCourse, sectionRef, status, pendingRequest, onPurchase, onTelegramNotify }) {
   const [pageNumber, setPageNumber] = useState(1);
   const [numPages, setNumPages] = useState(null);
@@ -86,7 +88,7 @@ export default function SamplePreviewSection({ activeSampleCourse, sectionRef, s
                   </div>
                 )}
                 <a
-                  href={`/api/courses/${activeSampleCourse._id}/sample`}
+                  href={`${apiBaseUrl}/api/courses/${activeSampleCourse._id}/sample`}
                   download={activeSampleCourse.sampleFileName || `${activeSampleCourse.name} - Sample.pdf`}
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-brand hover:bg-brand-hover text-text-on-accent rounded-lg text-[11px] font-sans font-bold transition cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] hover:-translate-y-px"
                 >
@@ -107,7 +109,7 @@ export default function SamplePreviewSection({ activeSampleCourse, sectionRef, s
               ) : (
                 <Document
                   key={activeSampleCourse._id}
-                  file={`/api/courses/${activeSampleCourse._id}/sample`}
+                  file={`${apiBaseUrl}/api/courses/${activeSampleCourse._id}/sample`}
                   onLoadSuccess={({ numPages: n }) => { setNumPages(n); setPdfError(false); }}
                   onLoadError={() => setPdfError(true)}
                   loading={
