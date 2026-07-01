@@ -1216,22 +1216,8 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                     </div>
 
                     {otpError && (
-                      <div className="space-y-2">
-                        <div className="p-2.5 bg-status-danger-bg border border-status-danger-text/30 text-status-danger-text rounded-lg text-[10px] font-bold">
-                          {otpError}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMobileNumber('+919876543210');
-                            setPhoneVerified(true);
-                            setOtpError('');
-                            setOtpSent(false);
-                          }}
-                          className="text-[10px] text-brand hover:text-brand-hover font-bold underline cursor-pointer block text-center w-full"
-                        >
-                          Bypass Phone Verification (Dev Mode)
-                        </button>
+                      <div className="p-2.5 bg-status-danger-bg border border-status-danger-text/30 text-status-danger-text rounded-lg text-[10px] font-bold">
+                        {otpError}
                       </div>
                     )}
 
