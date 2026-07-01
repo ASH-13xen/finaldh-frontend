@@ -42,7 +42,7 @@ const useGridReveal = (deps) => {
   return ref;
 };
 
-export default function CategorizedCourseGrid({ courses, getCourseStatus, getPendingRequest, onPurchase, onTelegramNotify, onSeeSample }) {
+export default function CategorizedCourseGrid({ courses, excludedCourseIds, getCourseStatus, getPendingRequest, onPurchase, onTelegramNotify, onSeeSample }) {
   const [optionalSearch, setOptionalSearch] = useState('');
   const [optionalDescription, setOptionalDescription] = useState('');
   const [gsCoreDescription, setGsCoreDescription] = useState('');
@@ -59,7 +59,8 @@ export default function CategorizedCourseGrid({ courses, getCourseStatus, getPen
       .catch(() => {});
   }, []);
 
-  const gsCoreCourses = courses.filter((c) => isGsCoreSubject(c.subject) && c.subject !== 'All GS');
+  const excluded = excludedCourseIds || [];
+  const gsCoreCourses = courses.filter((c) => isGsCoreSubject(c.subject) && !excluded.includes(c._id));
   const optionalCourses = courses.filter((c) => isOptionalSubject(c.subject));
   const otherCourses = courses.filter((c) => !isGsCoreSubject(c.subject) && !isOptionalSubject(c.subject));
 

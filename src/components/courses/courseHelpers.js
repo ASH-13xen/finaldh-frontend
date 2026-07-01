@@ -47,3 +47,10 @@ export const MMF_FEATURES = [
   'Enhanced Content Coverage with carefully curated additions from our side to ensure a more comprehensive understanding of every topic.',
   'Dedicated Group for Value Addition Pointers.',
 ];
+
+export const CAC_FEATURES = [
+  '"Mains 365 Plus" Summary — Precise, Exam-Oriented with Complete Coverage.',
+  'PYQ Linkage — PYQs, Value Addition Box and Keywords all arranged Topic-Wise for better utility of the content.',
+  'Brainstorming Sheets — Carefully curated List of Probable Mains questions for Brainstorming and active learning. (with Value Addition)',
+  'Additional Topics from Relevant sources and editorials in One-Pager Format in Dedicated Group.',
+];

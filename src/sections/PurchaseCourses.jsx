@@ -4,6 +4,7 @@ import MmfHeroBanner from "../components/courses/MmfHeroBanner";
 import ComboOffersSection from "../components/courses/ComboOffersSection";
 import CategorizedCourseGrid from "../components/courses/CategorizedCourseGrid";
 import SamplePreviewSection from "../components/courses/SamplePreviewSection";
+import { CAC_FEATURES } from "../components/courses/courseHelpers";
 
 export default function PurchaseCourses({ user, onUserUpdate }) {
   const [courses, setCourses] = useState([]);
@@ -374,12 +375,18 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
         : selectedCourse.price
       : 0;
 
-  // Categorize courses into sections for the page below
-  const mmfCourse = courses.find((c) => c.subject === "All GS");
+  // API returns courses newest-first. Oldest All GS = original Mains Master File (banner #1);
+  // second-oldest All GS = Current Affairs Compass (banner #2). Any further All GS go to grid.
+  const allGsCourses = courses.filter((c) => c.subject === "All GS");
+  const mmfCourse = allGsCourses.at(-1);
+  const cacCourse = allGsCourses.length >= 2 ? allGsCourses.at(-2) : null;
+  const featuredIds = [mmfCourse?._id, cacCourse?._id].filter(Boolean);
   const mmfStatus = mmfCourse ? getCourseStatus(mmfCourse) : null;
+  const cacStatus = cacCourse ? getCourseStatus(cacCourse) : null;
   const getPendingRequest = (course) =>
     purchaseRequests.find((r) => r.courseId === course.courseId && r.status === "pending");
   const mmfPendingRequest = mmfCourse ? getPendingRequest(mmfCourse) : null;
+  const cacPendingRequest = cacCourse ? getPendingRequest(cacCourse) : null;
 
   const sampleStatus = activeSampleCourse ? getCourseStatus(activeSampleCourse) : null;
   const sampleStatusPendingRequest = activeSampleCourse ? getPendingRequest(activeSampleCourse) : null;
@@ -405,6 +412,20 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
           onPurchase={handleOpenPurchaseModal}
           onTelegramNotify={handleTelegramNotify}
           onSeeSample={handleSeeSample}
+        />
+      )}
+
+      {!loading && !error && cacCourse && (
+        <MmfHeroBanner
+          course={cacCourse}
+          status={cacStatus}
+          pendingRequest={cacPendingRequest}
+          onPurchase={handleOpenPurchaseModal}
+          onTelegramNotify={handleTelegramNotify}
+          onSeeSample={handleSeeSample}
+          features={CAC_FEATURES}
+          badge="Current Affairs"
+          subtitle="Comprehensive current affairs coverage built for Mains — bridging news to syllabus."
         />
       )}
 
@@ -446,6 +467,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
       ) : (
         <CategorizedCourseGrid
           courses={courses}
+          excludedCourseIds={featuredIds}
           getCourseStatus={getCourseStatus}
           getPendingRequest={getPendingRequest}
           onPurchase={handleOpenPurchaseModal}

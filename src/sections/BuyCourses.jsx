@@ -4,6 +4,7 @@ import MmfHeroBanner from '../components/courses/MmfHeroBanner';
 import ComboOffersSection from '../components/courses/ComboOffersSection';
 import CategorizedCourseGrid from '../components/courses/CategorizedCourseGrid';
 import SamplePreviewSection from '../components/courses/SamplePreviewSection';
+import { CAC_FEATURES } from '../components/courses/courseHelpers';
 
 const GUEST_STATUS = { type: 'guest', label: 'Sign In to Purchase' };
 
@@ -45,7 +46,13 @@ export default function BuyCourses({ onRedirectToLogin }) {
     fetchData();
   }, []);
 
-  const mmfCourse = courses.find((c) => c.subject === 'All GS');
+  // API returns courses newest-first. The OLDEST All GS course is the original Mains Master File;
+  // the second-oldest (if present) is the Current Affairs Compass featured below it.
+  // Any further All GS courses fall through to the regular grid.
+  const allGsCourses = courses.filter((c) => c.subject === 'All GS');
+  const mmfCourse = allGsCourses.at(-1);
+  const cacCourse = allGsCourses.length >= 2 ? allGsCourses.at(-2) : null;
+  const featuredIds = [mmfCourse?._id, cacCourse?._id].filter(Boolean);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-16">
@@ -70,6 +77,20 @@ export default function BuyCourses({ onRedirectToLogin }) {
         />
       )}
 
+      {!loading && cacCourse && (
+        <MmfHeroBanner
+          course={cacCourse}
+          status={GUEST_STATUS}
+          pendingRequest={null}
+          onPurchase={onRedirectToLogin}
+          onTelegramNotify={onRedirectToLogin}
+          onSeeSample={handleSeeSample}
+          features={CAC_FEATURES}
+          badge="Current Affairs"
+          subtitle="Comprehensive current affairs coverage built for Mains — bridging news to syllabus."
+        />
+      )}
+
       {!loading && comboOffers.length > 0 && (
         <ComboOffersSection
           comboOffers={comboOffers}
@@ -91,6 +112,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
       ) : (
         <CategorizedCourseGrid
           courses={courses}
+          excludedCourseIds={featuredIds}
           getCourseStatus={() => GUEST_STATUS}
           getPendingRequest={() => null}
           onPurchase={onRedirectToLogin}

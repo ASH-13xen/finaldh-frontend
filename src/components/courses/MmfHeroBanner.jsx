@@ -2,7 +2,10 @@ import { useEffect, useRef } from 'react';
 import { MMF_FEATURES } from './courseHelpers';
 import { gsap, prefersReducedMotion } from '../../lib/gsapSetup';
 
-export default function MmfHeroBanner({ course, status, pendingRequest, onPurchase, onTelegramNotify, onSeeSample }) {
+export default function MmfHeroBanner({ course, status, pendingRequest, onPurchase, onTelegramNotify, onSeeSample, features, badge, subtitle }) {
+  const resolvedFeatures = features || MMF_FEATURES;
+  const resolvedBadge = badge || 'Most Popular';
+  const resolvedSubtitle = subtitle || 'Everything you need for GS Mains, compiled into one master file.';
   const bannerRef = useRef(null);
 
   useEffect(() => {
@@ -35,13 +38,13 @@ export default function MmfHeroBanner({ course, status, pendingRequest, onPurcha
         <div className="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-10">
           <div className="flex-1">
             <span className="inline-flex items-center gap-1.5 text-[10px] md:text-xs font-sans font-extrabold text-brand bg-accent-soft-bg border border-accent-soft-border rounded-full px-3 py-1 uppercase tracking-wider mb-3">
-              Most Popular
+              {resolvedBadge}
             </span>
             <h2 className="font-display font-semibold text-2xl md:text-4xl text-text-primary tracking-tight mb-1.5 leading-tight">
               {course.name}
             </h2>
             <p className="text-text-secondary text-xs md:text-sm font-medium mb-3">
-              Everything you need for GS Mains, compiled into one master file.
+              {resolvedSubtitle}
             </p>
 
             {course.sampleFileUrl && (
@@ -56,7 +59,7 @@ export default function MmfHeroBanner({ course, status, pendingRequest, onPurcha
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-              {MMF_FEATURES.map((point, idx) => (
+              {resolvedFeatures.map((point, idx) => (
                 <div key={idx} className="flex items-start gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5 text-brand shrink-0 mt-0.5"><polyline points="20 6 9 17 4 12" /></svg>
                   <span className="text-[11px] md:text-xs text-text-secondary font-medium leading-relaxed">
