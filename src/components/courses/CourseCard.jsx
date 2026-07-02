@@ -30,9 +30,9 @@ export default function CourseCard({
           <button
             type="button"
             onClick={() => onSeeSample(course)}
-            className="text-[10px] md:text-xs font-sans font-bold text-brand hover:text-brand-hover underline-offset-2 hover:underline cursor-pointer flex items-center gap-1"
+            className="inline-flex items-center gap-1.5 w-fit px-3 py-1.5 bg-accent-soft-bg hover:bg-accent-soft-border border border-accent-soft-border text-brand rounded-lg text-[11px] md:text-sm font-sans font-bold transition-all cursor-pointer"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3 md:w-3.5 md:h-3.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 md:w-4 md:h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             See Sample
           </button>
         )}

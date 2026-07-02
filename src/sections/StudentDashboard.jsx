@@ -1,8 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
-import LoadingSpinner from '../components/LoadingSpinner';
-import DownloadProgressBar from '../components/DownloadProgressBar';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+/* eslint-disable no-empty */
+/* eslint-disable no-unused-vars */
+import { useState, useEffect, useRef } from "react";
+import LoadingSpinner from "../components/LoadingSpinner";
+import DownloadProgressBar from "../components/DownloadProgressBar";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import {
+  getAuth,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,7 +17,7 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase
@@ -19,16 +25,21 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 
 const getCleanStatusText = (status) => {
-  if (!status) return '';
-  if (status.includes('Initiating') || status.includes('Securing') || status.includes('Preparing')) return 'Preparing PDF...';
-  if (status.includes('Saving')) return 'Finishing...';
-  if (status.includes('Success')) return 'Success!';
-  if (status.includes('Downloading')) {
+  if (!status) return "";
+  if (
+    status.includes("Initiating") ||
+    status.includes("Securing") ||
+    status.includes("Preparing")
+  )
+    return "Preparing PDF...";
+  if (status.includes("Saving")) return "Finishing...";
+  if (status.includes("Success")) return "Success!";
+  if (status.includes("Downloading")) {
     const pctMatch = status.match(/\((\d+)%\)/);
     if (pctMatch) return `Downloading (${pctMatch[1]}%)`;
     const kbMatch = status.match(/\((\d+ KB)\)/);
     if (kbMatch) return `Downloading (${kbMatch[1]})`;
-    return 'Downloading...';
+    return "Downloading...";
   }
   return status;
 };
@@ -36,7 +47,7 @@ const getCleanStatusText = (status) => {
 const wrapText = (text, maxWidth, font, fontSize) => {
   const words = text.split(/\s+/);
   const lines = [];
-  let currentLine = '';
+  let currentLine = "";
 
   for (const word of words) {
     const testLine = currentLine ? `${currentLine} ${word}` : word;
@@ -101,14 +112,17 @@ const drawSecurityWarningPage = (page, user, course, font, boldFont, rgb) => {
 
   // Draw licensee details
   const details = [
-    { label: "Authorized Licensee:", value: user.fullName || user.name || "N/A" },
+    {
+      label: "Authorized Licensee:",
+      value: user.fullName || user.name || "N/A",
+    },
     { label: "Registered Email:", value: user.email },
     { label: "Mobile Number:", value: user.mobileNumber || "N/A" },
     { label: "License Tracking ID:", value: user._id.toString() },
-    { label: "Document Name:", value: course.name || "N/A" }
+    { label: "Document Name:", value: course.name || "N/A" },
   ];
 
-  details.forEach(item => {
+  details.forEach((item) => {
     page.drawText(item.label, {
       x: 70,
       y: currentY,
@@ -155,12 +169,12 @@ const drawSecurityWarningPage = (page, user, course, font, boldFont, rgb) => {
     "2. PROHIBITED SHARING: It is strictly prohibited to share, publish, distribute, resell, or upload this PDF to any private/public forum, website, Telegram channel, Google Drive, WhatsApp group, or social media platform.",
     "3. SECURITY TRACING: This document is embedded with active visible watermarks and dynamic, invisible steganographic tracking signatures. Any leaked copies found online will be auto-scanned to retrieve these tracking IDs.",
     "4. LEGAL CONSEQUENCES",
-    "Unauthorized sharing, distribution and reproduction of this document constitutes a breach of this license agreement. Violations will result in immediate termination of access without refund and initiation of appropriate legal proceedings."
+    "Unauthorized sharing, distribution and reproduction of this document constitutes a breach of this license agreement. Violations will result in immediate termination of access without refund and initiation of appropriate legal proceedings.",
   ];
 
-  warningParagraphs.forEach(p => {
+  warningParagraphs.forEach((p) => {
     const lines = wrapText(p, width - 120, font, 9);
-    lines.forEach(line => {
+    lines.forEach((line) => {
       page.drawText(line, {
         x: 65,
         y: currentY,
@@ -175,7 +189,8 @@ const drawSecurityWarningPage = (page, user, course, font, boldFont, rgb) => {
 
   currentY -= 15;
   // Footer message
-  const footerText = "Thank you for supporting honest learning and respecting authors' copy rights.";
+  const footerText =
+    "Thank you for supporting honest learning and respecting authors' copy rights.";
   const footerW = font.widthOfTextAtSize(footerText, 8.5);
   page.drawText(footerText, {
     x: (width - footerW) / 2,
@@ -218,7 +233,7 @@ function CourseSkeleton() {
 export default function StudentDashboard({ user, onUserUpdate }) {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(user);
 
   // Profile Gate Modal State
@@ -226,28 +241,34 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [downloadWarningOpen, setDownloadWarningOpen] = useState(false);
   const [pendingDownloadParams, setPendingDownloadParams] = useState(null);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [telegramUsername, setTelegramUsername] = useState('');
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [telegramUsername, setTelegramUsername] = useState("");
 
   // Firebase Auth State
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [otpCode, setOtpCode] = useState('');
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [otpCode, setOtpCode] = useState("");
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [otpSent, setOtpSent] = useState(false);
   const [isOtpGenerating, setIsOtpGenerating] = useState(false);
   const [otpVerifying, setOtpVerifying] = useState(false);
-  const [otpError, setOtpError] = useState('');
+  const [otpError, setOtpError] = useState("");
   const [phoneVerified, setPhoneVerified] = useState(false);
 
-  const [profileError, setProfileError] = useState('');
+  const [profileError, setProfileError] = useState("");
   const [profileSubmitting, setProfileSubmitting] = useState(false);
 
   // Validation checks for profile completeness
-  const nameParts = (currentUser?.fullName || currentUser?.name || '').trim().split(/\s+/);
+  const nameParts = (currentUser?.fullName || currentUser?.name || "")
+    .trim()
+    .split(/\s+/);
   const isNameValid = nameParts.length >= 2 && nameParts[0] && nameParts[1];
-  const isTelegramValid = !!(currentUser?.telegramUsername && currentUser.telegramUsername.trim());
-  const isPhoneValid = !!(currentUser?.mobileNumber && currentUser.mobileNumber.trim());
+  const isTelegramValid = !!(
+    currentUser?.telegramUsername && currentUser.telegramUsername.trim()
+  );
+  const isPhoneValid = !!(
+    currentUser?.mobileNumber && currentUser.mobileNumber.trim()
+  );
 
   useEffect(() => {
     return () => {
@@ -270,12 +291,12 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   };
 
   const formatPhoneNumber = (phone) => {
-    let cleaned = phone.trim().replace(/\s+/g, '');
-    if (!cleaned.startsWith('+')) {
+    let cleaned = phone.trim().replace(/\s+/g, "");
+    if (!cleaned.startsWith("+")) {
       if (cleaned.length === 10) {
-        cleaned = '+91' + cleaned;
+        cleaned = "+91" + cleaned;
       } else {
-        cleaned = '+' + cleaned;
+        cleaned = "+" + cleaned;
       }
     }
     return cleaned;
@@ -286,28 +307,32 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
       }
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: (response) => {
-          // reCAPTCHA solved
+      window.recaptchaVerifier = new RecaptchaVerifier(
+        auth,
+        "recaptcha-container",
+        {
+          size: "invisible",
+          callback: (response) => {
+            // reCAPTCHA solved
+          },
+          "expired-callback": () => {
+            setOtpError("reCAPTCHA expired. Please try sending the SMS again.");
+          },
         },
-        'expired-callback': () => {
-          setOtpError('reCAPTCHA expired. Please try sending the SMS again.');
-        }
-      });
+      );
     } catch (err) {
-      console.error('Error setting up RecaptchaVerifier:', err);
+      console.error("Error setting up RecaptchaVerifier:", err);
     }
   };
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    setOtpError('');
+    setOtpError("");
     setIsOtpGenerating(true);
 
     const formatted = formatPhoneNumber(mobileNumber);
     if (formatted.length < 10) {
-      setOtpError('Add +91 at the start');
+      setOtpError("Add +91 at the start");
       setIsOtpGenerating(false);
       return;
     }
@@ -315,12 +340,19 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     try {
       setupRecaptcha();
       const verifier = window.recaptchaVerifier;
-      const confirmation = await signInWithPhoneNumber(auth, formatted, verifier);
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        formatted,
+        verifier,
+      );
       setConfirmationResult(confirmation);
       setOtpSent(true);
     } catch (err) {
-      console.error('Error sending SMS:', err);
-      setOtpError(err.message || 'Failed to send SMS code. Please check your phone number format.');
+      console.error("Error sending SMS:", err);
+      setOtpError(
+        err.message ||
+          "Failed to send SMS code. Please check your phone number format.",
+      );
     } finally {
       setIsOtpGenerating(false);
     }
@@ -328,19 +360,21 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    setOtpError('');
+    setOtpError("");
     setOtpVerifying(true);
 
     try {
       if (!confirmationResult) {
-        throw new Error('No active OTP session found. Please send SMS verification code first.');
+        throw new Error(
+          "No active OTP session found. Please send SMS verification code first.",
+        );
       }
       await confirmationResult.confirm(otpCode);
       setPhoneVerified(true);
       setOtpSent(false);
     } catch (err) {
-      console.error('Error verifying OTP:', err);
-      setOtpError(err.message || 'Invalid code. Please try again.');
+      console.error("Error verifying OTP:", err);
+      setOtpError(err.message || "Invalid code. Please try again.");
     } finally {
       setOtpVerifying(false);
     }
@@ -348,43 +382,43 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    setProfileError('');
+    setProfileError("");
     setProfileSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
-      
+      const token = localStorage.getItem("token");
+
       if (!firstName.trim() || !lastName.trim()) {
-        throw new Error('Both First Name and Last Name must be provided.');
+        throw new Error("Both First Name and Last Name must be provided.");
       }
       if (!telegramUsername.trim()) {
-        throw new Error('Telegram Username is required.');
+        throw new Error("Telegram Username is required.");
       }
 
       const payload = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        telegramUsername: telegramUsername.trim()
+        telegramUsername: telegramUsername.trim(),
       };
 
       if (!isPhoneValid) {
         if (!phoneVerified || !mobileNumber.trim()) {
-          throw new Error('Phone number must be verified via OTP first.');
+          throw new Error("Phone number must be verified via OTP first.");
         }
         payload.mobileNumber = formatPhoneNumber(mobileNumber);
       }
 
-      const res = await fetch('/api/user/complete-profile', {
-        method: 'PUT',
+      const res = await fetch("/api/user/complete-profile", {
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to save profile details');
+        throw new Error(data.error || "Failed to save profile details");
       }
 
       setCurrentUser(data.user);
@@ -397,14 +431,21 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       setPendingDownloadCourse(null);
 
       if (courseToDownload) {
-        console.log(`[handleSaveProfile] Profile verified. Starting pending download for: ${courseToDownload.name}`);
+        console.log(
+          `[handleSaveProfile] Profile verified. Starting pending download for: ${courseToDownload.name}`,
+        );
         setTimeout(() => {
-          handleDownload(courseToDownload.id, courseToDownload.name, courseToDownload.fileIndex || 0, true);
+          handleDownload(
+            courseToDownload.id,
+            courseToDownload.name,
+            courseToDownload.fileIndex || 0,
+            true,
+          );
         }, 100);
       }
     } catch (err) {
-      console.error('Error saving profile details:', err);
-      setProfileError(err.message || 'Error occurred while saving profile.');
+      console.error("Error saving profile details:", err);
+      setProfileError(err.message || "Error occurred while saving profile.");
     } finally {
       setProfileSubmitting(false);
     }
@@ -413,6 +454,11 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   const [requestingCourseId, setRequestingCourseId] = useState(null);
   const [downloadingStatus, setDownloadingStatus] = useState({});
   const [requestingStatus, setRequestingStatus] = useState({});
+  // Synchronous re-entry guard, keyed by compositeId. React state updates are
+  // async, so a fast double-click could otherwise fire two independent
+  // download flows (each with its own polling loop) before the UI has a
+  // chance to re-render the button into its disabled/processing state.
+  const downloadInFlightRef = useRef({});
 
   // Multi-PDF list UI: per-course collapse/expand override + filename search
   const PDF_AUTO_COLLAPSE_THRESHOLD = 6;
@@ -420,73 +466,82 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   const [pdfSearch, setPdfSearch] = useState({});
 
   const [showRequestModal, setShowRequestModal] = useState(false);
-  const [requestModalCourseId, setRequestModalCourseId] = useState('');
-  const [requestModalCourseName, setRequestModalCourseName] = useState('');
-  const [requestReason, setRequestReason] = useState('');
-  const [requestErrorMsg, setRequestErrorMsg] = useState('');
+  const [requestModalCourseId, setRequestModalCourseId] = useState("");
+  const [requestModalCourseName, setRequestModalCourseName] = useState("");
+  const [requestReason, setRequestReason] = useState("");
+  const [requestErrorMsg, setRequestErrorMsg] = useState("");
 
   const handleOpenRequestModal = (courseId, courseName) => {
     setRequestModalCourseId(courseId);
     setRequestModalCourseName(courseName);
-    setRequestReason('');
-    setRequestErrorMsg('');
+    setRequestReason("");
+    setRequestErrorMsg("");
     setShowRequestModal(true);
   };
 
   const handleSubmitRequest = async () => {
     if (!requestReason.trim()) {
-      setRequestErrorMsg('Reason cannot be empty.');
+      setRequestErrorMsg("Reason cannot be empty.");
       return;
     }
 
     try {
-      const res = await fetch('/api/user/download-request', {
-        method: 'POST',
+      const res = await fetch("/api/user/download-request", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify({ 
-          courseId: requestModalCourseId, 
-          courseName: requestModalCourseName, 
-          reason: requestReason.trim() 
-        })
+        body: JSON.stringify({
+          courseId: requestModalCourseId,
+          courseName: requestModalCourseName,
+          reason: requestReason.trim(),
+        }),
       });
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || 'Failed to submit request');
+        throw new Error(errData.error || "Failed to submit request");
       }
 
       setShowRequestModal(false);
-      setRequestReason('');
-      setRequestErrorMsg('');
+      setRequestReason("");
+      setRequestErrorMsg("");
       await fetchRequests();
     } catch (err) {
-      setRequestErrorMsg(err.message || 'Failed to submit request');
+      setRequestErrorMsg(err.message || "Failed to submit request");
     }
   };
 
   // Filter courses that match user's interestedCourses (case-insensitive check)
-  const interestedList = (Array.isArray(currentUser?.interestedCourses) ? currentUser.interestedCourses : [])
-    .filter(item => typeof item === 'string' && item.trim() !== '');
-  const matchedCourses = courses.filter(course => 
-    course && course.courseId && interestedList.some(intCourse => intCourse.toLowerCase() === course.courseId.toLowerCase())
+  const interestedList = (
+    Array.isArray(currentUser?.interestedCourses)
+      ? currentUser.interestedCourses
+      : []
+  ).filter((item) => typeof item === "string" && item.trim() !== "");
+  const matchedCourses = courses.filter(
+    (course) =>
+      course &&
+      course.courseId &&
+      interestedList.some(
+        (intCourse) =>
+          intCourse.toLowerCase() === course.courseId.toLowerCase(),
+      ),
   );
 
   const fetchRequests = async () => {
     try {
-      const res = await fetch('/api/user/download-requests', {
+      const res = await fetch("/api/user/download-requests", {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
       });
       if (res.ok) {
         const data = await res.json();
         setRequests(data);
       }
     } catch (err) {
-      console.error('Error fetching requests:', err);
+      console.error("Error fetching requests:", err);
     }
   };
 
@@ -498,17 +553,17 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     fetchRequests();
     const fetchCourses = async () => {
       setLoading(true);
-      setError('');
+      setError("");
       try {
-        const res = await fetch('/api/courses/list');
+        const res = await fetch("/api/courses/list");
         if (!res.ok) {
-          throw new Error('Failed to retrieve courses list');
+          throw new Error("Failed to retrieve courses list");
         }
         const data = await res.json();
         setCourses(data.courses || []);
       } catch (err) {
-        console.error('Error fetching courses:', err);
-        setError(err.message || 'Failed to load courses.');
+        console.error("Error fetching courses:", err);
+        setError(err.message || "Failed to load courses.");
       } finally {
         setLoading(false);
       }
@@ -524,61 +579,96 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     handleDownload(courseId, courseName, fileIndex, true, true);
   };
 
-  async function handleDownload(courseId, courseName, fileIndex = 0, skipModal = false, skipWarning = false) {
-    console.log(`[handleDownload] Initiating download warning gate verification for composite course: ${courseId}_${fileIndex} (skipModal: ${skipModal}, skipWarning: ${skipWarning})`);
-    
-    const targetCourse = courses.find(c => c.courseId && c.courseId.toLowerCase() === courseId.toLowerCase());
-    const hasMultiplePdfs = targetCourse && targetCourse.fileUrls && targetCourse.fileUrls.length > 1;
+  async function handleDownload(
+    courseId,
+    courseName,
+    fileIndex = 0,
+    skipModal = false,
+    skipWarning = false,
+  ) {
+    console.log(
+      `[handleDownload] Initiating download warning gate verification for composite course: ${courseId}_${fileIndex} (skipModal: ${skipModal}, skipWarning: ${skipWarning})`,
+    );
+
+    const targetCourse = courses.find(
+      (c) => c.courseId && c.courseId.toLowerCase() === courseId.toLowerCase(),
+    );
+    const hasMultiplePdfs =
+      targetCourse && targetCourse.fileUrls && targetCourse.fileUrls.length > 1;
     const compositeId = hasMultiplePdfs ? `${courseId}_${fileIndex}` : courseId;
 
     // Always show profile details modal when download button is clicked unless skipModal is true
     if (!skipModal) {
-      console.log('[handleDownload] Showing profile details modal before download.');
+      console.log(
+        "[handleDownload] Showing profile details modal before download.",
+      );
       setPendingDownloadCourse({ id: courseId, name: courseName, fileIndex });
-      setFirstName(nameParts[0] || '');
-      setLastName(nameParts.slice(1).join(' ') || '');
-      setTelegramUsername(currentUser?.telegramUsername || '');
-      setMobileNumber(currentUser?.mobileNumber || '');
+      setFirstName(nameParts[0] || "");
+      setLastName(nameParts.slice(1).join(" ") || "");
+      setTelegramUsername(currentUser?.telegramUsername || "");
+      setMobileNumber(currentUser?.mobileNumber || "");
       setPhoneVerified(isPhoneValid);
       setOtpSent(false);
-      setOtpError('');
-      setProfileError('');
+      setOtpError("");
+      setProfileError("");
       setProfileModalOpen(true);
       return;
     }
 
     if (!skipWarning) {
-      console.log('[handleDownload] Interrupting download flow to display guidelines and best practices.');
-      setPendingDownloadParams({ courseId, courseName, fileIndex, compositeId });
+      console.log(
+        "[handleDownload] Interrupting download flow to display guidelines and best practices.",
+      );
+      setPendingDownloadParams({
+        courseId,
+        courseName,
+        fileIndex,
+        compositeId,
+      });
       setDownloadWarningOpen(true);
       return;
     }
 
-    setDownloadingStatus(prev => ({ 
-      ...prev, 
-      [compositeId]: { step: 1, isDownloading: false, downloadPercent: 0 } 
+    if (downloadInFlightRef.current[compositeId]) {
+      console.log(
+        `[handleDownload] Ignoring duplicate trigger for ${compositeId} — already in flight.`,
+      );
+      return;
+    }
+    downloadInFlightRef.current[compositeId] = true;
+    const clearInFlight = () => {
+      delete downloadInFlightRef.current[compositeId];
+    };
+
+    setDownloadingStatus((prev) => ({
+      ...prev,
+      [compositeId]: { step: 1, isDownloading: false, downloadPercent: 0 },
     }));
 
     const triggerNativeDownload = () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const apiBaseUrl = import.meta.env.VITE_API_URL || window.location.origin;
       const downloadUrl = `${apiBaseUrl}/api/courses/download/${courseId}?token=${token}&index=${fileIndex}`;
-      console.log(`[handleDownload] Directing window to trigger native PDF download: ${downloadUrl}`);
+      console.log(
+        `[handleDownload] Directing window to trigger native PDF download: ${downloadUrl}`,
+      );
 
       // Update UI limits locally
-      setCurrentUser(prev => {
-        const limits = (prev.downloadLimits || []).map(d => {
+      setCurrentUser((prev) => {
+        const limits = (prev.downloadLimits || []).map((d) => {
           if (d.courseId.toLowerCase() === compositeId.toLowerCase()) {
             return { ...d, downloadedCount: d.downloadedCount + 1 };
           }
           return d;
         });
-        const hasEntry = (prev.downloadLimits || []).some(d => d.courseId.toLowerCase() === compositeId.toLowerCase());
+        const hasEntry = (prev.downloadLimits || []).some(
+          (d) => d.courseId.toLowerCase() === compositeId.toLowerCase(),
+        );
         if (!hasEntry) {
           limits.push({
             courseId: compositeId,
             downloadedCount: 1,
-            allowedCount: 1
+            allowedCount: 1,
           });
         }
         const updatedUser = { ...prev, downloadLimits: limits };
@@ -589,17 +679,23 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       });
 
       // Update UI state to completed
-      setDownloadingStatus(prev => ({
+      setDownloadingStatus((prev) => ({
         ...prev,
-        [compositeId]: { step: 9, isDownloading: false, downloadPercent: 100, isSuccess: true }
+        [compositeId]: {
+          step: 9,
+          isDownloading: false,
+          downloadPercent: 100,
+          isSuccess: true,
+        },
       }));
 
       // Trigger native browser download using redirection
       window.location.href = downloadUrl;
+      clearInFlight();
 
       // Clear downloading status after 3.5 seconds
       setTimeout(() => {
-        setDownloadingStatus(prev => {
+        setDownloadingStatus((prev) => {
           const next = { ...prev };
           delete next[compositeId];
           return next;
@@ -608,17 +704,24 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     };
 
     try {
-      console.log(`[Main Fetch] Checking download status via GET request to /api/courses/download/${courseId}?checkOnly=true&index=${fileIndex}`);
-      const res = await fetch(`/api/courses/download/${courseId}?checkOnly=true&index=${fileIndex}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      console.log(`[Main Fetch] Check response received. Status: ${res.status}`);
+      console.log(
+        `[Main Fetch] Checking download status via GET request to /api/courses/download/${courseId}?checkOnly=true&index=${fileIndex}`,
+      );
+      const res = await fetch(
+        `/api/courses/download/${courseId}?checkOnly=true&index=${fileIndex}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+      console.log(
+        `[Main Fetch] Check response received. Status: ${res.status}`,
+      );
 
       if (!res.ok) {
-        let errorMsg = 'Failed to download PDF';
+        let errorMsg = "Failed to download PDF";
         try {
           const errData = await res.json();
           errorMsg = errData.error || errorMsg;
@@ -630,30 +733,39 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
       // Case A: PDF is ready or sync streaming mode is active
       if (data.exists || data.directStream) {
-        console.log(`[Main Fetch] PDF is ready or sync mode is active. Triggering native download.`);
+        console.log(
+          `[Main Fetch] PDF is ready or sync mode is active. Triggering native download.`,
+        );
         triggerNativeDownload();
         return;
       }
 
       // Case B: Background processing is currently running or just started
-      if (res.status === 202 || data.status === 'processing') {
-        console.log(`[Main Fetch] Background generation started or in progress. Starting polling interval.`);
-        
+      if (res.status === 202 || data.status === "processing") {
+        console.log(
+          `[Main Fetch] Background generation started or in progress. Starting polling interval.`,
+        );
+
         let hasTriggeredDownload = false;
         const pollInterval = setInterval(async () => {
           try {
-            const progressRes = await fetch(`/api/courses/download-progress/${courseId}?index=${fileIndex}`, {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-              }
-            });
+            const progressRes = await fetch(
+              `/api/courses/download-progress/${courseId}?index=${fileIndex}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+              },
+            );
             if (progressRes.ok) {
               const progressData = await progressRes.json();
               const step = progressData.step || 1;
-              const status = progressData.status || 'processing';
-              console.log(`[Progress Polling] Polled step: ${step}, status: ${status}`);
+              const status = progressData.status || "processing";
+              console.log(
+                `[Progress Polling] Polled step: ${step}, status: ${status}`,
+              );
 
-              if (status === 'completed') {
+              if (status === "completed") {
                 clearInterval(pollInterval);
                 if (!hasTriggeredDownload) {
                   hasTriggeredDownload = true;
@@ -662,14 +774,18 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                 return;
               }
 
-              if (status === 'failed') {
+              if (status === "failed") {
                 clearInterval(pollInterval);
-                setDownloadingStatus(prev => ({
+                clearInFlight();
+                setDownloadingStatus((prev) => ({
                   ...prev,
-                  [compositeId]: { isError: true, errorMsg: progressData.error || 'Generation failed' }
+                  [compositeId]: {
+                    isError: true,
+                    errorMsg: progressData.error || "Generation failed",
+                  },
                 }));
                 setTimeout(() => {
-                  setDownloadingStatus(prev => {
+                  setDownloadingStatus((prev) => {
                     const next = { ...prev };
                     delete next[compositeId];
                     return next;
@@ -678,59 +794,75 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                 return;
               }
 
-              setDownloadingStatus(prev => {
+              setDownloadingStatus((prev) => {
                 return {
                   ...prev,
-                  [compositeId]: { step, isDownloading: false, downloadPercent: 0 }
+                  [compositeId]: {
+                    step,
+                    isDownloading: false,
+                    downloadPercent: 0,
+                  },
                 };
               });
             }
           } catch (err) {
-            console.warn('Error polling progress:', err);
+            console.warn("Error polling progress:", err);
           }
         }, 800);
 
         return;
       }
-
     } catch (err) {
       console.error(`[handleDownload] Fatal error during check/download:`, err);
-      setDownloadingStatus(prev => ({ 
-        ...prev, 
-        [compositeId]: { isError: true, errorMsg: err.message || 'Download failed' } 
+      clearInFlight();
+      setDownloadingStatus((prev) => ({
+        ...prev,
+        [compositeId]: {
+          isError: true,
+          errorMsg: err.message || "Download failed",
+        },
       }));
       setTimeout(() => {
-        setDownloadingStatus(prev => {
+        setDownloadingStatus((prev) => {
           const next = { ...prev };
           delete next[compositeId];
           return next;
         });
       }, 3500);
     }
-  };
+  }
 
   const handleRequestDownload = async (courseId, courseName) => {
-    setRequestingStatus(prev => ({ ...prev, [courseId]: 'Submitting request...' }));
+    setRequestingStatus((prev) => ({
+      ...prev,
+      [courseId]: "Submitting request...",
+    }));
     try {
-      const res = await fetch('/api/user/download-request', {
-        method: 'POST',
+      const res = await fetch("/api/user/download-request", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify({ courseId, courseName })
+        body: JSON.stringify({ courseId, courseName }),
       });
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || 'Failed to submit request');
+        throw new Error(errData.error || "Failed to submit request");
       }
-      setRequestingStatus(prev => ({ ...prev, [courseId]: 'Submitted successfully!' }));
+      setRequestingStatus((prev) => ({
+        ...prev,
+        [courseId]: "Submitted successfully!",
+      }));
       await fetchRequests();
     } catch (err) {
-      setRequestingStatus(prev => ({ ...prev, [courseId]: `Error: ${err.message || 'Failed'}` }));
+      setRequestingStatus((prev) => ({
+        ...prev,
+        [courseId]: `Error: ${err.message || "Failed"}`,
+      }));
     } finally {
       setTimeout(() => {
-        setRequestingStatus(prev => {
+        setRequestingStatus((prev) => {
           const next = { ...prev };
           delete next[courseId];
           return next;
@@ -743,9 +875,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return 'Good morning';
-    if (hour >= 12 && hour < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (hour >= 5 && hour < 12) return "Good morning";
+    if (hour >= 12 && hour < 18) return "Good afternoon";
+    return "Good evening";
   };
 
   const handleMouseMove = (e) => {
@@ -753,8 +885,8 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     const rect = card.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    card.style.setProperty('--mouse-x', `${x}px`);
-    card.style.setProperty('--mouse-y', `${y}px`);
+    card.style.setProperty("--mouse-x", `${x}px`);
+    card.style.setProperty("--mouse-y", `${y}px`);
   };
 
   return (
@@ -764,10 +896,15 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         <h1 className="text-xl md:text-4xl font-display font-semibold text-text-primary tracking-tight flex flex-wrap items-center gap-x-1.5 md:gap-x-2 gap-y-0.5 md:gap-y-1">
           <span>{getGreeting()},</span>
           <span className="text-brand capitalize">
-            {currentUser?.fullName?.split(' ')[0] || currentUser?.name || 'Scholar'}
+            {currentUser?.fullName?.split(" ")[0] ||
+              currentUser?.name ||
+              "Scholar"}
           </span>
         </h1>
-        <p className="text-text-secondary text-xs md:text-sm mt-1.5 md:mt-2 font-medium">Access and download study materials matching your learning preferences.</p>
+        <p className="text-text-secondary text-xs md:text-sm mt-1.5 md:mt-2 font-medium">
+          Access and download study materials matching your learning
+          preferences.
+        </p>
       </div>
 
       {/* Profile summary banner */}
@@ -777,14 +914,27 @@ export default function StudentDashboard({ user, onUserUpdate }) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 md:gap-2.5">
               <div className="p-1 md:p-1.5 bg-accent-soft-bg border border-accent-soft-border text-brand rounded-md md:rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 md:w-4 md:h-4"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  className="w-3.5 h-3.5 md:w-4 md:h-4"
+                >
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                  <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
+                </svg>
               </div>
-              <h2 className="text-[10px] md:text-xs font-sans font-bold text-text-secondary uppercase tracking-wider md:tracking-widest">My Enrolled Courses</h2>
+              <h2 className="text-[10px] md:text-xs font-sans font-bold text-text-secondary uppercase tracking-wider md:tracking-widest">
+                My Enrolled Courses
+              </h2>
             </div>
             {interestedList.length > 0 && (
               <span className="text-[8px] md:text-[10px] px-2 md:px-2.5 py-0.5 bg-status-success-bg border border-status-success-text/25 text-status-success-text rounded-full font-bold uppercase tracking-wider flex items-center gap-1 md:gap-1.5 self-start sm:self-auto">
                 <span className="w-1.5 h-1.5 bg-status-success-text rounded-full animate-pulse"></span>
-                {interestedList.length} Active {interestedList.length === 1 ? 'Course' : 'Courses'}
+                {interestedList.length} Active{" "}
+                {interestedList.length === 1 ? "Course" : "Courses"}
               </span>
             )}
           </div>
@@ -792,7 +942,12 @@ export default function StudentDashboard({ user, onUserUpdate }) {
           <div className="flex flex-wrap gap-1.5 md:gap-2.5">
             {interestedList.length > 0 ? (
               interestedList.map((courseId, index) => {
-                const courseDetail = courses.find(c => c.courseId && typeof c.courseId === 'string' && c.courseId.toLowerCase() === courseId.toLowerCase());
+                const courseDetail = courses.find(
+                  (c) =>
+                    c.courseId &&
+                    typeof c.courseId === "string" &&
+                    c.courseId.toLowerCase() === courseId.toLowerCase(),
+                );
                 const dispName = courseDetail ? courseDetail.name : courseId;
 
                 return (
@@ -804,7 +959,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                     <span>{courseId}</span>
                     {courseDetail && (
                       <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 md:w-56 hidden group-hover/pill:block bg-surface border border-border-default text-[9px] md:text-[10px] text-text-secondary rounded-lg p-2 md:p-2.5 shadow-2xl z-30 leading-normal pointer-events-none text-center">
-                        <span className="font-bold text-text-primary block truncate">{dispName}</span>
+                        <span className="font-bold text-text-primary block truncate">
+                          {dispName}
+                        </span>
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1 border-4 border-transparent border-b-border-default"></div>
                       </div>
                     )}
@@ -812,7 +969,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                 );
               })
             ) : (
-              <span className="text-xs text-text-tertiary font-medium italic">No courses linked to your profile yet.</span>
+              <span className="text-xs text-text-tertiary font-medium italic">
+                No courses linked to your profile yet.
+              </span>
             )}
           </div>
         </div>
@@ -823,43 +982,85 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         <CourseSkeleton />
       ) : error ? (
         <div className="py-12 text-center bg-status-danger-bg border border-status-danger-text/25 rounded-2xl p-6">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-8 h-8 text-status-danger-text mx-auto mb-3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <h3 className="font-bold text-text-primary">Failed to load courses</h3>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            className="w-8 h-8 text-status-danger-text mx-auto mb-3"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <h3 className="font-bold text-text-primary">
+            Failed to load courses
+          </h3>
           <p className="text-xs text-text-secondary mt-1">{error}</p>
         </div>
       ) : matchedCourses.length === 0 ? (
         <div className="py-10 md:py-16 text-center border border-dashed border-border-default rounded-xl md:rounded-2xl bg-surface-raised p-6 md:p-8">
           <div className="w-10 h-10 md:w-12 md:h-12 bg-surface border border-border-default rounded-lg md:rounded-xl flex items-center justify-center mx-auto mb-3 md:mb-4 text-text-tertiary">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 md:w-6 md:h-6"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="w-5 h-5 md:w-6 md:h-6"
+            >
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
           </div>
-          <h3 className="font-bold text-text-secondary text-xs md:text-sm">No matched courses found</h3>
+          <h3 className="font-bold text-text-secondary text-xs md:text-sm">
+            No matched courses found
+          </h3>
           <p className="text-[11px] md:text-xs text-text-tertiary mt-1 md:mt-1.5 max-w-md mx-auto font-medium">
-            There are currently no uploaded courses matching your profile's taken courses ({interestedList.join(', ') || 'none'}).
+            There are currently no uploaded courses matching your profile's
+            taken courses ({interestedList.join(", ") || "none"}).
           </p>
         </div>
       ) : (
         <div className="space-y-6">
           <div className="flex items-center justify-between pb-1">
-            <h2 className="text-base md:text-lg font-display font-semibold text-text-primary">Downloadable Resources</h2>
-            <span className="text-[9px] md:text-[11px] font-bold text-text-tertiary uppercase tracking-wider md:tracking-widest">{matchedCourses.length} Courses Available</span>
+            <h2 className="text-base md:text-lg font-display font-semibold text-text-primary">
+              Downloadable Resources
+            </h2>
+            <span className="text-[9px] md:text-[11px] font-bold text-text-tertiary uppercase tracking-wider md:tracking-widest">
+              {matchedCourses.length} Courses Available
+            </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {matchedCourses.map((course) => {
-              const pdfUrls = course.fileUrls && course.fileUrls.length > 0 ? course.fileUrls : [course.fileUrl];
-              const pdfNames = course.fileNames && course.fileNames.length > 0 ? course.fileNames : [course.fileName || course.name];
+              const pdfUrls =
+                course.fileUrls && course.fileUrls.length > 0
+                  ? course.fileUrls
+                  : [course.fileUrl];
+              const pdfNames =
+                course.fileNames && course.fileNames.length > 0
+                  ? course.fileNames
+                  : [course.fileName || course.name];
 
               const isExpanded = !!expandedCourses[course._id];
-              const searchTerm = (pdfSearch[course._id] || '').trim().toLowerCase();
+              const searchTerm = (pdfSearch[course._id] || "")
+                .trim()
+                .toLowerCase();
               const visibleIndices = searchTerm
-                ? pdfUrls.map((_, idx) => idx).filter((idx) => (pdfNames[idx] || '').toLowerCase().includes(searchTerm))
+                ? pdfUrls
+                    .map((_, idx) => idx)
+                    .filter((idx) =>
+                      (pdfNames[idx] || "").toLowerCase().includes(searchTerm),
+                    )
                 : pdfUrls.map((_, idx) => idx);
 
               return (
                 <div
                   key={course._id}
                   onMouseMove={handleMouseMove}
-                  style={{ '--mouse-x': '0px', '--mouse-y': '0px' }}
+                  style={{ "--mouse-x": "0px", "--mouse-y": "0px" }}
                   className="course-card relative overflow-hidden bg-surface border border-border-default hover:border-brand/40 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm flex flex-col justify-between hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 before:absolute before:inset-0 before:z-0 before:pointer-events-none before:rounded-xl md:before:rounded-2xl before:bg-[radial-gradient(400px_circle_at_var(--mouse-x)_var(--mouse-y),rgba(13,122,86,0.08),transparent_60%)]"
                 >
                   <div className="relative z-10 flex-grow flex flex-col justify-between space-y-4">
@@ -871,10 +1072,17 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
                       {/* Password Info */}
                       <p className="text-[10px] md:text-xs text-text-secondary mt-1 md:mt-2 font-medium tracking-wide">
-                        PDF password: {currentUser?.mobileNumber ? (
-                          <span className="text-brand font-bold">{currentUser.mobileNumber.replace(/\D/g, '').slice(-10)}</span>
+                        PDF password:{" "}
+                        {currentUser?.mobileNumber ? (
+                          <span className="text-brand font-bold">
+                            {currentUser.mobileNumber
+                              .replace(/\D/g, "")
+                              .slice(-10)}
+                          </span>
                         ) : (
-                          <span className="text-brand/60 italic font-semibold">your contact number (without +91)</span>
+                          <span className="text-brand/60 italic font-semibold">
+                            your contact number (without +91)
+                          </span>
                         )}
                       </p>
 
@@ -885,7 +1093,12 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                           rel="noopener noreferrer"
                           className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-accent-soft-bg border border-accent-soft-border text-brand hover:text-brand-hover rounded-lg text-[10px] md:text-xs font-bold shadow transition-all hover:scale-[1.02] cursor-pointer"
                         >
-                          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4 10-10S17.52 2 12 2zm4.64 6.8c-.15.75-.85 3.79-1.2 5.68-.15.8-.45 1.07-.73 1.1-.63.06-1.11-.42-1.72-.82-.96-.63-1.51-1.02-2.44-1.63-1.08-.71-.38-1.1.24-1.74.16-.17 3.01-2.76 3.07-3.01.01-.03.01-.14-.05-.2-.06-.06-.15-.04-.21-.03-.1.02-1.61 1.02-4.56 3.02-.43.3-.82.45-1.17.44-.39-.01-1.15-.22-1.71-.41-.69-.23-1.24-.35-1.19-.74.03-.2.3-.41.82-.63 3.2-1.39 5.34-2.31 6.42-2.75 3.07-1.28 3.7-1.5 4.12-1.5.09 0 .3.02.43.13.11.09.14.22.15.31-.01.07.01.21-.01.29z" /></svg>
+                          <svg
+                            className="w-3.5 h-3.5 fill-current"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4 10-10S17.52 2 12 2zm4.64 6.8c-.15.75-.85 3.79-1.2 5.68-.15.8-.45 1.07-.73 1.1-.63.06-1.11-.42-1.72-.82-.96-.63-1.51-1.02-2.44-1.63-1.08-.71-.38-1.1.24-1.74.16-.17 3.01-2.76 3.07-3.01.01-.03.01-.14-.05-.2-.06-.06-.15-.04-.21-.03-.1.02-1.61 1.02-4.56 3.02-.43.3-.82.45-1.17.44-.39-.01-1.15-.22-1.71-.41-.69-.23-1.24-.35-1.19-.74.03-.2.3-.41.82-.63 3.2-1.39 5.34-2.31 6.42-2.75 3.07-1.28 3.7-1.5 4.12-1.5.09 0 .3.02.43.13.11.09.14.22.15.31-.01.07.01.21-.01.29z" />
+                          </svg>
                           Join Telegram Group
                         </a>
                       )}
@@ -895,17 +1108,26 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                     <div className="pt-3 md:pt-4 border-t border-border-default">
                       <button
                         type="button"
-                        onClick={() => setExpandedCourses(prev => ({ ...prev, [course._id]: !isExpanded }))}
+                        onClick={() =>
+                          setExpandedCourses((prev) => ({
+                            ...prev,
+                            [course._id]: !isExpanded,
+                          }))
+                        }
                         className="w-full flex items-center justify-between gap-2 cursor-pointer group/pdfheader"
                       >
                         <span className="text-[10px] md:text-xs font-bold text-text-secondary uppercase tracking-wider group-hover/pdfheader:text-text-primary transition-colors">
-                          {pdfUrls.length} PDF{pdfUrls.length !== 1 ? 's' : ''}
+                          {pdfUrls.length} PDF{pdfUrls.length !== 1 ? "s" : ""}
                         </span>
                         <svg
-                          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                          className={`w-3.5 h-3.5 text-text-tertiary group-hover/pdfheader:text-text-primary transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          className={`w-3.5 h-3.5 text-text-tertiary group-hover/pdfheader:text-text-primary transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
                         >
-                          <polyline points="6 9 12 15 18 9"/>
+                          <polyline points="6 9 12 15 18 9" />
                         </svg>
                       </button>
 
@@ -914,32 +1136,61 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                           {pdfUrls.length > PDF_AUTO_COLLAPSE_THRESHOLD && (
                             <input
                               type="text"
-                              value={pdfSearch[course._id] || ''}
-                              onChange={(e) => setPdfSearch(prev => ({ ...prev, [course._id]: e.target.value }))}
+                              value={pdfSearch[course._id] || ""}
+                              onChange={(e) =>
+                                setPdfSearch((prev) => ({
+                                  ...prev,
+                                  [course._id]: e.target.value,
+                                }))
+                              }
                               placeholder="Search PDFs by name..."
                               className="w-full px-3 py-2 bg-page border border-border-default rounded-lg text-[11px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-brand transition-all font-medium"
                             />
                           )}
 
                           {visibleIndices.length === 0 ? (
-                            <p className="text-[11px] text-text-tertiary font-semibold text-center py-3">No PDFs match your search.</p>
+                            <p className="text-[11px] text-text-tertiary font-semibold text-center py-3">
+                              No PDFs match your search.
+                            </p>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {visibleIndices.map((idx) => {
                                 const fileDisplayName = pdfNames[idx];
-                                const compositeId = pdfUrls.length > 1 ? `${course.courseId}_${idx}` : course.courseId;
+                                const compositeId =
+                                  pdfUrls.length > 1
+                                    ? `${course.courseId}_${idx}`
+                                    : course.courseId;
 
-                                const limitEntry = currentUser?.downloadLimits?.find(d => d.courseId.toLowerCase() === compositeId.toLowerCase());
-                                const downloadedCount = limitEntry ? limitEntry.downloadedCount : 0;
-                                const allowedCount = limitEntry ? limitEntry.allowedCount : 1;
-                                const remaining = allowedCount - downloadedCount;
+                                const limitEntry =
+                                  currentUser?.downloadLimits?.find(
+                                    (d) =>
+                                      d.courseId.toLowerCase() ===
+                                      compositeId.toLowerCase(),
+                                  );
+                                const downloadedCount = limitEntry
+                                  ? limitEntry.downloadedCount
+                                  : 0;
+                                const allowedCount = limitEntry
+                                  ? limitEntry.allowedCount
+                                  : 1;
+                                const remaining =
+                                  allowedCount - downloadedCount;
                                 const isLimitReached = remaining <= 0;
 
-                                const pdfRequests = requests.filter(r => r.courseId.toLowerCase() === compositeId.toLowerCase());
-                                const hasPendingRequest = pdfRequests.some(r => r.status === 'pending');
+                                const pdfRequests = requests.filter(
+                                  (r) =>
+                                    r.courseId.toLowerCase() ===
+                                    compositeId.toLowerCase(),
+                                );
+                                const hasPendingRequest = pdfRequests.some(
+                                  (r) => r.status === "pending",
+                                );
 
                                 return (
-                                  <div key={idx} className="bg-sunken border border-border-subtle rounded-xl p-3 space-y-2.5 flex flex-col justify-between">
+                                  <div
+                                    key={idx}
+                                    className="bg-sunken border border-border-subtle rounded-xl p-3 space-y-2.5 flex flex-col justify-between"
+                                  >
                                     <div className="flex justify-between items-start gap-2">
                                       <span className="text-[11px] md:text-xs font-bold text-text-primary leading-snug">
                                         {fileDisplayName}
@@ -964,16 +1215,22 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                             </button>
                                           ) : (
                                             <button
-                                              onClick={() => handleOpenRequestModal(compositeId, `${course.name} - ${fileDisplayName}`)}
+                                              onClick={() =>
+                                                handleOpenRequestModal(
+                                                  compositeId,
+                                                  `${course.name} - ${fileDisplayName}`,
+                                                )
+                                              }
                                               className="w-full py-1.5 bg-accent-soft-bg hover:bg-accent-soft-border border border-accent-soft-border text-brand rounded-lg text-[10px] font-bold transition duration-200 cursor-pointer"
                                             >
                                               request download
                                             </button>
                                           )}
                                         </div>
-                                      ) : (
-                                        downloadingStatus[compositeId] ? (() => {
-                                          const status = downloadingStatus[compositeId];
+                                      ) : downloadingStatus[compositeId] ? (
+                                        (() => {
+                                          const status =
+                                            downloadingStatus[compositeId];
 
                                           if (status.isError) {
                                             return (
@@ -990,36 +1247,88 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                               {!status.isSuccess && (
                                                 <div className="flex flex-col gap-1 bg-status-warning-bg border border-status-warning-text/30 rounded-lg p-2.5 animate-pulse">
                                                   <div className="flex items-center gap-1 text-status-warning-text font-black text-[8px] uppercase tracking-wider">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                                    <span>Processing Watermarks -- Do Not Refresh</span>
+                                                    <svg
+                                                      xmlns="http://www.w3.org/2000/svg"
+                                                      viewBox="0 0 24 24"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      strokeWidth="3"
+                                                      className="w-3 h-3"
+                                                    >
+                                                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                                      <line
+                                                        x1="12"
+                                                        y1="9"
+                                                        x2="12"
+                                                        y2="13"
+                                                      />
+                                                      <line
+                                                        x1="12"
+                                                        y1="17"
+                                                        x2="12.01"
+                                                        y2="17"
+                                                      />
+                                                    </svg>
+                                                    <span>
+                                                      Processing Watermarks --
+                                                      Do Not Refresh
+                                                    </span>
                                                   </div>
                                                 </div>
                                               )}
                                               <DownloadProgressBar
                                                 step={status.step || 0}
-                                                isDownloading={status.isDownloading || false}
-                                                downloadPercent={status.downloadPercent || 0}
+                                                isDownloading={
+                                                  status.isDownloading || false
+                                                }
+                                                downloadPercent={
+                                                  status.downloadPercent || 0
+                                                }
                                               />
                                               <button
                                                 disabled
                                                 className="w-full py-1 bg-surface-raised text-text-tertiary rounded-lg text-[10px] font-bold cursor-wait"
                                               >
-                                                {status.isSuccess ? 'completed' : 'processing...'}
+                                                {status.isSuccess
+                                                  ? "completed"
+                                                  : "processing..."}
                                               </button>
                                             </div>
                                           );
-                                        })() : (
-                                          <button
-                                            onClick={() => {
-                                              console.log(`[UI Click] Clicked download for composite: ${compositeId}`);
-                                              handleDownload(course.courseId, course.name, idx);
-                                            }}
-                                            className="w-full inline-flex items-center justify-center gap-1 py-1.5 bg-brand hover:bg-brand-hover text-text-on-accent rounded-lg text-[10px] font-bold transition shadow cursor-pointer"
+                                        })()
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            console.log(
+                                              `[UI Click] Clicked download for composite: ${compositeId}`,
+                                            );
+                                            handleDownload(
+                                              course.courseId,
+                                              course.name,
+                                              idx,
+                                            );
+                                          }}
+                                          className="w-full inline-flex items-center justify-center gap-1 py-1.5 bg-brand hover:bg-brand-hover text-text-on-accent rounded-lg text-[10px] font-bold transition shadow cursor-pointer"
+                                        >
+                                          <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2.5"
+                                            className="w-3 h-3"
                                           >
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                            Download PDF
-                                          </button>
-                                        )
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                            <polyline points="7 10 12 15 17 10" />
+                                            <line
+                                              x1="12"
+                                              y1="15"
+                                              x2="12"
+                                              y2="3"
+                                            />
+                                          </svg>
+                                          Download PDF
+                                        </button>
                                       )}
                                     </div>
                                   </div>
@@ -1051,7 +1360,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
             >
               Telegram App (Mobile)
             </a>
-            <span className="text-text-tertiary font-medium hidden sm:inline">|</span>
+            <span className="text-text-tertiary font-medium hidden sm:inline">
+              |
+            </span>
             <a
               href="https://web.telegram.org/k/#@tdhadmin"
               target="_blank"
@@ -1068,9 +1379,15 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       {showRequestModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-950/70 backdrop-blur-sm px-4">
           <div className="bg-surface border border-border-default rounded-xl md:rounded-2xl w-full max-w-md p-4 md:p-6 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-sm md:text-base font-sans font-extrabold text-text-primary mb-1.5 md:mb-2">Request Additional Download</h3>
+            <h3 className="text-sm md:text-base font-sans font-extrabold text-text-primary mb-1.5 md:mb-2">
+              Request Additional Download
+            </h3>
             <p className="text-[10px] md:text-xs text-text-secondary mb-3 md:mb-4 font-medium">
-              Please specify a reason for requesting another download of <span className="text-brand font-bold">{requestModalCourseName}</span>.
+              Please specify a reason for requesting another download of{" "}
+              <span className="text-brand font-bold">
+                {requestModalCourseName}
+              </span>
+              .
             </p>
 
             {requestErrorMsg && (
@@ -1085,7 +1402,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
               value={requestReason}
               onChange={(e) => {
                 setRequestReason(e.target.value);
-                if (e.target.value.trim()) setRequestErrorMsg('');
+                if (e.target.value.trim()) setRequestErrorMsg("");
               }}
             />
 
@@ -1093,8 +1410,8 @@ export default function StudentDashboard({ user, onUserUpdate }) {
               <button
                 onClick={() => {
                   setShowRequestModal(false);
-                  setRequestReason('');
-                  setRequestErrorMsg('');
+                  setRequestReason("");
+                  setRequestErrorMsg("");
                 }}
                 className="px-3 py-1.5 md:px-4 md:py-2 text-text-secondary hover:text-text-primary text-[10px] md:text-xs font-bold transition cursor-pointer"
               >
@@ -1115,7 +1432,6 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       {profileModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-950/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-surface border border-border-default rounded-2xl w-full max-w-lg p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[95vh] overflow-y-auto">
-
             {/* Header */}
             <div className="flex justify-between items-start mb-5 pb-3 border-b border-border-default">
               <div>
@@ -1133,7 +1449,17 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                 onClick={handleCloseProfileModal}
                 className="text-text-tertiary hover:text-text-primary p-1 hover:bg-surface-raised rounded-lg transition"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  className="w-5 h-5"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
               </button>
             </div>
 
@@ -1144,7 +1470,6 @@ export default function StudentDashboard({ user, onUserUpdate }) {
             )}
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
-
               {/* Name Fields (First and Last Name) */}
               <div className="space-y-1.5">
                 <label className="text-[10px] md:text-xs font-bold text-text-secondary uppercase tracking-wider block">
@@ -1156,14 +1481,18 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                     className="bg-page border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand transition"
                     placeholder="First Name (e.g. Rahul)"
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value.replace(/\s/g, ''))}
+                    onChange={(e) =>
+                      setFirstName(e.target.value.replace(/\s/g, ""))
+                    }
                   />
                   <input
                     type="text"
                     className="bg-page border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand transition"
                     placeholder="Last Name (e.g. Sharma)"
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value.replace(/\s/g, ''))}
+                    onChange={(e) =>
+                      setLastName(e.target.value.replace(/\s/g, ""))
+                    }
                   />
                 </div>
               </div>
@@ -1174,13 +1503,19 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                   Telegram Username (without @)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-2.5 text-xs font-bold text-text-tertiary">@</span>
+                  <span className="absolute left-4 top-2.5 text-xs font-bold text-text-tertiary">
+                    @
+                  </span>
                   <input
                     type="text"
                     className="w-full bg-page border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl pl-8 pr-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand transition"
                     placeholder="username"
                     value={telegramUsername}
-                    onChange={(e) => setTelegramUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                    onChange={(e) =>
+                      setTelegramUsername(
+                        e.target.value.replace(/[^a-zA-Z0-9_]/g, ""),
+                      )
+                    }
                   />
                 </div>
               </div>
@@ -1196,10 +1531,19 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                       type="text"
                       disabled
                       className="w-full bg-sunken border border-border-subtle text-text-secondary rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none opacity-80 cursor-not-allowed"
-                      value={mobileNumber || currentUser?.mobileNumber || ''}
+                      value={mobileNumber || currentUser?.mobileNumber || ""}
                     />
                     <div className="absolute right-3.5 top-2.5 flex items-center gap-1 bg-status-success-bg border border-status-success-text/25 text-status-success-text text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        className="w-3 h-3"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
                       Verified
                     </div>
                   </div>
@@ -1207,11 +1551,25 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                   <div className="space-y-2.5 border border-border-default bg-sunken rounded-xl p-3.5 mt-2">
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 bg-accent-soft-bg border border-accent-soft-border text-brand rounded-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          className="w-3.5 h-3.5"
+                        >
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                        </svg>
                       </div>
                       <div>
-                        <h4 className="text-xs font-extrabold text-text-primary">Phone Verification</h4>
-                        <p className="text-[10px] text-text-tertiary mt-0.5">Link and verify your phone number using Firebase SMS OTP.</p>
+                        <h4 className="text-xs font-extrabold text-text-primary">
+                          Phone Verification
+                        </h4>
+                        <p className="text-[10px] text-text-tertiary mt-0.5">
+                          Link and verify your phone number using Firebase SMS
+                          OTP.
+                        </p>
                       </div>
                     </div>
 
@@ -1223,8 +1581,18 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
                     {phoneVerified ? (
                       <div className="flex items-center gap-2 py-1.5 text-status-success-text font-bold text-xs bg-status-success-bg border border-status-success-text/25 rounded-xl px-3 justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
-                        Phone Number Verified (+{mobileNumber.replace(/\D/g, '')})
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3.5"
+                          className="w-4 h-4"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Phone Number Verified (+
+                        {mobileNumber.replace(/\D/g, "")})
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -1241,15 +1609,24 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                           <button
                             type="button"
                             onClick={handleSendOtp}
-                            disabled={isOtpGenerating || otpSent || !mobileNumber.trim()}
+                            disabled={
+                              isOtpGenerating || otpSent || !mobileNumber.trim()
+                            }
                             className="px-4 py-2 bg-brand hover:bg-brand-hover disabled:bg-surface-raised disabled:text-text-tertiary text-text-on-accent rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
                           >
-                            {isOtpGenerating ? 'Sending...' : otpSent ? 'SMS Sent' : 'Send OTP'}
+                            {isOtpGenerating
+                              ? "Sending..."
+                              : otpSent
+                                ? "SMS Sent"
+                                : "Send OTP"}
                           </button>
                         </div>
 
                         {/* Recaptcha container target */}
-                        <div id="recaptcha-container" className="mx-auto flex justify-center"></div>
+                        <div
+                          id="recaptcha-container"
+                          className="mx-auto flex justify-center"
+                        ></div>
 
                         {/* OTP Code Input */}
                         {otpSent && (
@@ -1260,7 +1637,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                               className="flex-grow bg-page border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand transition"
                               placeholder="Enter 6-Digit OTP Code"
                               value={otpCode}
-                              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                              onChange={(e) =>
+                                setOtpCode(e.target.value.replace(/\D/g, ""))
+                              }
                             />
                             <button
                               type="button"
@@ -1268,7 +1647,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                               disabled={otpVerifying || otpCode.length < 6}
                               className="px-4 py-2 bg-brand hover:bg-brand-hover disabled:bg-surface-raised disabled:text-text-tertiary text-text-on-accent rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer"
                             >
-                              {otpVerifying ? 'Verifying...' : 'Verify OTP'}
+                              {otpVerifying ? "Verifying..." : "Verify OTP"}
                             </button>
                           </div>
                         )}
@@ -1299,7 +1678,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                     (!isPhoneValid && !phoneVerified)
                   }
                 >
-                  {profileSubmitting ? 'Saving Details...' : 'Save & Continue'}
+                  {profileSubmitting ? "Saving Details..." : "Save & Continue"}
                 </button>
               </div>
             </form>
@@ -1315,7 +1694,18 @@ export default function StudentDashboard({ user, onUserUpdate }) {
             <div className="flex justify-between items-start mb-4 pb-3 border-b border-border-default">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 bg-status-warning-bg border border-status-warning-text/25 text-status-warning-text rounded-xl flex items-center justify-center flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    className="w-5 h-5"
+                  >
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
                 </div>
                 <div>
                   <h3 className="text-sm md:text-base font-sans font-extrabold text-text-primary">
@@ -1333,7 +1723,17 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                 }}
                 className="text-text-secondary hover:text-text-primary p-1.5 hover:bg-sunken rounded-xl transition cursor-pointer"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  className="w-5 h-5"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
               </button>
             </div>
 
@@ -1345,31 +1745,62 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                   CRITICAL: Do Not Refresh
                 </h4>
                 <p className="text-[10.5px] leading-relaxed text-text-secondary">
-                  Once generation starts, the backend will dynamically stamp your registration details (Name, Email, Phone, and tracking code) onto the pages. **Do not close, reload, or navigate away from this page** until the download triggers.
+                  Once generation starts, the backend will dynamically stamp
+                  your registration details (Name, Email, Phone, and tracking
+                  code) onto the pages. **Do not close, reload, or navigate away
+                  from this page** until the download triggers.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <h4 className="text-[10px] font-bold text-text-primary uppercase tracking-wider">Best Practices for a Successful Download:</h4>
+                <h4 className="text-[10px] font-bold text-text-primary uppercase tracking-wider">
+                  Best Practices for a Successful Download:
+                </h4>
                 <ul className="space-y-2.5 list-none pl-1">
                   <li className="flex items-start gap-2.5">
-                    <span className="text-brand font-black shrink-0 mt-0.5">✓</span>
-                    <span><strong>Stable Connection:</strong> Ensure your internet connection is active and stable before starting.</span>
+                    <span className="text-brand font-black shrink-0 mt-0.5">
+                      ✓
+                    </span>
+                    <span>
+                      <strong>Stable Connection:</strong> Ensure your internet
+                      connection is active and stable before starting.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-brand font-black shrink-0 mt-0.5">✓</span>
-                    <span><strong>Use Chrome or Safari:</strong> Recommended mobile and desktop browsers for seamless watermark rendering and auto-trigger download redirections.</span>
+                    <span className="text-brand font-black shrink-0 mt-0.5">
+                      ✓
+                    </span>
+                    <span>
+                      <strong>Use Chrome or Safari:</strong> Recommended mobile
+                      and desktop browsers for seamless watermark rendering and
+                      auto-trigger download redirections.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="text-brand font-black shrink-0 mt-0.5">✓</span>
-                    <span><strong>Limit full? No problem:</strong> If your download fails or runs out of tries, don't worry! Click "Request Download" next to the PDF to ask for another slot and our administrators will approve it quickly.</span>
+                    <span className="text-brand font-black shrink-0 mt-0.5">
+                      ✓
+                    </span>
+                    <span>
+                      <strong>Limit full? No problem:</strong> If your download
+                      fails or runs out of tries, don't worry! Click "Request
+                      Download" next to the PDF to ask for another slot and our
+                      administrators will approve it quickly.
+                    </span>
                   </li>
                 </ul>
               </div>
 
               <div className="pt-3 border-t border-border-default flex items-center gap-3">
                 <div className="p-2 bg-accent-soft-bg border border-accent-soft-border text-brand rounded-xl font-sans font-extrabold text-[10.5px] w-full text-center flex items-center justify-center gap-1">
-                  💬 Issue? Contact: <a href="https://t.me/tdhadmin" target="_blank" rel="noopener noreferrer" className="underline hover:text-brand-hover font-black">@TDHadmin on Telegram</a>
+                  💬 Issue? Contact:{" "}
+                  <a
+                    href="https://t.me/tdhadmin"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand-hover font-black"
+                  >
+                    @TDHadmin on Telegram
+                  </a>
                 </div>
               </div>
             </div>

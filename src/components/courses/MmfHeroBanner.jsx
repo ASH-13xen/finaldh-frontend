@@ -51,9 +51,9 @@ export default function MmfHeroBanner({ course, status, pendingRequest, onPurcha
               <button
                 type="button"
                 onClick={() => onSeeSample(course)}
-                className="mb-5 text-[11px] md:text-xs font-sans font-bold text-brand hover:text-brand-hover underline-offset-2 hover:underline cursor-pointer flex items-center gap-1.5"
+                className="mb-5 inline-flex items-center gap-1.5 w-fit px-4 py-2 bg-accent-soft-bg hover:bg-accent-soft-border border border-accent-soft-border text-brand rounded-lg text-xs md:text-sm font-sans font-bold transition-all cursor-pointer"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 See Sample
               </button>
             )}
