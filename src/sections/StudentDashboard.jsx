@@ -201,6 +201,14 @@ const drawSecurityWarningPage = (page, user, course, font, boldFont, rgb) => {
   });
 };
 
+const askNotificationPermission = () => {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default' && !localStorage.getItem('notifPermAsked')) {
+    localStorage.setItem('notifPermAsked', '1');
+    Notification.requestPermission();
+  }
+};
+
 function CourseSkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -459,6 +467,10 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   // download flows (each with its own polling loop) before the UI has a
   // chance to re-render the button into its disabled/processing state.
   const downloadInFlightRef = useRef({});
+  // Ensures the "resume in-progress downloads" check runs at most once per
+  // mount, even though the effect's dependency (matchedCourses) is a new array
+  // reference on every render.
+  const resumeCheckedRef = useRef(false);
 
   // Multi-PDF list UI: per-course collapse/expand override + filename search
   const PDF_AUTO_COLLAPSE_THRESHOLD = 6;
@@ -571,6 +583,46 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     fetchCourses();
   }, []);
 
+  // On mount, check if any purchased course still has an in-progress download
+  // session on the backend (e.g. user refreshed mid-generation). If so, restore
+  // the polling UI so they don't have to manually retry.
+  useEffect(() => {
+    if (resumeCheckedRef.current) return;
+    if (matchedCourses.length === 0) return;
+    resumeCheckedRef.current = true;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const checkForResumable = async () => {
+      for (const course of matchedCourses) {
+        const hasMultiplePdfs = course.fileUrls && course.fileUrls.length > 1;
+        const fileIndices = hasMultiplePdfs
+          ? course.fileUrls.map((_, i) => i)
+          : [0];
+        for (const fileIndex of fileIndices) {
+          try {
+            const res = await fetch(
+              `/api/courses/download-progress/${course.courseId}?index=${fileIndex}`,
+              { headers: { Authorization: `Bearer ${token}` } },
+            );
+            if (!res.ok) continue;
+            const data = await res.json();
+            if (data.status === "queued" || data.status === "processing") {
+              // Kick off handleDownload (skipModal + skipWarning) so it reconnects
+              // to the existing backend job and resumes polling from where it left off.
+              handleDownload(course.courseId, course.name, fileIndex, true, true);
+            }
+          } catch (_) {
+            // Best-effort — silently skip if the progress endpoint errors
+          }
+        }
+      }
+    };
+    checkForResumable();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchedCourses]);
+
   const executeActualDownload = () => {
     if (!pendingDownloadParams) return;
     const { courseId, courseName, fileIndex } = pendingDownloadParams;
@@ -636,6 +688,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       return;
     }
     downloadInFlightRef.current[compositeId] = true;
+    askNotificationPermission();
     const clearInFlight = () => {
       delete downloadInFlightRef.current[compositeId];
     };
@@ -688,6 +741,15 @@ export default function StudentDashboard({ user, onUserUpdate }) {
           isSuccess: true,
         },
       }));
+
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('PDF Ready — The Dark Horse UPSC', {
+            body: `${courseName} is ready. Your download will begin shortly.`,
+            icon: '/favicon.ico',
+          });
+        } catch (_) {}
+      }
 
       // Trigger native browser download using redirection
       window.location.href = downloadUrl;
@@ -781,16 +843,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                   ...prev,
                   [compositeId]: {
                     isError: true,
-                    errorMsg: progressData.error || "Generation failed",
+                    errorMsg: progressData.error || "Generation failed. Please try again.",
                   },
                 }));
-                setTimeout(() => {
-                  setDownloadingStatus((prev) => {
-                    const next = { ...prev };
-                    delete next[compositeId];
-                    return next;
-                  });
-                }, 3500);
                 return;
               }
 
@@ -819,16 +874,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         ...prev,
         [compositeId]: {
           isError: true,
-          errorMsg: err.message || "Download failed",
+          errorMsg: err.message || "Download failed. Please try again.",
         },
       }));
-      setTimeout(() => {
-        setDownloadingStatus((prev) => {
-          const next = { ...prev };
-          delete next[compositeId];
-          return next;
-        });
-      }, 3500);
     }
   }
 
@@ -1234,10 +1282,46 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
                                           if (status.isError) {
                                             return (
-                                              <div className="flex flex-col gap-1 w-full">
-                                                <span className="text-[10px] text-status-danger-text font-bold text-center animate-pulse">
-                                                  {status.errorMsg}
-                                                </span>
+                                              <div className="flex flex-col gap-2 w-full">
+                                                <div className="p-2.5 bg-status-danger-bg border border-status-danger-text/30 rounded-lg">
+                                                  <p className="text-[10px] text-status-danger-text font-bold leading-snug mb-2">
+                                                    {status.errorMsg}
+                                                  </p>
+                                                  <div className="flex items-center gap-2">
+                                                    <button
+                                                      onClick={() =>
+                                                        handleDownload(
+                                                          course.courseId,
+                                                          course.name,
+                                                          idx,
+                                                          true,
+                                                          true,
+                                                        )
+                                                      }
+                                                      className="text-[9px] font-extrabold text-text-on-accent bg-status-danger-text hover:opacity-90 px-2 py-1 rounded cursor-pointer transition"
+                                                    >
+                                                      Retry
+                                                    </button>
+                                                    <button
+                                                      onClick={() =>
+                                                        setDownloadingStatus(
+                                                          (prev) => {
+                                                            const next = {
+                                                              ...prev,
+                                                            };
+                                                            delete next[
+                                                              compositeId
+                                                            ];
+                                                            return next;
+                                                          },
+                                                        )
+                                                      }
+                                                      className="text-[9px] font-bold text-status-danger-text underline cursor-pointer hover:no-underline"
+                                                    >
+                                                      Dismiss
+                                                    </button>
+                                                  </div>
+                                                </div>
                                               </div>
                                             );
                                           }
