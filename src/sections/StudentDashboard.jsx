@@ -706,31 +706,6 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         `[handleDownload] Directing window to trigger native PDF download: ${downloadUrl}`,
       );
 
-      // Update UI limits locally
-      setCurrentUser((prev) => {
-        const limits = (prev.downloadLimits || []).map((d) => {
-          if (d.courseId.toLowerCase() === compositeId.toLowerCase()) {
-            return { ...d, downloadedCount: d.downloadedCount + 1 };
-          }
-          return d;
-        });
-        const hasEntry = (prev.downloadLimits || []).some(
-          (d) => d.courseId.toLowerCase() === compositeId.toLowerCase(),
-        );
-        if (!hasEntry) {
-          limits.push({
-            courseId: compositeId,
-            downloadedCount: 1,
-            allowedCount: 1,
-          });
-        }
-        const updatedUser = { ...prev, downloadLimits: limits };
-        if (onUserUpdate) {
-          onUserUpdate(updatedUser);
-        }
-        return updatedUser;
-      });
-
       // Update UI state to completed
       setDownloadingStatus((prev) => ({
         ...prev,
@@ -1249,33 +1224,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                     </div>
 
                                     <div>
-                                      {isLimitReached ? (
-                                        <div className="flex flex-col gap-2 w-full">
-                                          <span className="text-[9px] md:text-[10px] text-status-danger-text font-bold text-center bg-status-danger-bg border border-status-danger-text/25 rounded px-1.5 py-1">
-                                            locked count full
-                                          </span>
-                                          {hasPendingRequest ? (
-                                            <button
-                                              disabled
-                                              className="w-full py-1.5 bg-surface-raised text-text-tertiary rounded-lg text-[10px] font-bold cursor-not-allowed border border-border-default"
-                                            >
-                                              request pending
-                                            </button>
-                                          ) : (
-                                            <button
-                                              onClick={() =>
-                                                handleOpenRequestModal(
-                                                  compositeId,
-                                                  `${course.name} - ${fileDisplayName}`,
-                                                )
-                                              }
-                                              className="w-full py-1.5 bg-accent-soft-bg hover:bg-accent-soft-border border border-accent-soft-border text-brand rounded-lg text-[10px] font-bold transition duration-200 cursor-pointer"
-                                            >
-                                              request download
-                                            </button>
-                                          )}
-                                        </div>
-                                      ) : downloadingStatus[compositeId] ? (
+                                      {downloadingStatus[compositeId] ? (
                                         (() => {
                                           const status =
                                             downloadingStatus[compositeId];
@@ -1380,6 +1329,32 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                             </div>
                                           );
                                         })()
+                                      ) : isLimitReached ? (
+                                        <div className="flex flex-col gap-2 w-full">
+                                          <span className="text-[9px] md:text-[10px] text-status-danger-text font-bold text-center bg-status-danger-bg border border-status-danger-text/25 rounded px-1.5 py-1">
+                                            locked count full
+                                          </span>
+                                          {hasPendingRequest ? (
+                                            <button
+                                              disabled
+                                              className="w-full py-1.5 bg-surface-raised text-text-tertiary rounded-lg text-[10px] font-bold cursor-not-allowed border border-border-default"
+                                            >
+                                              request pending
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() =>
+                                                handleOpenRequestModal(
+                                                  compositeId,
+                                                  `${course.name} - ${fileDisplayName}`,
+                                                )
+                                              }
+                                              className="w-full py-1.5 bg-accent-soft-bg hover:bg-accent-soft-border border border-accent-soft-border text-brand rounded-lg text-[10px] font-bold transition duration-200 cursor-pointer"
+                                            >
+                                              request download
+                                            </button>
+                                          )}
+                                        </div>
                                       ) : (
                                         <button
                                           onClick={() => {
