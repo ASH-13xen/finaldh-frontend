@@ -726,8 +726,15 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         } catch (_) {}
       }
 
-      // Trigger native browser download using redirection
-      window.location.href = downloadUrl;
+      // Trigger native browser download via anchor click.
+      // Using <a download> instead of window.location.href because iOS Safari
+      // treats location.href redirects as navigation rather than file downloads.
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       clearInFlight();
 
       // Clear downloading status after 3.5 seconds
