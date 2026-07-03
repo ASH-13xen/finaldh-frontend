@@ -920,7 +920,14 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-14">
+    <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-14 relative">
+      {/* Background watermark */}
+      <img
+        src="/logodh1.jpg"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none select-none absolute inset-0 w-full h-full object-contain opacity-[0.04] z-0"
+      />
       {/* Dashboard Header */}
       <div className="mb-6 md:mb-10 border-b border-border-default pb-4 md:pb-6">
         <h1 className="text-xl md:text-4xl font-display font-semibold text-text-primary tracking-tight flex flex-wrap items-center gap-x-1.5 md:gap-x-2 gap-y-0.5 md:gap-y-1">
@@ -1284,38 +1291,6 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
                                           return (
                                             <div className="flex flex-col gap-2 w-full">
-                                              {!status.isSuccess && (
-                                                <div className="flex flex-col gap-1 bg-status-warning-bg border border-status-warning-text/30 rounded-lg p-2.5 animate-pulse">
-                                                  <div className="flex items-center gap-1 text-status-warning-text font-black text-[8px] uppercase tracking-wider">
-                                                    <svg
-                                                      xmlns="http://www.w3.org/2000/svg"
-                                                      viewBox="0 0 24 24"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      strokeWidth="3"
-                                                      className="w-3 h-3"
-                                                    >
-                                                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                                                      <line
-                                                        x1="12"
-                                                        y1="9"
-                                                        x2="12"
-                                                        y2="13"
-                                                      />
-                                                      <line
-                                                        x1="12"
-                                                        y1="17"
-                                                        x2="12.01"
-                                                        y2="17"
-                                                      />
-                                                    </svg>
-                                                    <span>
-                                                      Processing Watermarks --
-                                                      Do Not Refresh
-                                                    </span>
-                                                  </div>
-                                                </div>
-                                              )}
                                               <DownloadProgressBar
                                                 step={status.step || 0}
                                                 isDownloading={

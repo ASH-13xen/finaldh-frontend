@@ -156,6 +156,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
       {/* Brand logo & title */}
       <div className="flex items-center gap-1.5 sm:gap-4 md:gap-6">
         <div onClick={handleLogoClick} className="flex items-center gap-1.5 md:gap-3 cursor-pointer">
+          <img src="/logodh1.jpg" alt="Dark Horse UPSC" className="w-7 h-7 md:w-9 md:h-9 rounded-full object-cover border border-border-default shrink-0" />
           <span className="font-display font-semibold text-text-primary tracking-tight text-sm md:text-lg whitespace-nowrap hidden sm:inline">The Dark Horse UPSC</span>
           <span className="font-display font-semibold text-text-primary tracking-tight text-sm md:text-lg whitespace-nowrap sm:hidden">Dark Horse</span>
         </div>

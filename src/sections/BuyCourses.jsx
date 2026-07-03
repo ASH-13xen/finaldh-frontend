@@ -55,7 +55,14 @@ export default function BuyCourses({ onRedirectToLogin }) {
   const featuredIds = [mmfCourse?._id, cacCourse?._id].filter(Boolean);
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-16">
+    <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-16 relative">
+      {/* Background watermark */}
+      <img
+        src="/logodh1.jpg"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none select-none absolute inset-0 w-full h-full object-contain opacity-[0.04] z-0"
+      />
       <div className="mb-12 md:mb-20 border-b border-border-default pb-6 md:pb-10">
         <span className="text-[11px] font-sans font-bold uppercase tracking-widest text-brand block mb-2">Study Material</span>
         <h1 className="text-3xl md:text-5xl font-display font-semibold text-text-primary tracking-tight leading-tight">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -25,8 +25,13 @@ export default function AdminView() {
 
   // Interactive States
   const [processingTxnId, setProcessingTxnId] = useState(null);
-  const [editingUser, setEditingUser] = useState(null); // stores user being edited
+  const [editingUser, setEditingUser] = useState(null);
+  const [courseEditUser, setCourseEditUser] = useState(null); // lightweight course-only editor
   const [lightboxImage, setLightboxImage] = useState(null);
+
+  // Lazy load state for user table
+  const [visibleCount, setVisibleCount] = useState(50);
+  const sentinelRef = useRef(null);
 
   // Load list of all courses for mapping
   const fetchCourses = async () => {
@@ -98,6 +103,21 @@ export default function AdminView() {
     loadData();
   }, [currentView]);
 
+  // Reset visible count whenever search/filter changes
+  useEffect(() => { setVisibleCount(50); }, [userSearch, selectedCourseKeys, currentView]);
+
+  // IntersectionObserver: load 50 more rows when sentinel scrolls into view
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisibleCount(prev => prev + 50); },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visibleCount, filteredUsers.length]);
+
   // Handle Approve/Reject for Purchase Requests
   const handleTxnStatus = async (requestId, action) => {
     setProcessingTxnId(requestId);
@@ -168,6 +188,23 @@ export default function AdminView() {
       alert(err.message || 'Error saving user profile');
     }
   };
+
+  // Quick save just interestedCourses from the course-edit popover
+  const handleSaveCourses = useCallback(async (user, interestedCourses) => {
+    try {
+      const res = await fetch(`/api/user/admin/users/${user._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ ...user, interestedCourses })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update');
+      setUsers(prev => prev.map(u => u._id === user._id ? data.user : u));
+      setCourseEditUser(null);
+    } catch (err) {
+      alert(err.message || 'Error saving courses');
+    }
+  }, []);
 
   // Helper: zoom screenshot image. Screenshots are served from an authenticated API route
   // (DB-backed, not a static file), so <img> needs the token as a query param since it
@@ -626,9 +663,9 @@ export default function AdminView() {
       ) : (
         // USER DATABASE VIEW
         <div className="space-y-4">
-          {/* Per-course purchase stats */}
+          {/* Per-course purchase stats — only show courses with at least 1 user */}
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-            {courseStatsList.map((c) => (
+            {courseStatsList.filter(c => c.count > 0).map((c) => (
               <div key={c.key} className="bg-surface border border-border-default rounded-xl p-3 flex flex-col justify-center shadow-sm">
                 <span className="text-[10px] text-text-secondary font-bold uppercase tracking-wider truncate" title={c.subject ? `${c.name} (${c.subject})` : c.name}>{c.name}</span>
                 <span className="text-lg font-black text-text-primary mt-1">{c.count}</span>
@@ -716,20 +753,30 @@ export default function AdminView() {
                       </td>
                     </tr>
                   ) : (
-                    filteredUsers.map((user) => {
+                    <>
+                    {filteredUsers.slice(0, visibleCount).map((user) => {
                       const limits = user.downloadLimits || [];
                       const totalDownloaded = limits.reduce((sum, d) => sum + (d.downloadedCount || 0), 0);
                       const totalAllowed = limits.reduce((sum, d) => sum + (d.allowedCount || 0), 0);
 
                       return (
                         <tr key={user._id} className="hover:bg-sunken/45 transition duration-150">
-                          {/* Profile picture */}
+                          {/* Profile picture — click to quick-edit courses */}
                           <td className="px-4 py-4 text-center whitespace-nowrap">
-                            <img
-                              src={user.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name || 'User')}`}
-                              alt={user.name}
-                              className="w-8 h-8 rounded-full border border-border-default mx-auto object-cover"
-                            />
+                            <button
+                              onClick={() => setCourseEditUser(JSON.parse(JSON.stringify(user)))}
+                              title="Click to add / remove courses"
+                              className="group relative cursor-pointer"
+                            >
+                              <img
+                                src={user.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name || 'User')}`}
+                                alt={user.name}
+                                className="w-8 h-8 rounded-full border border-border-default mx-auto object-cover group-hover:opacity-70 transition"
+                              />
+                              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-brand rounded-full border-2 border-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-2 h-2 text-text-on-accent"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                              </span>
+                            </button>
                           </td>
 
                           {/* Auth Details */}
@@ -783,7 +830,7 @@ export default function AdminView() {
                           {/* Edit Actions */}
                           <td className="px-4 py-4 text-center whitespace-nowrap">
                             <button
-                              onClick={() => setEditingUser(JSON.parse(JSON.stringify(user)))} // deep clone to edit safely
+                              onClick={() => setEditingUser(JSON.parse(JSON.stringify(user)))}
                               className="px-3.5 py-1.5 bg-surface border border-border-default hover:bg-sunken text-brand rounded-lg text-[10px] font-bold transition cursor-pointer"
                             >
                               Edit Profile
@@ -791,7 +838,16 @@ export default function AdminView() {
                           </td>
                         </tr>
                       );
-                    })
+                    })}
+                    {/* Lazy load sentinel */}
+                    {visibleCount < filteredUsers.length && (
+                      <tr ref={sentinelRef}>
+                        <td colSpan="7" className="py-5 text-center text-text-tertiary text-[10px] font-semibold">
+                          Loading more… ({visibleCount} of {filteredUsers.length})
+                        </td>
+                      </tr>
+                    )}
+                    </>
                   )}
                 </tbody>
               </table>
@@ -828,6 +884,78 @@ export default function AdminView() {
           </div>
         </div>
       )}
+
+      {/* QUICK COURSE EDITOR — opens when profile picture is clicked */}
+      {courseEditUser && (() => {
+        const allIds = [...new Set([
+          ...courses.map(c => c.courseId),
+          ...(courseEditUser.interestedCourses || [])
+        ])];
+        const getName = (cid) => courses.find(c => c.courseId === cid)?.name || cid;
+        return (
+          <div className="fixed inset-0 z-110 flex items-center justify-center bg-ink-950/60 backdrop-blur-sm p-4" onClick={() => setCourseEditUser(null)}>
+            <div className="bg-surface border border-border-default rounded-2xl w-full max-w-sm p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex justify-between items-start mb-4 pb-3 border-b border-border-default">
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src={courseEditUser.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(courseEditUser.name || 'User')}`}
+                    alt={courseEditUser.name}
+                    className="w-8 h-8 rounded-full border border-border-default object-cover"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-text-primary">{courseEditUser.fullName || courseEditUser.name}</p>
+                    <p className="text-[9px] text-text-tertiary font-mono truncate max-w-45">{courseEditUser.email}</p>
+                  </div>
+                </div>
+                <button onClick={() => setCourseEditUser(null)} className="text-text-secondary hover:text-text-primary p-1 hover:bg-sunken rounded-lg transition cursor-pointer">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-2.5">Add / Remove Courses</p>
+
+              {/* Course toggles */}
+              <div className="grid grid-cols-2 gap-2 max-h-70 overflow-y-auto">
+                {allIds.map(cid => {
+                  const isChecked = (courseEditUser.interestedCourses || []).includes(cid);
+                  return (
+                    <button
+                      key={cid}
+                      type="button"
+                      onClick={() => {
+                        const current = [...(courseEditUser.interestedCourses || [])];
+                        setCourseEditUser({
+                          ...courseEditUser,
+                          interestedCourses: isChecked ? current.filter(c => c !== cid) : [...current, cid]
+                        });
+                      }}
+                      className={`flex items-center justify-between gap-1.5 px-2.5 py-2 rounded-lg border text-left text-[11px] font-semibold transition cursor-pointer ${
+                        isChecked ? 'bg-accent-soft-bg border-brand text-brand' : 'bg-sunken border-border-default text-text-secondary hover:border-brand/40'
+                      }`}
+                    >
+                      <span className="truncate">{getName(cid)}</span>
+                      <span className={`w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center ${isChecked ? 'bg-brand border-brand' : 'border-border-default bg-surface'}`}>
+                        {isChecked && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" className="w-2.5 h-2.5 text-text-on-accent"><polyline points="20 6 9 17 4 12"/></svg>}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="flex gap-2 mt-4 pt-3 border-t border-border-default">
+                <button onClick={() => setCourseEditUser(null)} className="flex-1 py-2 border border-border-default hover:bg-sunken text-text-secondary hover:text-text-primary text-xs font-bold rounded-xl transition cursor-pointer">
+                  Cancel
+                </button>
+                <button onClick={() => handleSaveCourses(courseEditUser, courseEditUser.interestedCourses)} className="flex-1 py-2 bg-brand hover:bg-brand-hover text-text-on-accent text-xs font-bold rounded-xl transition shadow cursor-pointer">
+                  Save Courses
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* EDIT USER DETAILS MODAL (Spreadsheet Detail Editor) */}
       {editingUser && (
