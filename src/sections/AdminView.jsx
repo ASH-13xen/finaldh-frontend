@@ -34,77 +34,69 @@ export default function AdminView() {
   const [visibleCount, setVisibleCount] = useState(50);
   const sentinelRef = useRef(null);
 
-  // Load list of all courses for mapping
-  const fetchCourses = async () => {
-    try {
-      const res = await fetch('/api/courses/list');
-      if (res.ok) {
-        const data = await res.json();
-        setCourses(data.courses || []);
-      }
-    } catch (err) {
-      console.error('Error fetching course list:', err);
-    }
-  };
-
-  // Fetch Transactions
-  const fetchTransactions = async () => {
-    setError('');
-    try {
-      const res = await fetch('/api/courses/admin/purchase-requests', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to fetch purchase requests');
-      }
-      const data = await res.json();
-      setTransactions(data || []);
-    } catch (err) {
-      console.error('Error fetching admin requests:', err);
-      setError(err.message || 'Failed to load purchase requests.');
-    }
-  };
-
-  // Fetch Users
-  const fetchUsers = async () => {
-    setError('');
-    try {
-      const res = await fetch('/api/user/admin/users', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to fetch users');
-      }
-      const data = await res.json();
-      setUsers(data || []);
-    } catch (err) {
-      console.error('Error fetching admin users:', err);
-      setError(err.message || 'Failed to load users list.');
-    }
-  };
-
   const [retryCount, setRetryCount] = useState(0);
   const retry = () => { setError(''); setRetryCount(n => n + 1); };
 
-  // Initial load, view switching, and manual retry
+  // Initial load, view switching, and manual retry.
+  // AbortController ensures that when React Strict Mode re-runs the effect
+  // (or the user switches tabs), the previous in-flight request is cancelled
+  // silently instead of logging a spurious "Failed to fetch" error.
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+    const token = localStorage.getItem('token');
+    const authHeader = { 'Authorization': `Bearer ${token}` };
+
+    const fetchCourses = async () => {
+      try {
+        const res = await fetch('/api/courses/list', { signal });
+        if (res.ok) { const d = await res.json(); setCourses(d.courses || []); }
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Error fetching course list:', err);
+      }
+    };
+
+    const fetchTransactions = async () => {
+      setError('');
+      try {
+        const res = await fetch('/api/courses/admin/purchase-requests', { headers: authHeader, signal });
+        if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to fetch purchase requests'); }
+        const d = await res.json();
+        setTransactions(d || []);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Error fetching admin requests:', err);
+        setError(err.message || 'Failed to load purchase requests.');
+      }
+    };
+
+    const fetchUsers = async () => {
+      setError('');
+      try {
+        const res = await fetch('/api/user/admin/users', { headers: authHeader, signal });
+        if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to fetch users'); }
+        const d = await res.json();
+        setUsers(d || []);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Error fetching admin users:', err);
+        setError(err.message || 'Failed to load users list.');
+      }
+    };
+
     const loadData = async () => {
       setLoading(true);
       await fetchCourses();
-      if (currentView === 'transactions') {
-        await fetchTransactions();
-      } else {
-        await fetchUsers();
+      if (!signal.aborted) {
+        if (currentView === 'transactions') await fetchTransactions();
+        else await fetchUsers();
       }
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     };
+
     loadData();
+    return () => controller.abort();
   }, [currentView, retryCount]);
 
   // Reset visible count whenever search/filter changes
