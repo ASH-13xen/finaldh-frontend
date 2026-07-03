@@ -106,7 +106,9 @@ export default function AdminView() {
   // Reset visible count whenever search/filter changes
   useEffect(() => { setVisibleCount(50); }, [userSearch, selectedCourseKeys, currentView]);
 
-  // IntersectionObserver: load 50 more rows when sentinel scrolls into view
+  // IntersectionObserver: load 50 more rows when sentinel scrolls into view.
+  // Dependency is visibleCount only — filteredUsers is declared later in this scope
+  // and referencing it here in the dep array would cause a TDZ error in the bundle.
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -116,7 +118,7 @@ export default function AdminView() {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [visibleCount, filteredUsers.length]);
+  }, [visibleCount]);
 
   // Handle Approve/Reject for Purchase Requests
   const handleTxnStatus = async (requestId, action) => {
