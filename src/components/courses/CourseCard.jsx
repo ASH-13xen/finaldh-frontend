@@ -22,7 +22,7 @@ export default function CourseCard({
         </span>
 
         {/* Course Name + See Sample on the same line */}
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center justify-between gap-2">
           <h3 className="text-xs md:text-base font-sans font-bold text-text-primary group-hover:text-brand line-clamp-2 leading-relaxed transition-colors">
             {course.name || course.fileName}
           </h3>
@@ -30,7 +30,7 @@ export default function CourseCard({
             <button
               type="button"
               onClick={() => onSeeSample(course)}
-              className="inline-flex items-center gap-1 shrink-0 px-2 py-1 md:px-3 md:py-1.5 bg-accent-soft-bg hover:bg-accent-soft-border border border-accent-soft-border text-brand rounded-lg text-[10px] md:text-sm font-sans font-bold transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 shrink-0 px-2 py-1 md:px-3 md:py-1.5 bg-accent-soft-bg hover:bg-accent-soft-border border border-accent-soft-border text-brand rounded-lg text-xs md:text-base font-sans font-bold transition-all cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3 md:w-4 md:h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               See Sample

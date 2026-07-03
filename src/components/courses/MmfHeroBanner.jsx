@@ -40,23 +40,24 @@ export default function MmfHeroBanner({ course, status, pendingRequest, onPurcha
             <span className="inline-flex items-center gap-1.5 text-[10px] md:text-xs font-sans font-extrabold text-brand bg-accent-soft-bg border border-accent-soft-border rounded-full px-3 py-1 uppercase tracking-wider mb-3">
               {resolvedBadge}
             </span>
-            <h2 className="font-display font-semibold text-2xl md:text-4xl text-text-primary tracking-tight mb-1.5 leading-tight">
-              {course.name}
-            </h2>
+            <div className="flex items-center justify-between gap-3 mb-1.5">
+              <h2 className="font-display font-semibold text-2xl md:text-4xl text-text-primary tracking-tight leading-tight">
+                {course.name}
+              </h2>
+              {course.sampleFileUrl && (
+                <button
+                  type="button"
+                  onClick={() => onSeeSample(course)}
+                  className="inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 md:px-4 md:py-2 bg-accent-soft-bg hover:bg-accent-soft-border border border-accent-soft-border text-brand rounded-lg text-sm md:text-base font-sans font-bold transition-all cursor-pointer"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 md:w-5 md:h-5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  See Sample
+                </button>
+              )}
+            </div>
             <p className="text-text-secondary text-xs md:text-sm font-medium mb-3">
               {resolvedSubtitle}
             </p>
-
-            {course.sampleFileUrl && (
-              <button
-                type="button"
-                onClick={() => onSeeSample(course)}
-                className="mb-5 inline-flex items-center gap-1.5 w-fit px-4 py-2 bg-accent-soft-bg hover:bg-accent-soft-border border border-accent-soft-border text-brand rounded-lg text-xs md:text-sm font-sans font-bold transition-all cursor-pointer"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                See Sample
-              </button>
-            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
               {resolvedFeatures.map((point, idx) => (
