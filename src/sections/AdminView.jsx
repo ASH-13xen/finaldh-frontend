@@ -88,7 +88,10 @@ export default function AdminView() {
     }
   };
 
-  // Initial load & view switching
+  const [retryCount, setRetryCount] = useState(0);
+  const retry = () => { setError(''); setRetryCount(n => n + 1); };
+
+  // Initial load, view switching, and manual retry
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -101,7 +104,7 @@ export default function AdminView() {
       setLoading(false);
     };
     loadData();
-  }, [currentView]);
+  }, [currentView, retryCount]);
 
   // Reset visible count whenever search/filter changes
   useEffect(() => { setVisibleCount(50); }, [userSearch, selectedCourseKeys, currentView]);
@@ -409,6 +412,15 @@ export default function AdminView() {
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-8 h-8 text-rose-500 mx-auto mb-3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <h3 className="font-bold text-text-primary">Data Load Failure</h3>
           <p className="text-xs text-text-secondary mt-1">{error}</p>
+          {error.toLowerCase().includes('failed to fetch') && (
+            <p className="text-[10px] text-text-tertiary mt-1">Backend may not be ready yet.</p>
+          )}
+          <button
+            onClick={retry}
+            className="mt-4 px-5 py-2 bg-brand hover:bg-brand-hover text-text-on-accent rounded-xl text-xs font-bold transition cursor-pointer shadow-sm"
+          >
+            Retry
+          </button>
         </div>
       ) : currentView === 'transactions' ? (
         // TRANSACTION VIEW
