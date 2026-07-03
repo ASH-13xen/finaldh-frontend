@@ -27,6 +27,7 @@ export default function AdminView() {
   const [processingTxnId, setProcessingTxnId] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [courseEditUser, setCourseEditUser] = useState(null); // lightweight course-only editor
+  const [removeCourseConfirm, setRemoveCourseConfirm] = useState(null); // { user, cid }
   const [lightboxImage, setLightboxImage] = useState(null);
 
   // Lazy load state for user table
@@ -833,7 +834,7 @@ export default function AdminView() {
                                     <button
                                       type="button"
                                       title={`Remove ${cid}`}
-                                      onClick={() => handleSaveCourses(user, (user.interestedCourses || []).filter(c => c !== cid))}
+                                      onClick={(e) => { e.stopPropagation(); setRemoveCourseConfirm({ user, cid }); }}
                                       className="ml-0.5 text-brand/50 hover:text-status-danger-text transition cursor-pointer leading-none"
                                     >
                                       ×
@@ -903,6 +904,44 @@ export default function AdminView() {
           />
           <div className="text-text-secondary text-xs mt-4 font-bold uppercase tracking-wider select-none bg-surface/65 border border-border-default px-3 py-1.5 rounded-xl">
             Click outside image to close
+          </div>
+        </div>
+      )}
+
+      {/* REMOVE COURSE CONFIRMATION MODAL */}
+      {removeCourseConfirm && (
+        <div className="fixed inset-0 z-120 flex items-center justify-center bg-ink-950/60 backdrop-blur-sm p-4" onClick={() => setRemoveCourseConfirm(null)}>
+          <div className="bg-surface border border-border-default rounded-2xl w-full max-w-xs p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-status-danger-bg border border-status-danger-text/25 flex items-center justify-center shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-status-danger-text"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-text-primary">Remove Course?</h3>
+                <p className="text-[10px] text-text-tertiary font-mono truncate max-w-50">{removeCourseConfirm.user.fullName || removeCourseConfirm.user.name}</p>
+              </div>
+            </div>
+            <p className="text-xs text-text-secondary mb-5">
+              Remove <span className="font-bold text-status-danger-text uppercase">{removeCourseConfirm.cid}</span> from this user's subscribed courses? This cannot be undone without re-adding it manually.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setRemoveCourseConfirm(null)}
+                className="flex-1 py-2 border border-border-default hover:bg-sunken text-text-secondary hover:text-text-primary text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const { user, cid } = removeCourseConfirm;
+                  handleSaveCourses(user, (user.interestedCourses || []).filter(c => c !== cid));
+                  setRemoveCourseConfirm(null);
+                }}
+                className="flex-1 py-2 bg-status-danger-text hover:opacity-90 text-white text-xs font-bold rounded-xl transition shadow cursor-pointer"
+              >
+                Yes, Remove
+              </button>
+            </div>
           </div>
         </div>
       )}
