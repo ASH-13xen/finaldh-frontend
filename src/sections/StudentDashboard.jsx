@@ -471,6 +471,10 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   // mount, even though the effect's dependency (matchedCourses) is a new array
   // reference on every render.
   const resumeCheckedRef = useRef(false);
+  // Tracks active progress-poll setInterval IDs by compositeId so they can be
+  // torn down if the component unmounts mid-poll (e.g. user navigates away
+  // while a download is still processing) instead of polling forever.
+  const pollIntervalsRef = useRef({});
 
   // Multi-PDF list UI: per-course collapse/expand override + filename search
   const PDF_AUTO_COLLAPSE_THRESHOLD = 6;
@@ -622,6 +626,16 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     checkForResumable();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchedCourses]);
+
+  // Stop any in-flight progress polling when the component unmounts (e.g. the
+  // student navigates to another page while a download is still processing),
+  // instead of leaving those intervals hitting the API forever.
+  useEffect(() => {
+    return () => {
+      Object.values(pollIntervalsRef.current).forEach(clearInterval);
+      pollIntervalsRef.current = {};
+    };
+  }, []);
 
   const executeActualDownload = () => {
     if (!pendingDownloadParams) return;
@@ -792,6 +806,13 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
         let hasTriggeredDownload = false;
         const pollInterval = setInterval(async () => {
+          // Component may have unmounted since this interval was scheduled
+          // (e.g. user navigated away); stop polling instead of continuing
+          // to hit the API and set state on an unmounted component.
+          if (pollIntervalsRef.current[compositeId] !== pollInterval) {
+            clearInterval(pollInterval);
+            return;
+          }
           try {
             const progressRes = await fetch(
               `/api/courses/download-progress/${courseId}?index=${fileIndex}`,
@@ -811,6 +832,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
               if (status === "completed") {
                 clearInterval(pollInterval);
+                delete pollIntervalsRef.current[compositeId];
                 if (!hasTriggeredDownload) {
                   hasTriggeredDownload = true;
                   triggerNativeDownload();
@@ -820,6 +842,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
               if (status === "failed") {
                 clearInterval(pollInterval);
+                delete pollIntervalsRef.current[compositeId];
                 clearInFlight();
                 setDownloadingStatus((prev) => ({
                   ...prev,
@@ -846,6 +869,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
             console.warn("Error polling progress:", err);
           }
         }, 800);
+        pollIntervalsRef.current[compositeId] = pollInterval;
 
         return;
       }
