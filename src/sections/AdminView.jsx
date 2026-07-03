@@ -821,15 +821,23 @@ export default function AdminView() {
                             )}
                           </td>
 
-                          {/* Subscribed Courses */}
+                          {/* Subscribed Courses — each badge has an × to remove inline */}
                           <td className="px-4 py-4 max-w-[250px]">
                             <div className="flex flex-wrap gap-1">
                               {(user.interestedCourses || []).length === 0 ? (
                                 <span className="text-text-tertiary italic text-[10px]">None</span>
                               ) : (
                                 (user.interestedCourses || []).map((cid) => (
-                                  <span key={cid} className="bg-accent-soft-bg border border-accent-soft-border text-brand rounded px-1.5 py-0.5 text-[9px] font-bold uppercase">
+                                  <span key={cid} className="inline-flex items-center gap-0.5 bg-accent-soft-bg border border-accent-soft-border text-brand rounded px-1.5 py-0.5 text-[9px] font-bold uppercase">
                                     {cid}
+                                    <button
+                                      type="button"
+                                      title={`Remove ${cid}`}
+                                      onClick={() => handleSaveCourses(user, (user.interestedCourses || []).filter(c => c !== cid))}
+                                      className="ml-0.5 text-brand/50 hover:text-status-danger-text transition cursor-pointer leading-none"
+                                    >
+                                      ×
+                                    </button>
                                   </span>
                                 ))
                               )}
