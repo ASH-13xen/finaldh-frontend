@@ -17,6 +17,7 @@ import ProgressSection from './ProgressSection';
 import ComingSoon from './ComingSoon';
 import AdminMcqData from './AdminMcqData';
 import AdminView from './AdminView';
+import AdminContactUsers from './AdminContactUsers';
 
 export default function DashboardSection({ user, onLogout, activeTab, setActiveTab, onUserUpdate }) {
   const [syllabusData, setSyllabusData] = useState(null);
@@ -114,6 +115,10 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'admin_view' && (
           <AdminView />
+        )}
+
+        {activeTab === 'admin_contact_users' && (
+          <AdminContactUsers />
         )}
 
         {activeTab === 'progress' && (

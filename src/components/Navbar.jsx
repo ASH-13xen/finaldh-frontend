@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { gsap, prefersReducedMotion } from '../lib/gsapSetup';
 import { useTheme } from '../contexts/ThemeContext';
+import InboxBell from './InboxBell';
 
 const buttonClass = (active) =>
   `text-[9px] sm:text-xs font-sans font-semibold px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-md md:rounded-lg transition-all duration-200 cursor-pointer whitespace-nowrap ${
@@ -70,6 +71,12 @@ const getNavLinks = (user) => {
         target: 'admin_view',
         match: (t) => t === 'admin_view',
         label: <><span className="hidden sm:inline">Admin </span>View</>
+      },
+      {
+        key: 'contact_users',
+        target: 'admin_contact_users',
+        match: (t) => t === 'admin_contact_users',
+        label: <><span className="hidden sm:inline">Contact </span>User</>
       }
     );
   }
@@ -180,6 +187,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
       {/* Profile details, theme toggle & Logout / Sign In */}
       <div ref={mobileMenuRef} className="flex items-center gap-1.5 sm:gap-3 relative">
         <ThemeToggle />
+        {user && <InboxBell user={user} />}
         {user ? (
           <>
             {user.isAdmin && (
