@@ -47,10 +47,15 @@ function App() {
           if (profileRes.ok) {
             const profileData = await profileRes.json();
             setUser(profileData);
-          } else {
-            // Clear invalid token session
+          } else if (profileRes.status === 401 || profileRes.status === 403) {
+            // Token is actually invalid/expired — clear the session
             localStorage.removeItem("token");
             setToken(null);
+          } else {
+            // Transient server error (e.g. backend restarting) — the token may
+            // still be valid, so don't log the user out over it. Surface the
+            // error and let them retry once the server is back.
+            setError("Connection to server failed. Please reload the page.");
           }
         }
       } catch (err) {
