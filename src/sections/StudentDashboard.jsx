@@ -720,6 +720,35 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         `[handleDownload] Directing window to trigger native PDF download: ${downloadUrl}`,
       );
 
+      // The backend increments downloadedCount as soon as it dispatches/streams
+      // this file (see courseController.js), but currentUser is only fetched
+      // once on mount — without this, the "X of Y used" counter and the
+      // isLimitReached gate below would keep showing stale numbers until a
+      // full page refresh, letting the user click Download again for a file
+      // whose allowance is already spent.
+      setCurrentUser((prev) => {
+        if (!prev) return prev;
+        const downloadLimits = Array.isArray(prev.downloadLimits)
+          ? [...prev.downloadLimits]
+          : [];
+        const idx = downloadLimits.findIndex(
+          (d) => d.courseId.toLowerCase() === compositeId.toLowerCase(),
+        );
+        if (idx >= 0) {
+          downloadLimits[idx] = {
+            ...downloadLimits[idx],
+            downloadedCount: downloadLimits[idx].downloadedCount + 1,
+          };
+        } else {
+          downloadLimits.push({
+            courseId: compositeId,
+            downloadedCount: 1,
+            allowedCount: 1,
+          });
+        }
+        return { ...prev, downloadLimits };
+      });
+
       // Update UI state to completed
       setDownloadingStatus((prev) => ({
         ...prev,
