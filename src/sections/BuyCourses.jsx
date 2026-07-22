@@ -4,7 +4,8 @@ import MmfHeroBanner from '../components/courses/MmfHeroBanner';
 import ComboOffersSection from '../components/courses/ComboOffersSection';
 import CategorizedCourseGrid from '../components/courses/CategorizedCourseGrid';
 import SamplePreviewSection from '../components/courses/SamplePreviewSection';
-import { CAC_FEATURES } from '../components/courses/courseHelpers';
+import CourseCategoryNav from '../components/courses/CourseCategoryNav';
+import { CAC_FEATURES, categorizeCourses } from '../components/courses/courseHelpers';
 
 const GUEST_STATUS = { type: 'guest', label: 'Sign In to Purchase' };
 
@@ -53,6 +54,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
   const mmfCourse = allGsCourses.at(-1);
   const cacCourse = allGsCourses.length >= 2 ? allGsCourses.at(-2) : null;
   const featuredIds = [mmfCourse?._id, cacCourse?._id].filter(Boolean);
+  const { optional, gsCore } = categorizeCourses(courses, featuredIds);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-16 relative">
@@ -73,29 +75,58 @@ export default function BuyCourses({ onRedirectToLogin }) {
         </p>
       </div>
 
+      {/* How it works - the payment flow isn't visible until after sign-in, so spell it
+          out up front for anyone landing here for the first time. */}
+      <div className="mb-10 md:mb-14 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        {[
+          { step: '1', label: 'Sign in with Google' },
+          { step: '2', label: 'Pick your paper(s)' },
+          { step: '3', label: 'Pay via UPI & upload receipt' },
+          { step: '4', label: 'Get instant access' },
+        ].map(({ step, label }) => (
+          <div key={step} className="flex items-center gap-2.5 p-3 bg-surface-raised border border-border-default rounded-xl">
+            <span className="flex items-center justify-center w-6 h-6 shrink-0 bg-accent-soft-bg border border-accent-soft-border text-brand rounded-full text-[11px] font-sans font-extrabold">
+              {step}
+            </span>
+            <span className="text-xs font-sans font-semibold text-text-secondary leading-snug">{label}</span>
+          </div>
+        ))}
+      </div>
+
+      <CourseCategoryNav
+        hasMmf={!loading && !!mmfCourse}
+        hasCac={!loading && !!cacCourse}
+        optionalCount={optional.length}
+        gsCoreCount={gsCore.length}
+      />
+
       {!loading && mmfCourse && (
-        <MmfHeroBanner
-          course={mmfCourse}
-          status={GUEST_STATUS}
-          pendingRequest={null}
-          onPurchase={onRedirectToLogin}
-          onTelegramNotify={onRedirectToLogin}
-          onSeeSample={handleSeeSample}
-        />
+        <div id="category-mmf" className="scroll-mt-20 md:scroll-mt-24">
+          <MmfHeroBanner
+            course={mmfCourse}
+            status={GUEST_STATUS}
+            pendingRequest={null}
+            onPurchase={onRedirectToLogin}
+            onTelegramNotify={onRedirectToLogin}
+            onSeeSample={handleSeeSample}
+          />
+        </div>
       )}
 
       {!loading && cacCourse && (
-        <MmfHeroBanner
-          course={cacCourse}
-          status={GUEST_STATUS}
-          pendingRequest={null}
-          onPurchase={onRedirectToLogin}
-          onTelegramNotify={onRedirectToLogin}
-          onSeeSample={handleSeeSample}
-          features={CAC_FEATURES}
-          badge="Current Affairs"
-          subtitle="Comprehensive current affairs coverage built for Mains — bridging news to syllabus."
-        />
+        <div id="category-cac" className="scroll-mt-20 md:scroll-mt-24">
+          <MmfHeroBanner
+            course={cacCourse}
+            status={GUEST_STATUS}
+            pendingRequest={null}
+            onPurchase={onRedirectToLogin}
+            onTelegramNotify={onRedirectToLogin}
+            onSeeSample={handleSeeSample}
+            features={CAC_FEATURES}
+            badge="Current Affairs"
+            subtitle="Comprehensive current affairs coverage built for Mains — bridging news to syllabus."
+          />
+        </div>
       )}
 
       {!loading && comboOffers.length > 0 && (

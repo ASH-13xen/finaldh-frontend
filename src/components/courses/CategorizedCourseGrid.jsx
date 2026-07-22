@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import CourseCard from './CourseCard';
-import { isGsCoreSubject, isOptionalSubject, OPTIONAL_NAMES } from './courseHelpers';
+import { categorizeCourses, OPTIONAL_NAMES } from './courseHelpers';
 import { gsap, prefersReducedMotion } from '../../lib/gsapSetup';
 
 const PullQuote = ({ children }) => (
@@ -60,9 +60,7 @@ export default function CategorizedCourseGrid({ courses, excludedCourseIds, getC
   }, []);
 
   const excluded = excludedCourseIds || [];
-  const gsCoreCourses = courses.filter((c) => isGsCoreSubject(c.subject) && !excluded.includes(c._id));
-  const optionalCourses = courses.filter((c) => isOptionalSubject(c.subject));
-  const otherCourses = courses.filter((c) => !isGsCoreSubject(c.subject) && !isOptionalSubject(c.subject));
+  const { optional: optionalCourses, gsCore: gsCoreCourses, other: otherCourses } = categorizeCourses(courses, excluded);
 
   const optionalSearchTerm = optionalSearch.trim().toLowerCase();
   const filteredOptionalCourses = optionalSearchTerm
@@ -91,7 +89,7 @@ export default function CategorizedCourseGrid({ courses, excludedCourseIds, getC
   return (
     <div className="space-y-12 md:space-y-16">
       {optionalCourses.length > 0 && (
-        <div>
+        <div id="category-optional" className="scroll-mt-20 md:scroll-mt-24">
           <div className="mb-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
               <h2 className="text-xl md:text-2xl font-display font-semibold text-text-primary tracking-tight">
@@ -125,7 +123,7 @@ export default function CategorizedCourseGrid({ courses, excludedCourseIds, getC
       )}
 
       {gsCoreCourses.length > 0 && (
-        <div>
+        <div id="category-gscore" className="scroll-mt-20 md:scroll-mt-24">
           <div className="mb-5">
             <h2 className="text-xl md:text-2xl font-display font-semibold text-text-primary tracking-tight">
               GS Core Papers

@@ -4,7 +4,8 @@ import MmfHeroBanner from "../components/courses/MmfHeroBanner";
 import ComboOffersSection from "../components/courses/ComboOffersSection";
 import CategorizedCourseGrid from "../components/courses/CategorizedCourseGrid";
 import SamplePreviewSection from "../components/courses/SamplePreviewSection";
-import { CAC_FEATURES } from "../components/courses/courseHelpers";
+import CourseCategoryNav from "../components/courses/CourseCategoryNav";
+import { CAC_FEATURES, categorizeCourses } from "../components/courses/courseHelpers";
 
 export default function PurchaseCourses({ user, onUserUpdate }) {
   const [courses, setCourses] = useState([]);
@@ -381,6 +382,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
   const mmfCourse = allGsCourses.at(-1);
   const cacCourse = allGsCourses.length >= 2 ? allGsCourses.at(-2) : null;
   const featuredIds = [mmfCourse?._id, cacCourse?._id].filter(Boolean);
+  const { optional, gsCore } = categorizeCourses(courses, featuredIds);
   const mmfStatus = mmfCourse ? getCourseStatus(mmfCourse) : null;
   const cacStatus = cacCourse ? getCourseStatus(cacCourse) : null;
   const getPendingRequest = (course) =>
@@ -404,29 +406,40 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
         </p>
       </div>
 
+      <CourseCategoryNav
+        hasMmf={!loading && !error && !!mmfCourse}
+        hasCac={!loading && !error && !!cacCourse}
+        optionalCount={optional.length}
+        gsCoreCount={gsCore.length}
+      />
+
       {!loading && !error && mmfCourse && (
-        <MmfHeroBanner
-          course={mmfCourse}
-          status={mmfStatus}
-          pendingRequest={mmfPendingRequest}
-          onPurchase={handleOpenPurchaseModal}
-          onTelegramNotify={handleTelegramNotify}
-          onSeeSample={handleSeeSample}
-        />
+        <div id="category-mmf" className="scroll-mt-20 md:scroll-mt-24">
+          <MmfHeroBanner
+            course={mmfCourse}
+            status={mmfStatus}
+            pendingRequest={mmfPendingRequest}
+            onPurchase={handleOpenPurchaseModal}
+            onTelegramNotify={handleTelegramNotify}
+            onSeeSample={handleSeeSample}
+          />
+        </div>
       )}
 
       {!loading && !error && cacCourse && (
-        <MmfHeroBanner
-          course={cacCourse}
-          status={cacStatus}
-          pendingRequest={cacPendingRequest}
-          onPurchase={handleOpenPurchaseModal}
-          onTelegramNotify={handleTelegramNotify}
-          onSeeSample={handleSeeSample}
-          features={CAC_FEATURES}
-          badge="Current Affairs"
-          subtitle="Comprehensive current affairs coverage built for Mains — bridging news to syllabus."
-        />
+        <div id="category-cac" className="scroll-mt-20 md:scroll-mt-24">
+          <MmfHeroBanner
+            course={cacCourse}
+            status={cacStatus}
+            pendingRequest={cacPendingRequest}
+            onPurchase={handleOpenPurchaseModal}
+            onTelegramNotify={handleTelegramNotify}
+            onSeeSample={handleSeeSample}
+            features={CAC_FEATURES}
+            badge="Current Affairs"
+            subtitle="Comprehensive current affairs coverage built for Mains — bridging news to syllabus."
+          />
+        </div>
       )}
 
       {!loading && !error && comboOffers.length > 0 && (
@@ -438,29 +451,29 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
       )}
 
       {loading ? (
-        <div className="py-16 text-center bg-slate-900/40 border border-slate-800/80 rounded-2xl">
+        <div className="py-16 text-center bg-surface-raised border border-border-default rounded-2xl">
           <LoadingSpinner text="Loading courses..." />
         </div>
       ) : error ? (
-        <div className="py-12 text-center bg-rose-950/20 border border-rose-900/50 rounded-2xl p-6">
+        <div className="py-12 text-center bg-status-danger-bg border border-status-danger-text/30 rounded-2xl p-6">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
-            className="w-8 h-8 text-rose-500 mx-auto mb-3"
+            className="w-8 h-8 text-status-danger-text mx-auto mb-3"
           >
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          <h3 className="font-bold text-white">Failed to load courses</h3>
-          <p className="text-xs text-slate-400 mt-1">{error}</p>
+          <h3 className="font-bold text-text-primary">Failed to load courses</h3>
+          <p className="text-xs text-text-secondary mt-1">{error}</p>
         </div>
       ) : courses.length === 0 ? (
-        <div className="py-16 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/20">
-          <p className="text-sm text-slate-400 font-semibold">
+        <div className="py-16 text-center border border-dashed border-border-default rounded-2xl bg-surface-raised">
+          <p className="text-sm text-text-secondary font-semibold">
             No courses are currently available for purchase.
           </p>
         </div>

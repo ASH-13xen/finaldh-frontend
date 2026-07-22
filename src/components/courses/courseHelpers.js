@@ -37,6 +37,12 @@ export const isOptionalSubject = (subject) => subject?.startsWith('OptionalSubje
 export const isGsCoreSubject = (subject) =>
   subject?.startsWith('GS-') || subject === 'Essay' || subject === 'All GS';
 
+export const categorizeCourses = (courses, excludedIds = []) => ({
+  optional: courses.filter((c) => isOptionalSubject(c.subject)),
+  gsCore: courses.filter((c) => isGsCoreSubject(c.subject) && !excludedIds.includes(c._id)),
+  other: courses.filter((c) => !isGsCoreSubject(c.subject) && !isOptionalSubject(c.subject)),
+});
+
 export const subjectDisplayName = (subject) =>
   subject?.startsWith('GS-') ? subject : OPTIONAL_NAMES[subject]?.replace('Optional: ', '') || subject;
 

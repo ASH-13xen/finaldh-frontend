@@ -1,9 +1,21 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { gsap, SplitText, prefersReducedMotion } from '../lib/gsapSetup';
+import { detectInAppBrowser } from '../lib/inAppBrowser';
 
 export default function LoginSection({ error, googleButtonRef }) {
   const headlineRef = useRef(null);
   const cardRef = useRef(null);
+  // navigator.userAgent is static for the component's lifetime - a plain const is enough,
+  // no need for useState/useEffect just to read it once.
+  const inAppBrowser = detectInAppBrowser();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    navigator.clipboard?.writeText(window.location.href).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   useEffect(() => {
     if (prefersReducedMotion()) return;
@@ -54,8 +66,27 @@ export default function LoginSection({ error, googleButtonRef }) {
 
           {error && (
             <div className="mt-5 p-3.5 bg-status-danger-bg border border-status-danger-text/30 text-status-danger-text text-xs font-medium rounded-xl flex items-start gap-2.5">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 mt-0.5 flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               <span>{error}</span>
+            </div>
+          )}
+
+          {inAppBrowser.detected && (
+            <div className="mt-5 p-3.5 bg-status-warning-bg border border-status-warning-text/30 text-status-warning-text text-xs font-medium rounded-xl flex items-start gap-2.5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 mt-0.5 shrink-0"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <div className="flex-1">
+                <p>
+                  Google Sign-In doesn&apos;t work inside {inAppBrowser.label}&apos;s built-in browser. Tap the menu and choose &quot;Open in Browser&quot;, or copy this link and paste it into Chrome/Safari.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="mt-2.5 inline-flex items-center gap-1.5 py-1.5 px-3 bg-surface border border-status-warning-text/30 text-status-warning-text hover:bg-status-warning-bg rounded-lg text-[11px] font-sans font-bold transition-all duration-200 cursor-pointer"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+                </button>
+              </div>
             </div>
           )}
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
+import ErrorBoundary from '../components/ErrorBoundary';
 import StudentDashboard from './StudentDashboard';
 import ProgressUpdater from './ProgressUpdater';
 import QuestionUploader from './QuestionUploader';
@@ -68,6 +69,9 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
       {/* Main Page Workspace Content */}
       <main className="flex-grow">
+      {/* key={activeTab} remounts the boundary on tab switch, so navigating away from a
+          crashed section clears the error instead of leaving it stuck forever. */}
+      <ErrorBoundary key={activeTab}>
         {activeTab === 'student' && (
           <StudentDashboard user={user} setActiveTab={setActiveTab} onUserUpdate={onUserUpdate} />
         )}
@@ -136,6 +140,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
         {activeTab === 'admin_mcq_data' && (
           <AdminMcqData />
         )}
+      </ErrorBoundary>
       </main>
     </div>
   );

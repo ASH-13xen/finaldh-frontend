@@ -9,6 +9,7 @@ import DisplayPYQ from "./sections/DisplayPYQ";
 import DisplayUPSCQuestions from "./sections/DisplayUPSCQuestions";
 import BuyCourses from "./sections/BuyCourses";
 import UploadCourse from "./sections/UploadCourse";
+import { readTabFromHash } from "./lib/tabRouting";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -16,13 +17,32 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [googleClientId, setGoogleClientId] = useState(null);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("buy_pdfs");
+  const [activeTab, setActiveTab] = useState(() => readTabFromHash());
   const googleButtonRef = useRef(null);
+
+  // Wraps setActiveTab with a URL hash sync so refresh and browser back/forward preserve
+  // navigation state (there's no react-router in this app - activeTab IS the routing).
+  // Guarded against pushing a duplicate history entry when the hash is already correct,
+  // which matters under StrictMode's dev-only double-invoke of effects that call this.
+  const navigate = (tab) => {
+    setActiveTab(tab);
+    const hash = "#" + tab;
+    if (window.location.hash !== hash) {
+      window.history.pushState({ tab }, "", hash);
+    }
+  };
+
+  // Keep activeTab in sync when the user presses back/forward.
+  useEffect(() => {
+    const onPopState = () => setActiveTab(readTabFromHash());
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   // Automatically switch tabs when logging in
   useEffect(() => {
     if (user && (activeTab === "login" || activeTab === "buy_pdfs")) {
-      setActiveTab(user.isAdmin ? "manage_courses" : "student");
+      navigate(user.isAdmin ? "manage_courses" : "student");
     }
   }, [user]);
 
@@ -138,7 +158,7 @@ function App() {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
-    setActiveTab("buy_pdfs");
+    navigate("buy_pdfs");
   };
 
   const handleDevLogin = async () => {
@@ -154,7 +174,7 @@ function App() {
       localStorage.setItem("token", data.token);
       setToken(data.token);
       setUser(data.user);
-      setActiveTab(data.user.isAdmin ? "manage_courses" : "student");
+      navigate(data.user.isAdmin ? "manage_courses" : "student");
     } catch (err) {
       console.error(err);
       setError(err.message || "Mock login failed");
@@ -194,7 +214,7 @@ function App() {
         user={user}
         onLogout={handleLogout}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={navigate}
         onUserUpdate={setUser}
       />
     );
@@ -214,7 +234,7 @@ function App() {
           user={null}
           onLogout={handleLogout}
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={navigate}
         />
         <main className="grow">
           {activeTab === "uploader" ? (
@@ -224,7 +244,7 @@ function App() {
           ) : activeTab === "upsc_questions" ? (
             <DisplayUPSCQuestions />
           ) : activeTab === "buy_pdfs" ? (
-            <BuyCourses onRedirectToLogin={() => setActiveTab("login")} />
+            <BuyCourses onRedirectToLogin={() => navigate("login")} />
           ) : (
             <UploadCourse />
           )}
@@ -238,7 +258,7 @@ function App() {
     <LoginSection
       error={error}
       googleButtonRef={googleButtonRef}
-      onGuestAccess={() => setActiveTab("uploader")}
+      onGuestAccess={() => navigate("uploader")}
       onDevLogin={handleDevLogin}
     />
   );
