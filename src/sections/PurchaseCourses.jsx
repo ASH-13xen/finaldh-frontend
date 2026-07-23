@@ -409,6 +409,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
       <CourseCategoryNav
         hasMmf={!loading && !error && !!mmfCourse}
         hasCac={!loading && !error && !!cacCourse}
+        hasCombos={!loading && !error && comboOffers.length > 0}
         optionalCount={optional.length}
         gsCoreCount={gsCore.length}
       />
@@ -443,11 +444,13 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
       )}
 
       {!loading && !error && comboOffers.length > 0 && (
-        <ComboOffersSection
-          comboOffers={comboOffers}
-          getComboStatus={getComboStatus}
-          onSelectCombo={handleOpenComboPicker}
-        />
+        <div id="category-combos" className="scroll-mt-20 md:scroll-mt-24">
+          <ComboOffersSection
+            comboOffers={comboOffers}
+            getComboStatus={getComboStatus}
+            onSelectCombo={handleOpenComboPicker}
+          />
+        </div>
       )}
 
       {loading ? (

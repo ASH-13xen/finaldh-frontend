@@ -1,12 +1,20 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MMF_FEATURES } from './courseHelpers';
 import { gsap, prefersReducedMotion } from '../../lib/gsapSetup';
+
+// Number of feature bullets shown before the list is truncated behind "Read more".
+const PREVIEW_FEATURE_COUNT = 2;
 
 export default function MmfHeroBanner({ course, status, pendingRequest, onPurchase, onTelegramNotify, onSeeSample, features, badge, subtitle }) {
   const resolvedFeatures = features || MMF_FEATURES;
   const resolvedBadge = badge || 'Most Popular';
   const resolvedSubtitle = subtitle || 'Everything you need for GS Mains, compiled into one master file.';
   const bannerRef = useRef(null);
+  const [expanded, setExpanded] = useState(false);
+
+  const visibleFeatures = resolvedFeatures.slice(0, PREVIEW_FEATURE_COUNT);
+  const hiddenFeatures = resolvedFeatures.slice(PREVIEW_FEATURE_COUNT);
+  const hasHiddenFeatures = hiddenFeatures.length > 0;
 
   useEffect(() => {
     if (!bannerRef.current || prefersReducedMotion()) return;
@@ -59,15 +67,50 @@ export default function MmfHeroBanner({ course, status, pendingRequest, onPurcha
               {resolvedSubtitle}
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-              {resolvedFeatures.map((point, idx) => (
-                <div key={idx} className="flex items-start gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5 text-brand shrink-0 mt-0.5"><polyline points="20 6 9 17 4 12" /></svg>
-                  <span className="text-[11px] md:text-xs text-text-secondary font-medium leading-relaxed">
-                    {point}
-                  </span>
+            <div className="mb-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {visibleFeatures.map((point, idx) => (
+                  <div key={idx} className="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5 text-brand shrink-0 mt-0.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    <span className="text-[11px] md:text-xs text-text-secondary font-medium leading-relaxed">
+                      {point}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {hasHiddenFeatures && (
+                <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                  <div className="overflow-hidden">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+                      {hiddenFeatures.map((point, idx) => (
+                        <div key={idx} className="flex items-start gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3.5 h-3.5 text-brand shrink-0 mt-0.5"><polyline points="20 6 9 17 4 12" /></svg>
+                          <span className="text-[11px] md:text-xs text-text-secondary font-medium leading-relaxed">
+                            {point}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              ))}
+              )}
+
+              {hasHiddenFeatures && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="mt-2.5 inline-flex items-center gap-1 text-[11px] md:text-xs font-sans font-bold text-brand hover:text-brand-hover cursor-pointer"
+                >
+                  {expanded ? 'Show less' : `Read more (+${hiddenFeatures.length})`}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
+                    className={`w-3 h-3 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+              )}
             </div>
 
             {course.discountLimitTag && (

@@ -96,6 +96,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
       <CourseCategoryNav
         hasMmf={!loading && !!mmfCourse}
         hasCac={!loading && !!cacCourse}
+        hasCombos={!loading && comboOffers.length > 0}
         optionalCount={optional.length}
         gsCoreCount={gsCore.length}
       />
@@ -130,11 +131,13 @@ export default function BuyCourses({ onRedirectToLogin }) {
       )}
 
       {!loading && comboOffers.length > 0 && (
-        <ComboOffersSection
-          comboOffers={comboOffers}
-          getComboStatus={() => GUEST_STATUS}
-          onSelectCombo={onRedirectToLogin}
-        />
+        <div id="category-combos" className="scroll-mt-20 md:scroll-mt-24">
+          <ComboOffersSection
+            comboOffers={comboOffers}
+            getComboStatus={() => GUEST_STATUS}
+            onSelectCombo={onRedirectToLogin}
+          />
+        </div>
       )}
 
       {loading ? (

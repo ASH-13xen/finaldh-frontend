@@ -2,22 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import { gsap, ScrollTrigger, prefersReducedMotion } from '../../lib/gsapSetup';
 
 const chipClass = (active) =>
-  `shrink-0 whitespace-nowrap text-xs font-sans font-semibold px-3.5 py-2 rounded-full border transition-all duration-200 cursor-pointer ${
+  `shrink-0 whitespace-nowrap text-xs sm:text-sm font-sans font-extrabold px-4 sm:px-5 py-2.5 sm:py-3 rounded-full border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.03] ${
     active
-      ? 'bg-brand text-text-on-accent border-brand shadow-sm'
-      : 'bg-surface text-text-secondary border-border-default hover:text-text-primary hover:border-brand/40'
+      ? 'bg-brand text-text-on-accent border-brand shadow-md scale-[1.02]'
+      : 'bg-accent-soft-bg text-brand border-accent-soft-border hover:bg-accent-soft-border'
   }`;
 
-export default function CourseCategoryNav({ hasMmf, hasCac, optionalCount, gsCoreCount }) {
+export default function CourseCategoryNav({ hasMmf, hasCac, hasCombos, optionalCount, gsCoreCount }) {
   const [activeId, setActiveId] = useState(null);
   const navRef = useRef(null);
   const hasAnimated = useRef(false);
 
   const items = [
+    gsCoreCount > 0 && { id: 'category-gscore', label: 'TCC - GS' },
+    hasCombos && { id: 'category-combos', label: 'TCC- GS(Bundle and Save)' },
+    optionalCount > 0 && { id: 'category-optional', label: 'TCC- Optionals' },
     hasMmf && { id: 'category-mmf', label: 'Mains Master File' },
-    hasCac && { id: 'category-cac', label: 'Current Affairs Compass' },
-    optionalCount > 0 && { id: 'category-optional', label: `Optional Subjects (${optionalCount})` },
-    gsCoreCount > 0 && { id: 'category-gscore', label: `GS Core Papers (${gsCoreCount})` },
+    hasCac && { id: 'category-cac', label: 'Current Affairs Compass(Mains)' },
   ].filter(Boolean);
 
   // Entrance animation - runs once on first real mount (this component self-guards below,
@@ -57,7 +58,7 @@ export default function CourseCategoryNav({ hasMmf, hasCac, optionalCount, gsCor
   };
 
   return (
-    <div ref={navRef} className="mb-8 md:mb-10 flex gap-2 overflow-x-auto md:flex-wrap pb-1 -mx-1 px-1">
+    <div ref={navRef} className="mb-8 md:mb-10 flex gap-2.5 sm:gap-3 overflow-x-auto md:flex-wrap pb-1.5 -mx-1 px-1">
       {items.map(({ id, label }) => (
         <button key={id} type="button" onClick={() => handleClick(id)} className={chipClass(activeId === id)}>
           {label}
