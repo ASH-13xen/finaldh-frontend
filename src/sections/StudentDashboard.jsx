@@ -462,6 +462,11 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   const [requestingCourseId, setRequestingCourseId] = useState(null);
   const [downloadingStatus, setDownloadingStatus] = useState({});
   const [requestingStatus, setRequestingStatus] = useState({});
+  // Global single-flight lock: only one file's PDF may be generating/downloading
+  // at a time across the whole dashboard. Holds the compositeId currently holding
+  // the slot, or null when free. Cleared on both success and failure so the next
+  // file can start immediately - see handleDownload's clearInFlight/error paths.
+  const [activeDownloadId, setActiveDownloadId] = useState(null);
   // Synchronous re-entry guard, keyed by compositeId. React state updates are
   // async, so a fast double-click could otherwise fire two independent
   // download flows (each with its own polling loop) before the UI has a
@@ -701,10 +706,24 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       );
       return;
     }
+
+    // Only one file may occupy the download slot at a time. The buttons for
+    // every other file are disabled while this is set (see the render below),
+    // but this is the authoritative check - it also protects against a stale
+    // click landing between "download started" and the UI re-rendering.
+    if (activeDownloadId && activeDownloadId !== compositeId) {
+      console.log(
+        `[handleDownload] Blocked ${compositeId} — ${activeDownloadId} is still downloading.`,
+      );
+      return;
+    }
+
     downloadInFlightRef.current[compositeId] = true;
+    setActiveDownloadId(compositeId);
     askNotificationPermission();
     const clearInFlight = () => {
       delete downloadInFlightRef.current[compositeId];
+      setActiveDownloadId((prev) => (prev === compositeId ? null : prev));
     };
 
     setDownloadingStatus((prev) => ({
@@ -1275,6 +1294,12 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                 const hasPendingRequest = pdfRequests.some(
                                   (r) => r.status === "pending",
                                 );
+                                // A different file is currently occupying the single-flight
+                                // download slot - the button for this file is disabled until
+                                // that one finishes or fails (activeDownloadId clears in both cases).
+                                const isBlockedByOtherDownload =
+                                  activeDownloadId !== null &&
+                                  activeDownloadId !== compositeId;
 
                                 return (
                                   <div
@@ -1305,6 +1330,8 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                                   </p>
                                                   <div className="flex items-center gap-2">
                                                     <button
+                                                      disabled={isBlockedByOtherDownload}
+                                                      title={isBlockedByOtherDownload ? 'Another file is downloading — wait for it to finish or fail first' : undefined}
                                                       onClick={() =>
                                                         handleDownload(
                                                           course.courseId,
@@ -1314,7 +1341,11 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                                           true,
                                                         )
                                                       }
-                                                      className="text-[9px] font-extrabold text-text-on-accent bg-status-danger-text hover:opacity-90 px-2 py-1 rounded cursor-pointer transition"
+                                                      className={`text-[9px] font-extrabold px-2 py-1 rounded transition ${
+                                                        isBlockedByOtherDownload
+                                                          ? 'text-text-tertiary bg-surface-raised cursor-not-allowed'
+                                                          : 'text-text-on-accent bg-status-danger-text hover:opacity-90 cursor-pointer'
+                                                      }`}
                                                     >
                                                       Retry
                                                     </button>
@@ -1392,6 +1423,8 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                         </div>
                                       ) : (
                                         <button
+                                          disabled={isBlockedByOtherDownload}
+                                          title={isBlockedByOtherDownload ? 'Another file is downloading — wait for it to finish or fail first' : undefined}
                                           onClick={() => {
                                             console.log(
                                               `[UI Click] Clicked download for composite: ${compositeId}`,
@@ -1402,7 +1435,11 @@ export default function StudentDashboard({ user, onUserUpdate }) {
                                               idx,
                                             );
                                           }}
-                                          className="w-full inline-flex items-center justify-center gap-1 py-1.5 bg-brand hover:bg-brand-hover text-text-on-accent rounded-lg text-[10px] font-bold transition shadow cursor-pointer"
+                                          className={`w-full inline-flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold transition shadow ${
+                                            isBlockedByOtherDownload
+                                              ? 'bg-surface-raised text-text-tertiary cursor-not-allowed shadow-none'
+                                              : 'bg-brand hover:bg-brand-hover text-text-on-accent cursor-pointer'
+                                          }`}
                                         >
                                           <svg
                                             xmlns="http://www.w3.org/2000/svg"
