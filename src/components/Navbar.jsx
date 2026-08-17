@@ -61,6 +61,18 @@ const getNavLinks = (user) => {
         label: <><span className="hidden sm:inline">Progress </span>Data</>
       },
       {
+        key: 'progress_builder',
+        target: 'admin_progress_builder',
+        match: (t) => t === 'admin_progress_builder',
+        label: <><span className="hidden sm:inline">Progress </span>Builder</>
+      },
+      {
+        key: 'manage_mcq',
+        target: 'admin_mcq_data',
+        match: (t) => t === 'admin_mcq_data',
+        label: <><span className="hidden sm:inline">Manage </span>MCQ</>
+      },
+      {
         key: 'requests',
         target: 'admin_purchases',
         match: (t) => t === 'admin_purchases',

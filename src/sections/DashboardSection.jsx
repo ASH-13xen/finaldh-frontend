@@ -14,9 +14,10 @@ import PDFEditor from './PDFEditor';
 import PurchaseCourses from './PurchaseCourses';
 import AdminPurchases from './AdminPurchases';
 import AdminProgressData from './AdminProgressData';
+import AdminProgressBuilder from './AdminProgressBuilder';
 import ProgressSection from './ProgressSection';
-import ComingSoon from './ComingSoon';
 import AdminMcqData from './AdminMcqData';
+import McqFlow from './McqFlow';
 import AdminView from './AdminView';
 import AdminContactUsers from './AdminContactUsers';
 
@@ -133,8 +134,12 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
           <AdminProgressData />
         )}
 
+        {activeTab === 'admin_progress_builder' && (
+          <AdminProgressBuilder />
+        )}
+
         {activeTab?.startsWith('mcq_') && (
-          <ComingSoon title="MCQ Tests" onBack={() => setActiveTab(user?.isAdmin ? 'manage_courses' : 'student')} />
+          <McqFlow user={user} />
         )}
 
         {activeTab === 'admin_mcq_data' && (

@@ -2,11 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const STATUS_COLORS = {
-  'not-visited': 'bg-slate-700 text-slate-300',
-  'not-answered': 'bg-rose-600 text-white',
-  'answered': 'bg-emerald-600 text-white',
-  'marked-for-review': 'bg-violet-600 text-white',
-  'answered-marked-for-review': 'bg-violet-600 text-white ring-2 ring-emerald-400 ring-offset-1 ring-offset-slate-900'
+  'not-visited': 'bg-surface-raised text-text-tertiary border border-border-default',
+  'not-answered': 'bg-status-danger-text text-white',
+  'answered': 'bg-brand text-text-on-accent',
+  'marked-for-review': 'bg-status-info-text text-white',
+  'answered-marked-for-review': 'bg-status-info-text text-white ring-2 ring-brand ring-offset-1 ring-offset-surface'
 };
 
 // Derives a question's status from its current local state (selection + prior marked flag)
@@ -17,6 +17,12 @@ const inferStatus = (meta) => {
     ? (wasMarked ? 'answered-marked-for-review' : 'answered')
     : (wasMarked ? 'marked-for-review' : 'not-answered');
 };
+
+const CONFIDENCE_OPTIONS = [
+  { tag: 'sure', label: '100% Sure' },
+  { tag: 'elimination', label: 'Logical Elimination' },
+  { tag: 'guess', label: 'Pure Guess' }
+];
 
 const formatTime = (totalSeconds) => {
   const s = Math.max(0, totalSeconds);
@@ -38,6 +44,7 @@ export default function McqTestRunner({ attemptId, onSubmitted }) {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const questionEnteredAtRef = useRef(null); // set once the attempt finishes loading, see load() below
   const autoSubmitTriggeredRef = useRef(false);
@@ -77,7 +84,7 @@ export default function McqTestRunner({ attemptId, onSubmitted }) {
         setQuestions(data.questions || []);
         setServerDeadline(new Date(data.serverDeadline));
         const meta = {};
-        (data.responses || []).forEach(r => { meta[r.order] = { status: r.status, selectedOption: r.selectedOption }; });
+        (data.responses || []).forEach(r => { meta[r.order] = { status: r.status, selectedOption: r.selectedOption, confidenceTag: r.confidenceTag ?? null }; });
         setResponsesMeta(meta);
         setCurrentOrder(data.lastActiveQuestionOrder || 1);
         questionEnteredAtRef.current = Date.now();
@@ -101,7 +108,7 @@ export default function McqTestRunner({ attemptId, onSubmitted }) {
       const elapsed = Math.round((Date.now() - questionEnteredAtRef.current) / 1000);
       const meta = responsesMeta[currentOrder] || { selectedOption: null, status: 'not-answered' };
       const newStatus = inferStatus(meta);
-      await patchResponse(currentOrder, { deltaTimeSpentSeconds: elapsed, selectedOption: meta.selectedOption, status: newStatus });
+      await patchResponse(currentOrder, { deltaTimeSpentSeconds: elapsed, selectedOption: meta.selectedOption, status: newStatus, confidenceTag: meta.confidenceTag ?? null });
 
       await fetch(`/api/mcq/attempts/${attemptId}/submit`, {
         method: 'POST',
@@ -143,8 +150,8 @@ export default function McqTestRunner({ attemptId, onSubmitted }) {
     const meta = responsesMeta[currentOrder] || { selectedOption: null, status: 'not-answered' };
     const newStatus = statusOverride || inferStatus(meta);
 
-    setResponsesMeta(prev => ({ ...prev, [currentOrder]: { selectedOption: meta.selectedOption, status: newStatus } }));
-    await patchResponse(currentOrder, { deltaTimeSpentSeconds: elapsed, selectedOption: meta.selectedOption, status: newStatus });
+    setResponsesMeta(prev => ({ ...prev, [currentOrder]: { selectedOption: meta.selectedOption, status: newStatus, confidenceTag: meta.confidenceTag ?? null } }));
+    await patchResponse(currentOrder, { deltaTimeSpentSeconds: elapsed, selectedOption: meta.selectedOption, status: newStatus, confidenceTag: meta.confidenceTag ?? null });
 
     if (newOrder !== currentOrder) {
       const target = responsesMeta[newOrder] || { status: 'not-visited', selectedOption: null };
@@ -155,12 +162,20 @@ export default function McqTestRunner({ attemptId, onSubmitted }) {
       setCurrentOrder(newOrder);
     }
     questionEnteredAtRef.current = Date.now();
+    setPaletteOpen(false);
   };
 
   const selectOption = (label) => {
     setResponsesMeta(prev => ({
       ...prev,
       [currentOrder]: { ...(prev[currentOrder] || {}), selectedOption: label }
+    }));
+  };
+
+  const selectConfidence = (tag) => {
+    setResponsesMeta(prev => ({
+      ...prev,
+      [currentOrder]: { ...(prev[currentOrder] || {}), confidenceTag: tag }
     }));
   };
 
@@ -177,13 +192,14 @@ export default function McqTestRunner({ attemptId, onSubmitted }) {
   const handleClear = () => {
     const meta = responsesMeta[currentOrder] || { status: 'not-answered' };
     const wasMarked = meta.status === 'marked-for-review' || meta.status === 'answered-marked-for-review';
-    setResponsesMeta(prev => ({ ...prev, [currentOrder]: { selectedOption: null, status: wasMarked ? 'marked-for-review' : 'not-answered' } }));
-    patchResponse(currentOrder, { selectedOption: null, status: wasMarked ? 'marked-for-review' : 'not-answered' });
+    const clearedStatus = wasMarked ? 'marked-for-review' : 'not-answered';
+    setResponsesMeta(prev => ({ ...prev, [currentOrder]: { selectedOption: null, status: clearedStatus, confidenceTag: null } }));
+    patchResponse(currentOrder, { selectedOption: null, status: clearedStatus, confidenceTag: null });
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-73px)] bg-slate-950">
+      <div className="flex items-center justify-center min-h-[calc(100vh-73px)] bg-page">
         <LoadingSpinner text="Loading your test..." />
       </div>
     );
@@ -191,8 +207,8 @@ export default function McqTestRunner({ attemptId, onSubmitted }) {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-73px)] bg-slate-950 px-4">
-        <div className="p-6 bg-rose-950/20 border border-rose-900/40 rounded-2xl text-rose-400 text-sm font-semibold">{error}</div>
+      <div className="flex items-center justify-center min-h-[calc(100vh-73px)] bg-page px-4">
+        <div className="p-6 bg-status-danger-bg border border-status-danger-text/30 rounded-2xl text-status-danger-text text-sm font-semibold">{error}</div>
       </div>
     );
   }
@@ -212,21 +228,56 @@ export default function McqTestRunner({ attemptId, onSubmitted }) {
 
   const lowTime = remainingSeconds <= 300;
 
+  const CountTiles = ({ dense }) => (
+    <div className={`grid grid-cols-2 gap-2 font-bold ${dense ? 'text-[11px]' : 'text-[10px]'}`}>
+      <div className={`bg-status-success-bg border border-status-success-text/30 text-status-success-text rounded-lg text-center ${dense ? 'px-2 py-2' : 'px-2 py-1.5'}`}>Answered: {counts.answered}</div>
+      <div className={`bg-status-danger-bg border border-status-danger-text/30 text-status-danger-text rounded-lg text-center ${dense ? 'px-2 py-2' : 'px-2 py-1.5'}`}>Not Answered: {counts.notAnswered}</div>
+      <div className={`bg-status-info-bg border border-status-info-text/30 text-status-info-text rounded-lg text-center ${dense ? 'px-2 py-2' : 'px-2 py-1.5'}`}>Marked: {counts.marked}</div>
+      <div className={`bg-sunken border border-border-default text-text-tertiary rounded-lg text-center ${dense ? 'px-2 py-2' : 'px-2 py-1.5'}`}>Not Visited: {counts.notVisited}</div>
+    </div>
+  );
+
+  const PaletteGrid = () => (
+    <div className="grid grid-cols-5 gap-2 overflow-y-auto max-h-[420px] pr-1">
+      {questions.map((q) => {
+        const status = (responsesMeta[q.order] || {}).status || 'not-visited';
+        return (
+          <button
+            key={q.order}
+            onClick={() => goToQuestion(q.order)}
+            className={`w-9 h-9 rounded-lg text-xs font-bold flex items-center justify-center cursor-pointer transition-all ${STATUS_COLORS[status]} ${q.order === currentOrder ? 'ring-2 ring-brand ring-offset-1 ring-offset-surface' : ''}`}
+          >
+            {q.order}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-4">
-      <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl px-5 py-3 sticky top-2 z-10 shadow-lg">
-        <span className="text-xs font-bold text-slate-300">Question {currentOrder} of {questions.length}</span>
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono text-sm font-bold ${lowTime ? 'bg-rose-950/40 text-rose-400 border border-rose-900/50' : 'bg-slate-800 text-slate-100'}`}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          {formatTime(remainingSeconds)}
+      <div className="flex items-center justify-between bg-surface border border-border-default rounded-2xl px-5 py-3 sticky top-2 z-10 shadow-lg">
+        <span className="text-xs font-bold text-text-secondary">Question {currentOrder} of {questions.length}</span>
+        <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono text-sm font-bold ${lowTime ? 'bg-status-danger-bg text-status-danger-text border border-status-danger-text/30' : 'bg-sunken text-text-primary'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {formatTime(remainingSeconds)}
+          </div>
+          <button
+            onClick={() => setPaletteOpen(true)}
+            className="md:hidden flex items-center justify-center w-9 h-9 bg-sunken border border-border-default text-text-secondary rounded-xl cursor-pointer"
+            aria-label="Open question palette"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-9 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        <div className="md:col-span-8 lg:col-span-9 bg-surface border border-border-default rounded-2xl p-6 flex flex-col gap-6">
           {currentQuestion ? (
             <>
-              <p className="text-sm text-slate-100 font-semibold leading-relaxed whitespace-pre-wrap">{currentQuestion.questionText}</p>
+              <p className="text-sm text-text-primary font-semibold leading-relaxed whitespace-pre-wrap">{currentQuestion.questionText}</p>
 
               <div className="grid grid-cols-1 gap-3">
                 {currentQuestion.options.map((opt) => {
@@ -238,87 +289,104 @@ export default function McqTestRunner({ attemptId, onSubmitted }) {
                       onClick={() => selectOption(opt.label)}
                       className={`text-left flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer ${
                         selected
-                          ? 'border-accent-500 bg-accent-950/30'
-                          : 'border-slate-800 hover:border-slate-700 bg-slate-950/40'
+                          ? 'border-brand bg-accent-soft-bg'
+                          : 'border-border-default hover:border-text-tertiary bg-sunken/60'
                       }`}
                     >
-                      <span className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-[11px] font-bold ${selected ? 'border-accent-500 bg-accent-600 text-white' : 'border-slate-600 text-slate-400'}`}>
+                      <span className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-[11px] font-bold ${selected ? 'border-brand bg-brand text-text-on-accent' : 'border-border-default text-text-tertiary'}`}>
                         {opt.label}
                       </span>
-                      <span className="text-xs text-slate-200 leading-relaxed pt-0.5">{opt.text}</span>
+                      <span className="text-xs text-text-secondary leading-relaxed pt-0.5">{opt.text}</span>
                     </button>
                   );
                 })}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800">
-                <button onClick={() => goToQuestion(Math.max(1, currentOrder - 1))} disabled={currentOrder <= 1} className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 rounded-lg text-xs font-bold cursor-pointer">
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider">How confident are you in this answer?</span>
+                <div className="flex flex-wrap gap-2">
+                  {CONFIDENCE_OPTIONS.map(({ tag, label }) => {
+                    const active = currentMeta.confidenceTag === tag;
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => selectConfidence(tag)}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer transition-all border ${
+                          active
+                            ? 'border-brand bg-brand text-text-on-accent'
+                            : 'border-border-default bg-sunken text-text-secondary hover:border-text-tertiary'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border-default">
+                <button onClick={() => goToQuestion(Math.max(1, currentOrder - 1))} disabled={currentOrder <= 1} className="px-3 py-2 bg-sunken hover:bg-surface-raised disabled:opacity-40 text-text-secondary rounded-lg text-xs font-bold cursor-pointer">
                   ‹ Previous
                 </button>
-                <button onClick={handleClear} className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold cursor-pointer">
+                <button onClick={handleClear} className="px-3 py-2 bg-sunken hover:bg-surface-raised text-text-secondary rounded-lg text-xs font-bold cursor-pointer">
                   Clear Response
                 </button>
-                <button onClick={handleMarkAndNext} className="px-3 py-2 bg-violet-700 hover:bg-violet-600 text-white rounded-lg text-xs font-bold cursor-pointer">
+                <button onClick={handleMarkAndNext} className="px-3 py-2 bg-status-info-text hover:opacity-90 text-white rounded-lg text-xs font-bold cursor-pointer">
                   Mark for Review & Next
                 </button>
-                <button onClick={handleSaveAndNext} className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold cursor-pointer ml-auto">
+                <button onClick={handleSaveAndNext} className="px-3 py-2 bg-brand hover:bg-brand-hover text-text-on-accent rounded-lg text-xs font-bold cursor-pointer ml-auto">
                   Save & Next ›
                 </button>
               </div>
             </>
           ) : (
-            <p className="text-sm text-slate-500">Question not found.</p>
+            <p className="text-sm text-text-tertiary">Question not found.</p>
           )}
         </div>
 
-        <div className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
-            <div className="bg-emerald-950/30 border border-emerald-900/40 text-emerald-400 rounded-lg px-2 py-1.5 text-center">Answered: {counts.answered}</div>
-            <div className="bg-rose-950/30 border border-rose-900/40 text-rose-400 rounded-lg px-2 py-1.5 text-center">Not Answered: {counts.notAnswered}</div>
-            <div className="bg-violet-950/30 border border-violet-900/40 text-violet-400 rounded-lg px-2 py-1.5 text-center">Marked: {counts.marked}</div>
-            <div className="bg-slate-800 border border-slate-700 text-slate-400 rounded-lg px-2 py-1.5 text-center">Not Visited: {counts.notVisited}</div>
-          </div>
-
-          <div className="grid grid-cols-5 gap-2 overflow-y-auto max-h-[420px] pr-1">
-            {questions.map((q) => {
-              const status = (responsesMeta[q.order] || {}).status || 'not-visited';
-              return (
-                <button
-                  key={q.order}
-                  onClick={() => goToQuestion(q.order)}
-                  className={`w-9 h-9 rounded-lg text-xs font-bold flex items-center justify-center cursor-pointer transition-all ${STATUS_COLORS[status]} ${q.order === currentOrder ? 'ring-2 ring-accent-400 ring-offset-1 ring-offset-slate-900' : ''}`}
-                >
-                  {q.order}
-                </button>
-              );
-            })}
-          </div>
-
+        <div className="hidden md:flex md:col-span-4 lg:col-span-3 bg-surface border border-border-default rounded-2xl p-5 flex-col gap-4">
+          <CountTiles />
+          <PaletteGrid />
           <button
             onClick={() => setShowSubmitConfirm(true)}
-            className="w-full py-2.5 bg-accent-600 hover:bg-accent-500 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer mt-auto"
+            className="w-full py-2.5 bg-brand hover:bg-brand-hover text-text-on-accent rounded-xl text-xs font-bold transition shadow-sm cursor-pointer mt-auto"
           >
             Submit Test
           </button>
         </div>
       </div>
 
-      {showSubmitConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm px-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5">
-            <h3 className="text-base font-extrabold text-slate-100">Submit Test?</h3>
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
-              <div className="bg-emerald-950/30 border border-emerald-900/40 text-emerald-400 rounded-lg px-2 py-2 text-center">Answered: {counts.answered}</div>
-              <div className="bg-rose-950/30 border border-rose-900/40 text-rose-400 rounded-lg px-2 py-2 text-center">Not Answered: {counts.notAnswered}</div>
-              <div className="bg-violet-950/30 border border-violet-900/40 text-violet-400 rounded-lg px-2 py-2 text-center">Marked: {counts.marked}</div>
-              <div className="bg-slate-800 border border-slate-700 text-slate-400 rounded-lg px-2 py-2 text-center">Not Visited: {counts.notVisited}</div>
+      {paletteOpen && (
+        <div className="fixed inset-0 z-50 flex items-end md:hidden bg-page/70 backdrop-blur-sm" onClick={() => setPaletteOpen(false)}>
+          <div className="bg-surface border-t border-border-default rounded-t-2xl w-full p-5 shadow-2xl space-y-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-extrabold text-text-primary">Question Palette</h3>
+              <button onClick={() => setPaletteOpen(false)} className="text-text-tertiary text-xs font-bold cursor-pointer">Close</button>
             </div>
-            <p className="text-xs text-slate-400">Once submitted, you cannot resume this attempt.</p>
+            <CountTiles dense />
+            <PaletteGrid />
+            <button
+              onClick={() => { setPaletteOpen(false); setShowSubmitConfirm(true); }}
+              className="w-full py-2.5 bg-brand hover:bg-brand-hover text-text-on-accent rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+            >
+              Submit Test
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showSubmitConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-page/70 backdrop-blur-sm px-4">
+          <div className="bg-surface border border-border-default rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5">
+            <h3 className="text-base font-extrabold text-text-primary">Submit Test?</h3>
+            <CountTiles dense />
+            <p className="text-xs text-text-tertiary">Once submitted, you cannot resume this attempt.</p>
             <div className="flex items-center gap-3">
-              <button onClick={() => setShowSubmitConfirm(false)} className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">
+              <button onClick={() => setShowSubmitConfirm(false)} className="flex-1 py-2.5 bg-sunken hover:bg-surface-raised text-text-secondary rounded-xl text-xs font-bold cursor-pointer">
                 Continue Test
               </button>
-              <button onClick={() => handleSubmit(false)} disabled={submitting} className="flex-1 py-2.5 bg-accent-600 hover:bg-accent-500 disabled:bg-accent-900 text-white rounded-xl text-xs font-bold cursor-pointer">
+              <button onClick={() => handleSubmit(false)} disabled={submitting} className="flex-1 py-2.5 bg-brand hover:bg-brand-hover disabled:opacity-50 text-text-on-accent rounded-xl text-xs font-bold cursor-pointer">
                 {submitting ? 'Submitting...' : 'Yes, Submit Test'}
               </button>
             </div>

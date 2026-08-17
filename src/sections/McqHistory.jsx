@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import LoadingSpinner from '../components/LoadingSpinner';
+import Button from '../components/Button';
 
-const TOPIC_LINE_COLORS = ['#f59e0b', '#ec4899', '#22d3ee'];
+const TOPIC_LINE_COLORS = ['var(--color-status-warning-text)', 'var(--color-status-info-text)', 'var(--color-status-success-text)'];
 
 export default function McqHistory({ onBack, onViewAttempt }) {
   const [history, setHistory] = useState([]);
@@ -60,7 +61,7 @@ export default function McqHistory({ onBack, onViewAttempt }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-73px)] bg-slate-950">
+      <div className="flex items-center justify-center min-h-[calc(100vh-73px)] bg-page">
         <LoadingSpinner text="Loading your attempt history..." />
       </div>
     );
@@ -68,36 +69,34 @@ export default function McqHistory({ onBack, onViewAttempt }) {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-6 py-10 flex flex-col gap-6">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-5">
+      <div className="flex items-center justify-between border-b border-border-default pb-5">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-100 tracking-tight">My MCQ History</h1>
-          <p className="text-slate-400 text-sm mt-1 font-medium">Track your progress across all attempts.</p>
+          <h1 className="text-2xl font-display font-extrabold text-text-primary tracking-tight">My MCQ History</h1>
+          <p className="text-text-tertiary text-sm mt-1 font-medium">Track your progress across all attempts.</p>
         </div>
-        <button onClick={onBack} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer">
-          Back to Tests
-        </button>
+        <Button variant="secondary" size="sm" onClick={onBack}>Back to Tests</Button>
       </div>
 
-      {error && <div className="p-4 bg-rose-950/20 border border-rose-900/40 rounded-xl text-rose-400 text-sm font-semibold">{error}</div>}
+      {error && <div className="p-4 bg-status-danger-bg border border-status-danger-text/30 rounded-xl text-status-danger-text text-sm font-semibold">{error}</div>}
 
       {!error && history.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-16 text-center text-slate-500">
+        <div className="bg-surface border border-border-default rounded-2xl p-16 text-center text-text-tertiary">
           You haven't completed any MCQ tests yet.
         </div>
       ) : (
         <>
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <h2 className="text-sm font-extrabold text-slate-100 mb-1">Progress Over Time</h2>
-            <p className="text-[11px] text-slate-500 mb-4">Overall accuracy, plus your 3 weakest topics from your latest attempt.</p>
+          <div className="bg-surface border border-border-default rounded-2xl p-6">
+            <h2 className="text-sm font-extrabold text-text-primary mb-1">Progress Over Time</h2>
+            <p className="text-[11px] text-text-tertiary mb-4">Overall accuracy, plus your 3 weakest topics from your latest attempt.</p>
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="label" stroke="#64748b" fontSize={10} />
-                  <YAxis domain={[0, 100]} stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, fontSize: 11 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
+                  <XAxis dataKey="label" stroke="var(--color-text-tertiary)" fontSize={10} />
+                  <YAxis domain={[0, 100]} stroke="var(--color-text-tertiary)" fontSize={10} />
+                  <Tooltip contentStyle={{ background: 'var(--color-surface-raised)', border: '1px solid var(--color-border-default)', borderRadius: 8, fontSize: 11, color: 'var(--color-text-primary)' }} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Line type="monotone" dataKey="overall" name="Overall Accuracy" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="overall" name="Overall Accuracy" stroke="var(--color-brand)" strokeWidth={2.5} dot={{ r: 3 }} />
                   {topTopics.map((topic, i) => (
                     <Line key={topic} type="monotone" dataKey={topic} name={topic} stroke={TOPIC_LINE_COLORS[i % TOPIC_LINE_COLORS.length]} strokeWidth={1.5} dot={{ r: 2 }} connectNulls />
                   ))}
@@ -107,34 +106,34 @@ export default function McqHistory({ onBack, onViewAttempt }) {
 
             {improvement && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                <div className="p-3 bg-emerald-950/20 border border-emerald-900/30 rounded-xl text-[11px]">
-                  <span className="font-bold text-emerald-400">Most Improved: </span>
-                  <span className="text-slate-300">{improvement.most.topic} ({improvement.most.delta >= 0 ? '+' : ''}{improvement.most.delta}%)</span>
+                <div className="p-3 bg-status-success-bg border border-status-success-text/30 rounded-xl text-[11px]">
+                  <span className="font-bold text-status-success-text">Most Improved: </span>
+                  <span className="text-text-secondary">{improvement.most.topic} ({improvement.most.delta >= 0 ? '+' : ''}{improvement.most.delta}%)</span>
                 </div>
-                <div className="p-3 bg-rose-950/20 border border-rose-900/30 rounded-xl text-[11px]">
-                  <span className="font-bold text-rose-400">Most Regressed: </span>
-                  <span className="text-slate-300">{improvement.least.topic} ({improvement.least.delta >= 0 ? '+' : ''}{improvement.least.delta}%)</span>
+                <div className="p-3 bg-status-danger-bg border border-status-danger-text/30 rounded-xl text-[11px]">
+                  <span className="font-bold text-status-danger-text">Most Regressed: </span>
+                  <span className="text-text-secondary">{improvement.least.topic} ({improvement.least.delta >= 0 ? '+' : ''}{improvement.least.delta}%)</span>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <h2 className="text-sm font-extrabold text-slate-100 mb-4">All Attempts</h2>
+          <div className="bg-surface border border-border-default rounded-2xl p-6">
+            <h2 className="text-sm font-extrabold text-text-primary mb-4">All Attempts</h2>
             <div className="space-y-2">
               {[...history].reverse().map((h) => (
                 <button
                   key={h.attemptId}
                   onClick={() => onViewAttempt(h.attemptId)}
-                  className="w-full flex items-center justify-between gap-3 p-3 bg-slate-950/40 hover:bg-slate-950/70 border border-slate-800 hover:border-accent-600/50 rounded-xl text-left transition cursor-pointer"
+                  className="w-full flex items-center justify-between gap-3 p-3 bg-sunken hover:bg-surface-raised border border-border-default hover:border-brand/50 rounded-xl text-left transition cursor-pointer"
                 >
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-100 truncate">{h.testTitle}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">{new Date(h.submittedAt).toLocaleString()} · {h.subject}</p>
+                    <p className="text-xs font-bold text-text-primary truncate">{h.testTitle}</p>
+                    <p className="text-[10px] text-text-tertiary mt-0.5">{new Date(h.submittedAt).toLocaleString()} · {h.subject}</p>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 text-right">
-                    <span className="text-xs font-bold text-accent-400">{h.totalMarksObtained}/{h.totalMarks}</span>
-                    <span className="text-[10px] text-slate-400">{h.accuracyPercent}%</span>
+                    <span className="text-xs font-bold text-brand">{h.totalMarksObtained}/{h.totalMarks}</span>
+                    <span className="text-[10px] text-text-tertiary">{h.accuracyPercent}%</span>
                   </div>
                 </button>
               ))}

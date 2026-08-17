@@ -68,6 +68,8 @@
   --status-warning-text: #b45309;
   --status-danger-bg: #fef2f2;
   --status-danger-text: #b91c1c;
+  --status-info-bg: #eef2ff;
+  --status-info-text: #4338ca;
 }
 
 /* Semantic tokens — dark mode overrides */
@@ -96,6 +98,8 @@
   --status-warning-text: #fbbf24;
   --status-danger-bg: rgba(239, 68, 68, 0.12);
   --status-danger-text: #f87171;
+  --status-info-bg: rgba(129, 140, 248, 0.12);
+  --status-info-text: #a5b4fc;
 }
 
 /* Bridge semantic tokens into Tailwind's color namespace (requires `inline`
@@ -113,12 +117,16 @@
   --color-text-on-accent: var(--text-on-accent);
   --color-brand: var(--accent);
   --color-brand-hover: var(--accent-hover);
+  --color-accent-soft-bg: var(--accent-soft-bg);
+  --color-accent-soft-border: var(--accent-soft-border);
   --color-status-success-bg: var(--status-success-bg);
   --color-status-success-text: var(--status-success-text);
   --color-status-warning-bg: var(--status-warning-bg);
   --color-status-warning-text: var(--status-warning-text);
   --color-status-danger-bg: var(--status-danger-bg);
   --color-status-danger-text: var(--status-danger-text);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-info-text: var(--status-info-text);
 }
 
 body {
