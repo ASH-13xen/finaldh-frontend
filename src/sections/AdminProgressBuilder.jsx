@@ -87,16 +87,19 @@ function OverviewView({ onStart, onJumpToPyqs }) {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {f.state === 'not_started' && (
-                      <button onClick={() => onStart(sel)} className={smallBtn + ' !bg-brand !text-text-on-accent !border-0'}>Start</button>
+                      <button onClick={() => onStart(sel)} className={smallBtn + ' bg-brand! text-text-on-accent! border-0!'}>Start</button>
                     )}
                     {f.state === 'draft' && (
                       <>
-                        <button onClick={() => onStart(sel)} className={smallBtn + ' !bg-brand !text-text-on-accent !border-0'}>Resume</button>
+                        <button onClick={() => onStart(sel)} className={smallBtn + ' bg-brand! text-text-on-accent! border-0!'}>Resume</button>
                         <button onClick={() => handleDeleteDraft(f.draftId)} className={smallDangerBtn}>Delete</button>
                       </>
                     )}
                     {f.state === 'pyqs_pending' && (
-                      <button onClick={() => onJumpToPyqs(sel)} className={smallBtn + ' !bg-brand !text-text-on-accent !border-0'}>Add PYQs</button>
+                      <>
+                        <button onClick={() => onStart(sel)} className={smallBtn}>Edit Topics/Questions</button>
+                        <button onClick={() => onJumpToPyqs(sel)} className={smallBtn + ' bg-brand! text-text-on-accent! border-0!'}>Add PYQs</button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -178,7 +181,7 @@ function DraftTopicCard({ topic, isFirst, isLast, onUpdateName, onMoveTopic, onD
           placeholder="Page #"
           className="w-full md:w-20 bg-surface border border-border-default focus:border-brand text-text-primary rounded-lg px-3 py-1.5 text-xs shrink-0"
         />
-        <button onClick={handleAdd} disabled={!newText.trim() || !newPage} className={smallBtn + ' !bg-brand !text-text-on-accent !border-0 disabled:opacity-40'}>Add Question</button>
+        <button onClick={handleAdd} disabled={!newText.trim() || !newPage} className={smallBtn + ' bg-brand! text-text-on-accent! border-0! disabled:opacity-40'}>Add Question</button>
       </div>
     </div>
   );
@@ -187,6 +190,7 @@ function DraftTopicCard({ topic, isFirst, isLast, onUpdateName, onMoveTopic, onD
 function TopicQuestionBuilderView({ courseId, fileIndex, courseName, fileName, onBack, onSaved }) {
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [existingTopics, setExistingTopics] = useState([]);
   const [newTopicName, setNewTopicName] = useState('');
   const [saveState, setSaveState] = useState('idle'); // idle | pending | saving | saved | error
   const [committing, setCommitting] = useState(false);
@@ -212,6 +216,22 @@ function TopicQuestionBuilderView({ courseId, fileIndex, courseName, fileName, o
     };
     load();
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [courseId, fileIndex]);
+
+  // Topics/questions already committed for this file (e.g. from an earlier session that
+  // finished step 1 and moved on) - shown read-only so re-entering this step never looks
+  // like prior work vanished. New additions below are still safely additive on commit.
+  useEffect(() => {
+    const loadExisting = async () => {
+      try {
+        const res = await authedFetch(`/api/progress/topics?courseId=${courseId}&fileIndex=${fileIndex}`);
+        const data = await res.json();
+        if (res.ok) setExistingTopics(data.topics || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadExisting();
   }, [courseId, fileIndex]);
 
   useEffect(() => {
@@ -276,7 +296,11 @@ function TopicQuestionBuilderView({ courseId, fileIndex, courseName, fileName, o
   };
 
   const handleSaveAndContinue = async () => {
-    if (topics.length === 0) { setError('Add at least one topic.'); return; }
+    if (topics.length === 0) {
+      if (existingTopics.length > 0) { onSaved(); return; } // nothing new to add, already-committed topics are enough
+      setError('Add at least one topic.');
+      return;
+    }
     for (const t of topics) {
       if (!t.name.trim()) { setError('Every topic needs a name.'); return; }
       if (t.questions.length === 0) { setError(`Topic "${t.name}" needs at least one question.`); return; }
@@ -327,6 +351,23 @@ function TopicQuestionBuilderView({ courseId, fileIndex, courseName, fileName, o
         <p className="text-xs text-text-tertiary">Loading draft...</p>
       ) : (
         <>
+          {existingTopics.length > 0 && (
+            <div className="bg-sunken border border-border-default rounded-2xl p-5 space-y-2">
+              <h3 className="text-[11px] font-bold text-text-secondary uppercase tracking-wide">
+                Already saved to this file ({existingTopics.length} topic{existingTopics.length === 1 ? '' : 's'})
+              </h3>
+              <div className="space-y-1">
+                {existingTopics.map((t) => (
+                  <p key={t._id} className="text-xs text-text-primary">
+                    <span className="font-bold">{t.name}</span>{' '}
+                    <span className="text-text-tertiary">— {t.questions.length} question{t.questions.length === 1 ? '' : 's'}</span>
+                  </p>
+                ))}
+              </div>
+              <p className="text-[10px] text-text-tertiary">To rename, reorder, or delete these, use Progress Data → Manage Topics & Questions. Anything you add below is appended safely alongside these.</p>
+            </div>
+          )}
+
           {topics.map((topic, idx) => (
             <DraftTopicCard
               key={topic.tempId}
@@ -356,8 +397,8 @@ function TopicQuestionBuilderView({ courseId, fileIndex, courseName, fileName, o
 
           {error && <div className="p-3 bg-status-danger-bg border border-status-danger-text/25 rounded-xl text-status-danger-text text-xs font-semibold">{error}</div>}
 
-          <button onClick={handleSaveAndContinue} disabled={committing || topics.length === 0} className={primaryBtn}>
-            {committing ? 'Saving...' : 'Save & Continue to PYQs →'}
+          <button onClick={handleSaveAndContinue} disabled={committing || (topics.length === 0 && existingTopics.length === 0)} className={primaryBtn}>
+            {committing ? 'Saving...' : topics.length === 0 ? 'Continue to PYQs →' : 'Save & Continue to PYQs →'}
           </button>
         </>
       )}
@@ -367,7 +408,7 @@ function TopicQuestionBuilderView({ courseId, fileIndex, courseName, fileName, o
 
 // ================= Step 2: paste PYQs, Gemini sorts + auto-commits =================
 
-function PyqPasteView({ courseId, fileIndex, courseName, fileName, onDone, onBack }) {
+function PyqPasteView({ courseId, fileIndex, courseName, fileName, onDone, onBack, onBackToBuilder }) {
   const [blocks, setBlocks] = useState(['']);
   const [starting, setStarting] = useState(false);
   const [job, setJob] = useState(null);
@@ -431,7 +472,10 @@ function PyqPasteView({ courseId, fileIndex, courseName, fileName, onDone, onBac
   return (
     <div className="space-y-6">
       <div>
-        <button onClick={onBack} className={smallBtn + ' mb-2'}>← Back to Overview</button>
+        <div className="flex items-center gap-2 mb-2">
+          <button onClick={onBack} className={smallBtn}>← Back to Overview</button>
+          <button onClick={onBackToBuilder} className={smallBtn}>← Back to Topics & Questions</button>
+        </div>
         <h2 className="text-sm font-bold text-text-primary">{courseName} — {fileName}</h2>
         <p className="text-[11px] text-text-secondary mt-0.5">Step 2 of 2: paste PYQ text. Gemini extracts each question's year, classifies it against this file's topics, and saves it directly — the progress section goes live automatically once done.</p>
       </div>
@@ -536,7 +580,7 @@ export default function AdminProgressBuilder() {
         <TopicQuestionBuilderView {...selection} onBack={backToOverview} onSaved={() => goToPyqs(selection)} />
       )}
       {view === 'pyq' && selection && (
-        <PyqPasteView {...selection} onBack={backToOverview} onDone={backToOverview} />
+        <PyqPasteView {...selection} onBack={backToOverview} onDone={backToOverview} onBackToBuilder={() => goToBuilder(selection)} />
       )}
     </div>
   );
