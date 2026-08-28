@@ -9,6 +9,8 @@ const KNOWN_TABS = [
   'manage_courses',
   'pyqs',
   'upsc_questions',
+  'toppers_copy',
+  'admin_toppers_copy',
   'buy_pdfs',
   'upload_course',
   'pyq_recommender',
