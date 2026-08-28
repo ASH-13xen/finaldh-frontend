@@ -5,6 +5,7 @@ import McqInstructions from './McqInstructions';
 import McqTestRunner from './McqTestRunner';
 import McqAnalyzer from './McqAnalyzer';
 import McqHistory from './McqHistory';
+import QuizFlow from './quiz/QuizFlow';
 
 // Owns the subject -> test list -> instructions -> runner -> analyzer/history flow as plain
 // local state, mirroring how DashboardSection already tracks PYQRecommender's selected course.
@@ -66,9 +67,15 @@ export default function McqFlow({ user }) {
     );
   }
 
+  // Geography practice quiz — reached from the "Practice" card on the subjects landing.
+  if (screen === 'quizPractice') {
+    return <QuizFlow onExitToMcq={() => setScreen('subjects')} />;
+  }
+
   return (
     <McqSubjectsLanding
       onSelectSubject={(subject) => { setSelectedSubject(subject); setScreen('testList'); }}
+      onSelectPractice={() => setScreen('quizPractice')}
       onViewHistory={() => setScreen('history')}
     />
   );
