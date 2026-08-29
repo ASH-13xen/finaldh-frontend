@@ -15,6 +15,7 @@ export default function McqFlow({ user }) {
   const [screen, setScreen] = useState('subjects');
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [selectedTest, setSelectedTest] = useState(null);
+  const [selectedBankSubject, setSelectedBankSubject] = useState(null);
   const [activeAttemptId, setActiveAttemptId] = useState(null);
 
   if (screen === 'testList' && selectedSubject) {
@@ -67,15 +68,15 @@ export default function McqFlow({ user }) {
     );
   }
 
-  // Geography practice quiz — reached from the "Practice" card on the subjects landing.
-  if (screen === 'quizPractice') {
-    return <QuizFlow onExitToMcq={() => setScreen('subjects')} />;
+  // Question Bank practice — reached from a bank card on the subjects landing.
+  if (screen === 'quizPractice' && selectedBankSubject) {
+    return <QuizFlow subject={selectedBankSubject} onExitToMcq={() => { setSelectedBankSubject(null); setScreen('subjects'); }} />;
   }
 
   return (
     <McqSubjectsLanding
       onSelectSubject={(subject) => { setSelectedSubject(subject); setScreen('testList'); }}
-      onSelectPractice={() => setScreen('quizPractice')}
+      onSelectBank={(subject) => { setSelectedBankSubject(subject); setScreen('quizPractice'); }}
       onViewHistory={() => setScreen('history')}
     />
   );

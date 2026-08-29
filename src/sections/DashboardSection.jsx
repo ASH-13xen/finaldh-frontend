@@ -17,6 +17,7 @@ import AdminProgressData from './AdminProgressData';
 import AdminProgressBuilder from './AdminProgressBuilder';
 import ProgressSection from './ProgressSection';
 import AdminMcqData from './AdminMcqData';
+import AdminQuestionBanks from './AdminQuestionBanks';
 import McqFlow from './McqFlow';
 import AdminView from './AdminView';
 import AdminContactUsers from './AdminContactUsers';
@@ -144,6 +145,10 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'admin_mcq_data' && (
           <AdminMcqData />
+        )}
+
+        {activeTab === 'admin_question_banks' && (
+          <AdminQuestionBanks />
         )}
       </ErrorBoundary>
       </main>

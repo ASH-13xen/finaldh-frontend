@@ -62,7 +62,7 @@ export default function QuizSummary({ attemptId, onRetake, onBackToList }) {
         <div>
           <p className="text-lg font-bold text-text-primary">{attempt.totalCorrect} / {attempt.totalQuestions} correct</p>
           <p className="text-sm text-text-tertiary mt-1">
-            {attempt.hintsUsed || 0} hint{(attempt.hintsUsed || 0) === 1 ? '' : 's'} used
+            {attempt.totalAnswered ?? attempt.totalCorrect} of {attempt.totalQuestions} attempted
           </p>
           <div className="flex gap-2 mt-4">
             <button

@@ -37,11 +37,11 @@ const OPTIONAL_NAMES = {
   OptionalSubjectZoology: 'Optional: Zoology'
 };
 
-export default function McqSubjectsLanding({ onSelectSubject, onSelectPractice, onViewHistory }) {
+export default function McqSubjectsLanding({ onSelectSubject, onSelectBank, onViewHistory }) {
   const [subjects, setSubjects] = useState([]);
+  const [banks, setBanks] = useState([]); // published Question Banks from /api/question-banks
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [practiceMeta, setPracticeMeta] = useState(null); // { total, topics } from /api/quiz/topics
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -60,20 +60,18 @@ export default function McqSubjectsLanding({ onSelectSubject, onSelectPractice, 
         setLoading(false);
       }
     };
-    // The Geography practice pool — optional; the card still shows if this fails.
-    const fetchPractice = async () => {
+    // Published Question Banks — optional; the rest of the page still renders if this fails.
+    const fetchBanks = async () => {
       try {
-        const res = await fetch('/api/quiz/topics?subject=Geography', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch('/api/question-banks', { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) return;
         const data = await res.json();
-        if (data.total > 0) setPracticeMeta({ total: data.total, topics: (data.topics || []).length });
-      } catch { /* ignore — card renders without counts */ }
+        setBanks(data.banks || []);
+      } catch { /* ignore */ }
     };
     fetchSubjects();
-    if (onSelectPractice) fetchPractice();
-  }, [onSelectPractice]);
+    if (onSelectBank) fetchBanks();
+  }, [onSelectBank]);
 
   const displayName = (subject) => SUBJECT_NAMES[subject] || OPTIONAL_NAMES[subject] || subject;
 
@@ -104,27 +102,31 @@ export default function McqSubjectsLanding({ onSelectSubject, onSelectPractice, 
         <div className="p-4 bg-status-danger-bg border border-status-danger-text/30 rounded-xl text-status-danger-text text-sm font-semibold">{error}</div>
       )}
 
-      {onSelectPractice && (
-        <button
-          onClick={onSelectPractice}
-          className="w-full text-left bg-accent-soft-bg border border-accent-soft-border rounded-2xl p-6 flex items-center justify-between gap-4 hover:border-brand transition-colors cursor-pointer group"
-        >
-          <div>
-            <span className="text-[9px] font-bold text-brand uppercase tracking-wide">Practice · untimed</span>
-            <h3 className="font-bold text-lg text-text-primary mt-1">Geography — Question Bank</h3>
-            <p className="text-xs text-text-secondary mt-1">
-              {practiceMeta
-                ? `${practiceMeta.total.toLocaleString()} questions · ${practiceMeta.topics} topics · learn by topic, random test, or all`
-                : 'Learn by topic, take a random test, or work through every question'}
-            </p>
-          </div>
-          <span className="w-9 h-9 rounded-lg bg-surface border border-accent-soft-border flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-text-on-accent transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
-          </span>
-        </button>
+      {onSelectBank && banks.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Question banks · practice, untimed</p>
+          {banks.map((bank) => (
+            <button
+              key={bank.subject}
+              onClick={() => onSelectBank(bank.subject)}
+              className="w-full text-left bg-accent-soft-bg border border-accent-soft-border rounded-2xl p-6 flex items-center justify-between gap-4 hover:border-brand transition-colors cursor-pointer group"
+            >
+              <div>
+                <span className="text-[9px] font-bold text-brand uppercase tracking-wide">Practice · untimed</span>
+                <h3 className="font-bold text-lg text-text-primary mt-1">{bank.title}</h3>
+                <p className="text-xs text-text-secondary mt-1">
+                  {bank.total.toLocaleString()} questions · {bank.topicCount} topics · learn by topic, random test, or all
+                </p>
+              </div>
+              <span className="w-9 h-9 rounded-lg bg-surface border border-accent-soft-border flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-text-on-accent transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+              </span>
+            </button>
+          ))}
+        </div>
       )}
 
-      {!error && subjects.length === 0 && !onSelectPractice && (
+      {!error && subjects.length === 0 && banks.length === 0 && (
         <div className="bg-surface border border-border-default rounded-2xl p-16 text-center text-text-tertiary">
           No MCQ tests have been published yet. Check back soon.
         </div>

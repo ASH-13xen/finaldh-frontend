@@ -73,6 +73,12 @@ const getNavLinks = (user) => {
         label: <><span className="hidden sm:inline">Manage </span>MCQ</>
       },
       {
+        key: 'question_banks',
+        target: 'admin_question_banks',
+        match: (t) => t === 'admin_question_banks',
+        label: <><span className="hidden sm:inline">Question </span>Banks</>
+      },
+      {
         key: 'requests',
         target: 'admin_purchases',
         match: (t) => t === 'admin_purchases',
