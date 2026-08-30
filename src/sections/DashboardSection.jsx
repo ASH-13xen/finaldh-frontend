@@ -18,6 +18,8 @@ import AdminProgressBuilder from './AdminProgressBuilder';
 import ProgressSection from './ProgressSection';
 import AdminMcqData from './AdminMcqData';
 import AdminQuestionBanks from './AdminQuestionBanks';
+import ToppersCopy from './ToppersCopy';
+import AdminToppersCopy from './AdminToppersCopy';
 import McqFlow from './McqFlow';
 import AdminView from './AdminView';
 import AdminContactUsers from './AdminContactUsers';
@@ -90,6 +92,14 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'upsc_questions' && (
           <DisplayUPSCQuestions />
+        )}
+
+        {activeTab === 'toppers_copy' && (
+          <ToppersCopy />
+        )}
+
+        {activeTab === 'admin_toppers_copy' && (
+          <AdminToppersCopy />
         )}
 
         {activeTab === 'buy_pdfs' && (
