@@ -279,6 +279,14 @@ export default function McqTestRunner({ attemptId, onSubmitted }) {
             <>
               <p className="text-sm text-text-primary font-semibold leading-relaxed whitespace-pre-wrap">{currentQuestion.questionText}</p>
 
+              {currentQuestion.statements?.length > 0 && (
+                <ul className="flex flex-col gap-1.5 pl-1 border-l-2 border-border-default">
+                  {currentQuestion.statements.map((s, i) => (
+                    <li key={i} className="text-xs text-text-secondary leading-relaxed pl-3 whitespace-pre-wrap">{s}</li>
+                  ))}
+                </ul>
+              )}
+
               <div className="grid grid-cols-1 gap-3">
                 {currentQuestion.options.map((opt) => {
                   const selected = currentMeta.selectedOption === opt.label;

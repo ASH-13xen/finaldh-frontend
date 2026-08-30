@@ -367,7 +367,7 @@ function UploadQuestionsTab({ tests, loadingTests }) {
     <div className="bg-surface border border-border-default rounded-2xl p-6 shadow-sm">
       <h2 className="text-sm font-extrabold text-text-primary mb-1">Upload Questions (CSV)</h2>
       <p className="text-xs text-text-tertiary mb-1">
-        CSV columns required: <span className="font-bold text-text-secondary">order</span>, <span className="font-bold text-text-secondary">question text</span>, <span className="font-bold text-text-secondary">option a-d</span>, <span className="font-bold text-text-secondary">correct option</span> (A-D). Optional: <span className="font-bold text-text-secondary">explanation</span>, <span className="font-bold text-text-secondary">difficulty</span> (Easy/Medium/Hard), <span className="font-bold text-text-secondary">marks</span>, <span className="font-bold text-text-secondary">tags</span> (syllabus section/topic names, semicolon-separated).
+        CSV columns required: <span className="font-bold text-text-secondary">order</span>, <span className="font-bold text-text-secondary">question text</span>, <span className="font-bold text-text-secondary">option a-d</span>, <span className="font-bold text-text-secondary">correct option</span> (A-D). Optional: <span className="font-bold text-text-secondary">explanation</span>, <span className="font-bold text-text-secondary">statements</span> (pipe <code>|</code> separated), <span className="font-bold text-text-secondary">difficulty</span> (Easy/Medium/Hard), <span className="font-bold text-text-secondary">marks</span>, <span className="font-bold text-text-secondary">tags</span> (syllabus section/topic names, semicolon-separated).
       </p>
       <p className="text-[11px] text-status-warning-text font-semibold mb-5">Uploading replaces all existing questions for the selected test.</p>
 
@@ -413,6 +413,133 @@ function UploadQuestionsTab({ tests, loadingTests }) {
   );
 }
 
+const FIELD_CLS = 'w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-3 py-2 text-xs font-semibold transition-all';
+
+// One row in the "Questions in this Test" list: collapsed summary, or an inline edit form.
+function EditableQuestionRow({ testId, question, onSaved, onDeleted }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const [questionText, setQuestionText] = useState(question.questionText);
+  const [statements, setStatements] = useState((question.statements || []).join('\n'));
+  const [optionTexts, setOptionTexts] = useState(['A', 'B', 'C', 'D'].map(l => question.options.find(o => o.label === l)?.text || ''));
+  const [correctOption, setCorrectOption] = useState(question.correctOption);
+  const [difficulty, setDifficulty] = useState(question.difficulty || 'Medium');
+  const [questionType, setQuestionType] = useState(question.questionType || 'conceptual');
+  const [examSource, setExamSource] = useState(question.examSource || '');
+  const [explanation, setExplanation] = useState(question.explanation || '');
+
+  const resetFromQuestion = () => {
+    setQuestionText(question.questionText);
+    setStatements((question.statements || []).join('\n'));
+    setOptionTexts(['A', 'B', 'C', 'D'].map(l => question.options.find(o => o.label === l)?.text || ''));
+    setCorrectOption(question.correctOption);
+    setDifficulty(question.difficulty || 'Medium');
+    setQuestionType(question.questionType || 'conceptual');
+    setExamSource(question.examSource || '');
+    setExplanation(question.explanation || '');
+    setErr('');
+  };
+
+  const handleSave = async () => {
+    if (!questionText.trim()) { setErr('Question text is required.'); return; }
+    if (optionTexts.some(t => !t.trim())) { setErr('All 4 options are required.'); return; }
+    setSaving(true);
+    setErr('');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/mcq/admin/tests/${testId}/questions/${question._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          questionText: questionText.trim(),
+          statements: statements.split('\n').map(s => s.trim()).filter(Boolean),
+          options: ['A', 'B', 'C', 'D'].map((label, i) => ({ label, text: optionTexts[i].trim() })),
+          correctOption,
+          difficulty,
+          questionType,
+          examSource: examSource.trim(),
+          explanation: explanation.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save');
+      setEditing(false);
+      onSaved(data.question);
+    } catch (e) {
+      setErr(e.message || 'Failed to save.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <div className="flex items-start justify-between gap-3 p-3 bg-sunken border border-border-default rounded-xl">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-text-primary">Q{question.order}. {question.questionText}</p>
+          <p className="text-[10px] text-text-tertiary mt-1">
+            Correct: {question.correctOption} · {question.difficulty} · {question.questionType}
+            {question.examSource ? ` · ${question.examSource}` : ''}
+            {question.statements?.length ? ` · ${question.statements.length} statement line(s)` : ''}
+            {question.explanation ? '' : ' · no explanation'}
+          </p>
+        </div>
+        <div className="flex flex-shrink-0 gap-1.5">
+          <button onClick={() => { resetFromQuestion(); setEditing(true); }} className="px-2.5 py-1 bg-surface-raised hover:bg-surface text-text-secondary border border-border-default rounded-lg text-[10px] font-bold cursor-pointer">Edit</button>
+          <button onClick={() => onDeleted(question._id)} className="px-2.5 py-1 bg-status-danger-bg hover:opacity-90 text-status-danger-text border border-status-danger-text/30 rounded-lg text-[10px] font-bold cursor-pointer">Delete</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 bg-sunken border border-brand/40 rounded-xl space-y-3">
+      <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-wide">Editing Q{question.order}</p>
+      <textarea value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={2} placeholder="Question text" className={FIELD_CLS} />
+      <div>
+        <label className="block text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">Statement lines (one per line, optional)</label>
+        <textarea value={statements} onChange={(e) => setStatements(e.target.value)} rows={3} placeholder={"1. ...\n2. ..."} className={FIELD_CLS} />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {['A', 'B', 'C', 'D'].map((label, i) => (
+          <div key={label} className="flex items-center gap-2">
+            <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer">
+              <input type="radio" name={`correct-${question._id}`} checked={correctOption === label} onChange={() => setCorrectOption(label)} className="w-4 h-4 accent-brand cursor-pointer" />
+              <span className="text-xs font-bold text-text-tertiary w-4">{label}</span>
+            </label>
+            <input type="text" value={optionTexts[i]} onChange={(e) => setOptionTexts(prev => prev.map((v, idx) => idx === i ? e.target.value : v))} placeholder={`Option ${label}`} className={FIELD_CLS} />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div>
+          <label className="block text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">Difficulty</label>
+          <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className={FIELD_CLS}><option>Easy</option><option>Medium</option><option>Hard</option></select>
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">Type</label>
+          <select value={questionType} onChange={(e) => setQuestionType(e.target.value)} className={FIELD_CLS}><option value="conceptual">Conceptual</option><option value="factual">Factual</option></select>
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">Exam source</label>
+          <input type="text" value={examSource} onChange={(e) => setExamSource(e.target.value)} placeholder="e.g. UPSC CSE 2019" className={FIELD_CLS} />
+        </div>
+      </div>
+      <div>
+        <label className="block text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">Explanation / Why</label>
+        <textarea value={explanation} onChange={(e) => setExplanation(e.target.value)} rows={3} className={FIELD_CLS} />
+      </div>
+      {err && <div className="p-2 bg-status-danger-bg border border-status-danger-text/30 rounded-lg text-status-danger-text text-[11px] font-semibold">{err}</div>}
+      <div className="flex gap-2">
+        <button onClick={handleSave} disabled={saving} className="px-4 py-1.5 bg-brand hover:bg-brand-hover disabled:opacity-50 text-text-on-accent rounded-lg text-xs font-bold cursor-pointer">{saving ? 'Saving...' : 'Save Changes'}</button>
+        <button onClick={() => setEditing(false)} className="px-4 py-1.5 bg-surface-raised hover:bg-surface text-text-secondary rounded-lg text-xs font-bold cursor-pointer">Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
   const [testId, setTestId] = useState('');
   const [questions, setQuestions] = useState([]);
@@ -427,6 +554,9 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
   const [marks, setMarks] = useState('');
   const [explanation, setExplanation] = useState('');
   const [tags, setTags] = useState('');
+  const [statements, setStatements] = useState('');
+  const [questionType, setQuestionType] = useState('conceptual');
+  const [examSource, setExamSource] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -460,6 +590,9 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
     setMarks('');
     setExplanation('');
     setTags('');
+    setStatements('');
+    setQuestionType('conceptual');
+    setExamSource('');
   };
 
   const handleAddQuestion = async (e) => {
@@ -479,6 +612,9 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
           options: ['A', 'B', 'C', 'D'].map((label, i) => ({ label, text: optionTexts[i].trim() })),
           correctOption,
           difficulty,
+          questionType,
+          examSource: examSource.trim(),
+          statements: statements.split('\n').map((s) => s.trim()).filter(Boolean),
           marks: marks === '' ? null : Number(marks),
           explanation: explanation.trim(),
           tags
@@ -585,6 +721,17 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2">Statement lines (one per line, optional)</label>
+                <textarea
+                  value={statements}
+                  onChange={(e) => setStatements(e.target.value)}
+                  rows={2}
+                  placeholder={"1. ...\n2. ..."}
+                  className="w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-semibold transition-all"
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {['A', 'B', 'C', 'D'].map((label, i) => (
                   <div key={label} className="flex items-center gap-2">
@@ -636,6 +783,26 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2">Type</label>
+                  <select value={questionType} onChange={(e) => setQuestionType(e.target.value)} className="w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-3 py-2 text-xs font-semibold transition-all">
+                    <option value="conceptual">Conceptual</option>
+                    <option value="factual">Factual</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2">Exam source (optional)</label>
+                  <input
+                    type="text"
+                    value={examSource}
+                    onChange={(e) => setExamSource(e.target.value)}
+                    placeholder="e.g. UPSC CSE 2019"
+                    className="w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-3 py-2 text-xs font-semibold transition-all"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2">Explanation (optional)</label>
                 <textarea
@@ -663,15 +830,13 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
             ) : (
               <div className="space-y-2">
                 {questions.map((q) => (
-                  <div key={q._id} className="flex items-start justify-between gap-3 p-3 bg-sunken border border-border-default rounded-xl">
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-text-primary">Q{q.order}. {q.questionText}</p>
-                      <p className="text-[10px] text-text-tertiary mt-1">Correct: {q.correctOption} · {q.difficulty} · {q.marks ?? selectedTest.marksPerQuestion} marks</p>
-                    </div>
-                    <button onClick={() => handleDeleteQuestion(q._id)} className="flex-shrink-0 px-2.5 py-1 bg-status-danger-bg hover:opacity-90 text-status-danger-text border border-status-danger-text/30 rounded-lg text-[10px] font-bold cursor-pointer">
-                      Delete
-                    </button>
-                  </div>
+                  <EditableQuestionRow
+                    key={q._id}
+                    testId={testId}
+                    question={q}
+                    onSaved={(updated) => setQuestions((prev) => prev.map((x) => x._id === updated._id ? updated : x))}
+                    onDeleted={handleDeleteQuestion}
+                  />
                 ))}
               </div>
             )}
@@ -1034,7 +1199,7 @@ export default function AdminMcqData() {
     <div className="w-full max-w-4xl mx-auto px-6 py-10 md:py-14">
       <div className="mb-8 border-b border-border-default pb-5">
         <h1 className="text-2xl md:text-3xl font-display font-extrabold text-text-primary tracking-tight">MCQ Test Data</h1>
-        <p className="text-text-tertiary text-sm mt-1.5 font-medium">Create MCQ tests and bulk-upload their questions via CSV.</p>
+        <p className="text-text-tertiary text-sm mt-1.5 font-medium">Create MCQ tests and bulk-upload their questions from JSON or CSV.</p>
       </div>
 
       <div className="flex items-center gap-2 mb-6">

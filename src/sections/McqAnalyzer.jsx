@@ -47,6 +47,7 @@ export default function McqAnalyzer({ attemptId, onBackToTests, onViewHistory })
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reviewFilter, setReviewFilter] = useState('All');
+  const [selectedReviewOrder, setSelectedReviewOrder] = useState(null);
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -109,6 +110,12 @@ export default function McqAnalyzer({ attemptId, onBackToTests, onViewHistory })
     if (reviewFilter === 'Marked') return q.status === 'marked-for-review' || q.status === 'answered-marked-for-review';
     return true;
   });
+
+  const activeReviewQ = filteredReview.find(q => q.order === selectedReviewOrder) || filteredReview[0] || null;
+  const reviewSwatch = (q) =>
+    q.isCorrect === true ? 'bg-status-success-text text-white border-transparent'
+    : q.isCorrect === false ? 'bg-status-danger-text text-white border-transparent'
+    : 'bg-surface-raised text-text-tertiary border-border-default';
 
   return (
     <div className="w-full max-w-5xl mx-auto px-6 py-10 flex flex-col gap-6">
@@ -410,13 +417,13 @@ export default function McqAnalyzer({ attemptId, onBackToTests, onViewHistory })
         </div>
       </SectionCard>
 
-      {/* 7. Question-by-question review */}
-      <SectionCard title="Question-by-Question Review">
+      {/* 7. Question-by-question review — palette on the left, full detail on the right */}
+      <SectionCard title="Answer Review" subtitle="Pick a question number to see the correct answer and explanation.">
         <div className="flex flex-wrap gap-2 mb-4">
           {['All', 'Correct', 'Wrong', 'Unattempted', 'Marked'].map(f => (
             <button
               key={f}
-              onClick={() => setReviewFilter(f)}
+              onClick={() => { setReviewFilter(f); setSelectedReviewOrder(null); }}
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition ${reviewFilter === f ? 'bg-brand text-text-on-accent' : 'bg-sunken text-text-secondary hover:bg-surface-raised'}`}
             >
               {f}
@@ -424,47 +431,87 @@ export default function McqAnalyzer({ attemptId, onBackToTests, onViewHistory })
           ))}
         </div>
 
-        <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-          {filteredReview.map((q) => (
-            <div key={q.order} className={`p-4 rounded-xl border space-y-2.5 ${q.isCorrect === true ? 'border-status-success-text/30 bg-status-success-bg' : q.isCorrect === false ? 'border-status-danger-text/30 bg-status-danger-bg' : 'border-border-default bg-sunken/60'}`}>
-              <div className="flex items-center justify-between gap-2 text-[10px] font-bold">
-                <span className="text-text-tertiary">Q{q.order} · {q.difficulty} · {q.timeSpentSeconds}s</span>
-                <span className={q.isCorrect === true ? 'text-status-success-text' : q.isCorrect === false ? 'text-status-danger-text' : 'text-text-tertiary'}>
-                  {q.isCorrect === true ? 'Correct' : q.isCorrect === false ? 'Incorrect' : 'Unattempted'} ({q.marksAwarded >= 0 ? '+' : ''}{q.marksAwarded})
-                </span>
+        {filteredReview.length === 0 ? (
+          <p className="text-[11px] text-text-tertiary">No questions match this filter.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-5">
+            {/* palette */}
+            <div className="md:w-[196px]">
+              <div className="grid grid-cols-6 md:grid-cols-5 gap-1.5 max-h-[240px] md:max-h-[520px] overflow-y-auto pr-1">
+                {filteredReview.map((q) => (
+                  <button
+                    key={q.order}
+                    onClick={() => setSelectedReviewOrder(q.order)}
+                    className={`w-9 h-9 rounded-lg text-xs font-bold flex items-center justify-center cursor-pointer border transition-all ${reviewSwatch(q)} ${activeReviewQ?.order === q.order ? 'ring-2 ring-brand ring-offset-1 ring-offset-surface' : ''}`}
+                  >
+                    {q.order}
+                  </button>
+                ))}
               </div>
-              <p className="text-xs text-text-primary font-semibold leading-relaxed">{q.questionText}</p>
-              <div className="space-y-1.5">
-                {q.options.map(opt => {
-                  const isSelected = opt.label === q.selectedOption;
-                  const isCorrectOpt = opt.label === q.correctOption;
-                  return (
-                    <div
-                      key={opt.label}
-                      className={`text-[11px] px-2.5 py-1.5 rounded-lg border flex items-center gap-2 ${
-                        isCorrectOpt ? 'border-status-success-text/40 bg-status-success-bg text-status-success-text'
-                        : isSelected ? 'border-status-danger-text/40 bg-status-danger-bg text-status-danger-text'
-                        : 'border-border-default text-text-tertiary'
-                      }`}
-                    >
-                      <span className="font-bold">{opt.label}.</span> {opt.text}
-                      {isCorrectOpt && <span className="ml-auto text-[9px] font-bold uppercase">Correct</span>}
-                      {isSelected && !isCorrectOpt && <span className="ml-auto text-[9px] font-bold uppercase">Your Answer</span>}
-                    </div>
-                  );
-                })}
-              </div>
-              {q.explanation && (
-                <p className="text-[11px] text-text-tertiary italic border-t border-border-default pt-2">{q.explanation}</p>
-              )}
-              <div className="flex flex-wrap gap-1.5">
-                {q.tags.map((t, i) => <span key={i} className="text-[9px] bg-sunken border border-border-subtle text-text-tertiary rounded px-1.5 py-0.5">{t.section}</span>)}
-                {q.questionType && <span className="text-[9px] bg-sunken border border-border-subtle text-text-tertiary rounded px-1.5 py-0.5 capitalize">{q.questionType}</span>}
-                {q.examSource && <span className="text-[9px] bg-accent-soft-bg border border-accent-soft-border text-brand rounded px-1.5 py-0.5">Appeared in: {q.examSource}</span>}
+              <div className="flex flex-col gap-1 mt-3 text-[10px] font-semibold text-text-tertiary">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-status-success-text inline-block" /> Correct</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-status-danger-text inline-block" /> Wrong</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-surface-raised border border-border-default inline-block" /> Skipped</span>
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* detail */}
+            {activeReviewQ && (
+              <div className={`p-4 rounded-xl border space-y-3 ${activeReviewQ.isCorrect === true ? 'border-status-success-text/30 bg-status-success-bg' : activeReviewQ.isCorrect === false ? 'border-status-danger-text/30 bg-status-danger-bg' : 'border-border-default bg-sunken/60'}`}>
+                <div className="flex items-center justify-between gap-2 text-[10px] font-bold">
+                  <span className="text-text-tertiary">Q{activeReviewQ.order} · {activeReviewQ.difficulty} · {activeReviewQ.timeSpentSeconds}s</span>
+                  <span className={activeReviewQ.isCorrect === true ? 'text-status-success-text' : activeReviewQ.isCorrect === false ? 'text-status-danger-text' : 'text-text-tertiary'}>
+                    {activeReviewQ.isCorrect === true ? 'Correct' : activeReviewQ.isCorrect === false ? 'Incorrect' : 'Unattempted'} ({activeReviewQ.marksAwarded >= 0 ? '+' : ''}{activeReviewQ.marksAwarded})
+                  </span>
+                </div>
+
+                <p className="text-xs text-text-primary font-semibold leading-relaxed whitespace-pre-wrap">{activeReviewQ.questionText}</p>
+
+                {activeReviewQ.statements?.length > 0 && (
+                  <ul className="flex flex-col gap-1 pl-1 border-l-2 border-border-default">
+                    {activeReviewQ.statements.map((s, i) => (
+                      <li key={i} className="text-[11px] text-text-secondary leading-relaxed pl-3 whitespace-pre-wrap">{s}</li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="space-y-1.5">
+                  {activeReviewQ.options.map(opt => {
+                    const isSelected = opt.label === activeReviewQ.selectedOption;
+                    const isCorrectOpt = opt.label === activeReviewQ.correctOption;
+                    return (
+                      <div
+                        key={opt.label}
+                        className={`text-[11px] px-2.5 py-1.5 rounded-lg border flex items-center gap-2 ${
+                          isCorrectOpt ? 'border-status-success-text/40 bg-status-success-bg text-status-success-text'
+                          : isSelected ? 'border-status-danger-text/40 bg-status-danger-bg text-status-danger-text'
+                          : 'border-border-default text-text-tertiary'
+                        }`}
+                      >
+                        <span className="font-bold">{opt.label}.</span> {opt.text}
+                        {isCorrectOpt && <span className="ml-auto text-[9px] font-bold uppercase">Correct</span>}
+                        {isSelected && !isCorrectOpt && <span className="ml-auto text-[9px] font-bold uppercase">Your Answer</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {activeReviewQ.explanation && (
+                  <div className="border-t border-border-default pt-2.5">
+                    <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-wide mb-1">Why</p>
+                    <p className="text-[11px] text-text-secondary leading-relaxed whitespace-pre-wrap">{activeReviewQ.explanation}</p>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-1.5">
+                  {activeReviewQ.tags.map((t, i) => <span key={i} className="text-[9px] bg-sunken border border-border-subtle text-text-tertiary rounded px-1.5 py-0.5">{t.section}</span>)}
+                  {activeReviewQ.questionType && <span className="text-[9px] bg-sunken border border-border-subtle text-text-tertiary rounded px-1.5 py-0.5 capitalize">{activeReviewQ.questionType}</span>}
+                  {activeReviewQ.examSource && <span className="text-[9px] bg-accent-soft-bg border border-accent-soft-border text-brand rounded px-1.5 py-0.5">Appeared in: {activeReviewQ.examSource}</span>}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </SectionCard>
     </div>
   );
