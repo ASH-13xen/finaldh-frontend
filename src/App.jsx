@@ -161,12 +161,14 @@ function App() {
     navigate("buy_pdfs");
   };
 
-  const handleDevLogin = async () => {
+  const handleDevLogin = async (email) => {
     setLoading(true);
     setError("");
     try {
       const res = await fetch("/api/auth/mock", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(email ? { email } : {}),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Mock login failed");
