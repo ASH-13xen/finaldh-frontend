@@ -40,6 +40,12 @@ const getNavLinks = (user) => {
       target: 'toppers_copy',
       match: (t) => t === 'toppers_copy',
       label: <><span className="hidden sm:inline">Toppers </span>Copy</>
+    },
+    {
+      key: 'my_notes',
+      target: 'my_notes',
+      match: (t) => t === 'my_notes',
+      label: <><span className="hidden sm:inline">My </span>Notes</>
     }
   ];
 

@@ -10,6 +10,7 @@ const KNOWN_TABS = [
   'pyqs',
   'upsc_questions',
   'toppers_copy',
+  'my_notes',
   'admin_toppers_copy',
   'buy_pdfs',
   'upload_course',
