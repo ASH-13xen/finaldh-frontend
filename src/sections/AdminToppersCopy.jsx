@@ -835,6 +835,10 @@ function SubtopicEditor({ topicId, topicName, onClose }) {
   const [groups, setGroups] = useState({});    // key -> [questionId] (NONE = no sub-topic)
   const [selected, setSelected] = useState(() => new Set());
   const [newName, setNewName] = useState('');
+  // Drag and drop (desktop): `dragIds` = questions being dragged (the whole selection when
+  // the grabbed row is selected); `dropAt` = { key, index } where they'd land.
+  const [dragIds, setDragIds] = useState(null);
+  const [dropAt, setDropAt] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true); setErr('');
@@ -921,6 +925,53 @@ function SubtopicEditor({ topicId, topicName, onClose }) {
     return next;
   }));
 
+  // Insert `qids` into group `target` before position `index` (index counts the target's
+  // rows as they are now, including any being moved), keeping their display order.
+  const place = (qids, target, index) => change(() => setGroups((g) => {
+    const moving = order.flatMap((k) => (g[k] || []).filter((id) => qids.includes(id)));
+    const before = (g[target] || []).slice(0, index).filter((id) => !qids.includes(id)).length;
+    const next = {};
+    for (const k of Object.keys(g)) next[k] = g[k].filter((id) => !qids.includes(id));
+    next[target] = [...next[target].slice(0, before), ...moving, ...next[target].slice(before)];
+    return next;
+  }));
+
+  const endDrag = () => { setDragIds(null); setDropAt(null); };
+
+  const onRowDragStart = (e, qid) => {
+    const ids = selected.has(qid) ? order.flatMap((k) => (groups[k] || []).filter((id) => selected.has(id))) : [qid];
+    setDragIds(ids);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', ids.join(',')); // Firefox won't start a drag without data
+  };
+
+  // Hovering a row: land above it in its top half, below it in its bottom half.
+  const onRowDragOver = (e, key, i) => {
+    if (!dragIds) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    const index = e.clientY < r.top + r.height / 2 ? i : i + 1;
+    if (dropAt?.key !== key || dropAt?.index !== index) setDropAt({ key, index });
+  };
+
+  // Hovering a group's empty space / header: land at its end.
+  const onGroupDragOver = (e, key) => {
+    if (!dragIds) return;
+    e.preventDefault();
+    const index = (groups[key] || []).length;
+    if (dropAt?.key !== key || dropAt?.index !== index) setDropAt({ key, index });
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    if (dragIds && dropAt) {
+      place(dragIds, dropAt.key, dropAt.index);
+      setSelected(new Set());
+    }
+    endDrag();
+  };
+
   const toggleSel = (qid) => setSelected((s) => {
     const next = new Set(s);
     if (next.has(qid)) next.delete(qid); else next.add(qid);
@@ -956,8 +1007,17 @@ function SubtopicEditor({ topicId, topicName, onClose }) {
     const sub = subs.find((x) => x.key === key);
     const list = groups[key] || [];
     const si = subs.findIndex((x) => x.key === key);
+    const isDropGroup = !!dragIds && dropAt?.key === key;
+    const line = <div className="h-1 bg-brand rounded-full mx-3" aria-hidden="true" />;
     return (
-      <div key={key} className={`border rounded-xl overflow-hidden ${isNone ? 'border-dashed border-border-default' : 'border-border-default'}`}>
+      <div
+        key={key}
+        onDragOver={(e) => onGroupDragOver(e, key)}
+        onDrop={onDrop}
+        className={`border rounded-xl overflow-hidden transition-shadow ${isNone ? 'border-dashed border-border-default' : 'border-border-default'} ${
+          isDropGroup ? 'ring-2 ring-brand/60' : ''
+        }`}
+      >
         <div className="px-3 py-2 bg-surface-raised border-b border-border-default flex items-center gap-2 flex-wrap">
           {isNone ? (
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-text-tertiary flex-grow">No sub-topic</span>
@@ -978,15 +1038,28 @@ function SubtopicEditor({ topicId, topicName, onClose }) {
           <span className="text-[10px] font-bold text-text-tertiary tabular-nums">{list.length} Q</span>
         </div>
         {list.length === 0 ? (
-          <p className="px-3 py-3 text-[11px] italic text-text-tertiary">
-            {isNone ? 'Every question is in a sub-topic.' : 'Empty — tick questions above and use "Move selected to…", or pick this sub-topic in a question\'s menu.'}
+          <p className={`px-3 py-3 text-[11px] italic ${isDropGroup ? 'text-brand font-bold' : 'text-text-tertiary'}`}>
+            {isDropGroup
+              ? 'Drop here'
+              : isNone ? 'Every question is in a sub-topic.' : 'Empty — drag questions here, or tick them and use "Move selected to…".'}
           </p>
         ) : (
           <ul className="divide-y divide-border-default">
             {list.map((qid, i) => {
               const q = qById[qid];
+              const dragging = !!dragIds?.includes(qid);
               return (
-                <li key={qid} className="px-3 py-2 flex items-center gap-2">
+                <li
+                  key={qid}
+                  draggable
+                  onDragStart={(e) => onRowDragStart(e, qid)}
+                  onDragEnd={endDrag}
+                  onDragOver={(e) => onRowDragOver(e, key, i)}
+                  onDrop={onDrop}
+                  className={`relative px-3 py-2 flex items-center gap-2 bg-surface ${dragging ? 'opacity-40' : ''}`}
+                >
+                  {isDropGroup && dropAt.index === i && <div className="absolute left-0 right-0 -top-px">{line}</div>}
+                  <span className="text-text-tertiary cursor-grab active:cursor-grabbing select-none text-sm leading-none" title="Drag to move" aria-hidden="true">⠿</span>
                   <input type="checkbox" checked={selected.has(qid)} onChange={() => toggleSel(qid)} aria-label={`Select Q${numberOf[qid]}`} className="accent-brand cursor-pointer" />
                   <span className="text-[11px] font-bold text-text-tertiary w-8 flex-shrink-0">Q{numberOf[qid]}</span>
                   <span className="text-xs text-text-primary flex-grow min-w-0 truncate" title={q?.questionText}>{q?.questionText || 'Untitled question'}</span>
@@ -1005,6 +1078,9 @@ function SubtopicEditor({ topicId, topicName, onClose }) {
             })}
           </ul>
         )}
+        {list.length > 0 && isDropGroup && dropAt.index === list.length && (
+          <div className="py-1.5">{line}</div>
+        )}
       </div>
     );
   };
@@ -1015,7 +1091,8 @@ function SubtopicEditor({ topicId, topicName, onClose }) {
         <div>
           <p className="text-xs font-extrabold text-text-primary">Sub-topics — {topicName}</p>
           <p className="text-[11px] text-text-tertiary mt-0.5">
-            Group this topic's questions under your own headings. Students see questions without a sub-topic first, then each sub-topic in this order.
+            Group this topic's questions under your own headings — drag a question (⠿) into any sub-topic, or tick several and drag them together.
+            Students see questions without a sub-topic first, then each sub-topic in this order.
           </p>
         </div>
         <div className="flex items-center gap-2">
