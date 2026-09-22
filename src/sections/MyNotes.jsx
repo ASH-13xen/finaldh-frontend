@@ -124,7 +124,7 @@ export default function MyNotes() {
     const bySubject = new Map();
     for (const it of items) {
       const s = it.context?.subject || 'Other';
-      const t = it.context?.topic || 'General';
+      const t = (it.context?.topic || 'General') + (it.subtopic ? ` › ${it.subtopic}` : '');
       if (!bySubject.has(s)) bySubject.set(s, new Map());
       const topics = bySubject.get(s);
       if (!topics.has(t)) topics.set(t, []);
