@@ -9,7 +9,11 @@ import DisplayPYQ from "./sections/DisplayPYQ";
 import DisplayUPSCQuestions from "./sections/DisplayUPSCQuestions";
 import BuyCourses from "./sections/BuyCourses";
 import UploadCourse from "./sections/UploadCourse";
+import SessionWatermark from "./components/SessionWatermark";
 import { readTabFromHash } from "./lib/tabRouting";
+import { getDeviceId, SESSION_ENDED_EVENT, describeLoginBlock } from "./lib/session";
+
+const HEARTBEAT_MS = 5 * 60 * 1000;
 
 function App() {
   const [user, setUser] = useState(null);
@@ -101,12 +105,14 @@ function App() {
         const authRes = await fetch("/api/auth/google", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ credential: response.credential }),
+          body: JSON.stringify({ credential: response.credential, deviceId: getDeviceId() }),
         });
 
         if (!authRes.ok) {
           const errData = await authRes.json();
-          throw new Error(errData.error || "Authentication failed");
+          throw new Error(
+            errData.code === "SESSION_ACTIVE" ? describeLoginBlock(errData) : errData.error || "Authentication failed",
+          );
         }
 
         const data = await authRes.json();
@@ -154,7 +160,47 @@ function App() {
     return () => clearTimeout(timer);
   }, [activeTab, loading, token, googleClientId]);
 
+  // The backend signed this device out (idle timeout, signed in again, ...): drop the
+  // local session and show why on the login screen.
+  useEffect(() => {
+    const onSessionEnded = (e) => {
+      localStorage.removeItem("token");
+      setToken(null);
+      setUser(null);
+      setError(e.detail?.error || "You were signed out. Please sign in again.");
+      navigate("login");
+    };
+    window.addEventListener(SESSION_ENDED_EVENT, onSessionEnded);
+    return () => window.removeEventListener(SESSION_ENDED_EVENT, onSessionEnded);
+  }, []);
+
+  // Keep the session alive while the portal is actually on screen, and re-check it the
+  // moment the tab comes back (a 401 there signs out through the listener above).
+  useEffect(() => {
+    if (!user || user.isAdmin) return;
+    const ping = () => {
+      if (document.visibilityState !== "visible") return;
+      fetch("/api/auth/session", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }).catch(() => {});
+    };
+    const id = setInterval(ping, HEARTBEAT_MS);
+    document.addEventListener("visibilitychange", ping);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", ping);
+    };
+  }, [user]);
+
   const handleLogout = () => {
+    // Fire-and-forget: ending the session server-side starts the device-switch lock.
+    const currentToken = localStorage.getItem("token");
+    if (currentToken) {
+      fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${currentToken}` },
+      }).catch(() => {});
+    }
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
@@ -167,9 +213,13 @@ function App() {
     try {
       const res = await fetch("/api/auth/mock", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceId: getDeviceId() }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Mock login failed");
+      if (!res.ok) {
+        throw new Error(data.code === "SESSION_ACTIVE" ? describeLoginBlock(data) : data.error || "Mock login failed");
+      }
 
       localStorage.setItem("token", data.token);
       setToken(data.token);
@@ -210,13 +260,16 @@ function App() {
   // Dashboard / Home View
   if (user) {
     return (
-      <DashboardSection
-        user={user}
-        onLogout={handleLogout}
-        activeTab={activeTab}
-        setActiveTab={navigate}
-        onUserUpdate={setUser}
-      />
+      <>
+        <DashboardSection
+          user={user}
+          onLogout={handleLogout}
+          activeTab={activeTab}
+          setActiveTab={navigate}
+          onUserUpdate={setUser}
+        />
+        {!user.isAdmin && <SessionWatermark user={user} />}
+      </>
     );
   }
 

@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { ThemeProvider } from './contexts/ThemeContext.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { SESSION_ENDED_EVENT } from './lib/session.js'
 
 // Intercept fetch to prefix relative URLs with VITE_API_URL if defined
 const originalFetch = window.fetch;
@@ -64,7 +65,18 @@ window.fetch = async (input, init) => {
       }
     }
   }
-  return originalFetch(url, init);
+  const response = await originalFetch(url, init);
+
+  // The backend ends sessions (idle timeout, re-login, logout) with 401 + a SESSION_*
+  // code - broadcast it so App can sign out wherever the request came from.
+  if (response.status === 401) {
+    response.clone().json().then((body) => {
+      if (body?.code?.startsWith('SESSION_')) {
+        window.dispatchEvent(new CustomEvent(SESSION_ENDED_EVENT, { detail: body }));
+      }
+    }).catch(() => {});
+  }
+  return response;
 };
 
 createRoot(document.getElementById('root')).render(
