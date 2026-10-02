@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { gsap, prefersReducedMotion } from '../lib/gsapSetup';
 import { useTheme } from '../contexts/ThemeContext';
 import InboxBell from './InboxBell';
+import { TEST_TAB_LABEL } from '../lib/tabRouting';
 
 const buttonClass = (active) =>
   `text-[9px] sm:text-xs font-sans font-semibold px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-md md:rounded-lg transition-all duration-200 cursor-pointer whitespace-nowrap ${
@@ -101,6 +102,12 @@ const getNavLinks = (user) => {
         target: 'admin_economy_master',
         match: (t) => t === 'admin_economy_master',
         label: <><span className="hidden sm:inline">Economy </span>Data</>
+      },
+      {
+        key: 'admin_test',
+        target: 'admin_test',
+        match: (t) => t === 'admin_test',
+        label: TEST_TAB_LABEL
       },
       {
         key: 'admin_toppers_copy',

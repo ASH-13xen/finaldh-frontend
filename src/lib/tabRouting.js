@@ -13,6 +13,7 @@ const KNOWN_TABS = [
   'my_notes',
   'economy_master',
   'admin_economy_master',
+  'admin_test',
   'admin_toppers_copy',
   'buy_pdfs',
   'upload_course',
@@ -27,6 +28,9 @@ const KNOWN_TABS = [
   'admin_mcq_data',
   'admin_question_banks',
 ];
+
+// Header label for the admin upload panel tab — placeholder name until it's confirmed.
+export const TEST_TAB_LABEL = 'Test';
 
 export const DEFAULT_TAB = 'buy_pdfs';
 
