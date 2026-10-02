@@ -11,6 +11,8 @@ const KNOWN_TABS = [
   'upsc_questions',
   'toppers_copy',
   'my_notes',
+  'economy_master',
+  'admin_economy_master',
   'admin_toppers_copy',
   'buy_pdfs',
   'upload_course',

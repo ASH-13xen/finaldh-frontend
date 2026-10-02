@@ -42,6 +42,12 @@ const getNavLinks = (user) => {
       label: <><span className="hidden sm:inline">Toppers </span>Copy</>
     },
     {
+      key: 'economy_master',
+      target: 'economy_master',
+      match: (t) => t === 'economy_master',
+      label: <><span className="hidden sm:inline">Economy </span>Master<span className="hidden sm:inline"> File</span></>
+    },
+    {
       key: 'my_notes',
       target: 'my_notes',
       match: (t) => t === 'my_notes',
@@ -89,6 +95,12 @@ const getNavLinks = (user) => {
         target: 'admin_question_banks',
         match: (t) => t === 'admin_question_banks',
         label: <><span className="hidden sm:inline">Question </span>Banks</>
+      },
+      {
+        key: 'admin_economy_master',
+        target: 'admin_economy_master',
+        match: (t) => t === 'admin_economy_master',
+        label: <><span className="hidden sm:inline">Economy </span>Data</>
       },
       {
         key: 'admin_toppers_copy',

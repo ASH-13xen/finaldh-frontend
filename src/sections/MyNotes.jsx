@@ -12,13 +12,17 @@ import { jumpTo } from '../lib/studyJump';
 
 const PAGE = 50;
 
-const SECTION_LABEL = { toppers_copy: 'Toppers Copy', question_bank: 'Question Bank' };
+const SECTION_LABEL = { toppers_copy: 'Toppers Copy', question_bank: 'Question Bank', economy_master: 'Economy Master File' };
 const REF_LABEL = {
   tc_question: 'Question',
   tc_answer: 'Topper copy',
   tc_pyq: 'PYQ',
   qb_question: 'MCQ',
+  em_topic: 'Topic',
 };
+
+// Sections whose items open back at their source (Question Bank items are shown in place).
+const OPENABLE = ['toppers_copy', 'economy_master'];
 
 const relTime = (d) => {
   if (!d) return '';
@@ -29,9 +33,13 @@ const relTime = (d) => {
   return new Date(d).toLocaleDateString();
 };
 
-// Where "Open" goes for a Toppers Copy item (Question Bank items are shown in place).
+// Where "Open" goes for a Toppers Copy / Economy item.
 const openSource = (item) => {
   const r = item.ref || {};
+  if (item.refType === 'em_topic') {
+    jumpTo('economy_master', { topicId: r.economyTopic });
+    return;
+  }
   jumpTo('toppers_copy', {
     subject: item.context?.subject,
     toppersCopyId: r.toppersCopy || null,
@@ -108,7 +116,7 @@ export default function MyNotes() {
   };
 
   const counts = useMemo(() => {
-    const c = { all: 0, bookmark: 0, note: 0, toppers_copy: 0, question_bank: 0 };
+    const c = { all: 0, bookmark: 0, note: 0, toppers_copy: 0, question_bank: 0, economy_master: 0 };
     const subjects = new Map();
     for (const f of facets) {
       c.all += f.count;
@@ -193,9 +201,10 @@ export default function MyNotes() {
           <Chip active={kind === 'bookmark'} onClick={() => setKind('bookmark')}>★ Bookmarks ({counts.bookmark})</Chip>
           <Chip active={kind === 'note'} onClick={() => setKind('note')}>✎ Notes ({counts.note})</Chip>
           <span className="w-px bg-border-default mx-1 hidden sm:block" aria-hidden="true" />
-          <Chip active={!section} onClick={() => pickSection('')}>Both sections</Chip>
+          <Chip active={!section} onClick={() => pickSection('')}>All sections</Chip>
           <Chip active={section === 'toppers_copy'} onClick={() => pickSection('toppers_copy')}>Toppers Copy ({counts.toppers_copy})</Chip>
           <Chip active={section === 'question_bank'} onClick={() => pickSection('question_bank')}>Question Bank ({counts.question_bank})</Chip>
+          <Chip active={section === 'economy_master'} onClick={() => pickSection('economy_master')}>Economy ({counts.economy_master})</Chip>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
@@ -295,7 +304,7 @@ function NoteCard({ item, onPatch, onDelete }) {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
   const [showMcq, setShowMcq] = useState(false);
-  const isTc = item.context?.section === 'toppers_copy';
+  const isTc = OPENABLE.includes(item.context?.section);
 
   const save = async () => {
     setSaving(true);
@@ -428,7 +437,7 @@ function RevisionMode({ items, onExit, onRevised }) {
   const [done, setDone] = useState(() => new Set());
   const [answered, setAnswered] = useState(() => new Set()); // MCQ items the student has picked on
   const item = items[i];
-  const isTc = item?.context?.section === 'toppers_copy';
+  const isTc = OPENABLE.includes(item?.context?.section);
   // An MCQ's saved quote/note is usually the explanation — keep it hidden until they answer.
   const hideExtras = !isTc && !!item?.mcq && !answered.has(item._id);
   const last = i >= items.length - 1;
@@ -490,7 +499,7 @@ function RevisionMode({ items, onExit, onRevised }) {
         {!hideExtras && item.body && <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-line bg-sunken rounded-lg px-3 py-2">{item.body}</p>}
         {isTc && (
           <button onClick={() => openSource(item)} className="text-xs font-bold text-brand hover:text-brand-hover cursor-pointer">
-            Open in Toppers Copy →
+            Open in {SECTION_LABEL[item.context?.section]} →
           </button>
         )}
       </article>

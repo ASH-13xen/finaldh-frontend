@@ -21,6 +21,8 @@ import AdminQuestionBanks from './AdminQuestionBanks';
 import ToppersCopy from './ToppersCopy';
 import AdminToppersCopy from './AdminToppersCopy';
 import MyNotes from './MyNotes';
+import EconomyMaster from './EconomyMaster';
+import AdminEconomyMaster from './AdminEconomyMaster';
 import McqFlow from './McqFlow';
 import AdminView from './AdminView';
 import AdminContactUsers from './AdminContactUsers';
@@ -97,6 +99,14 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'toppers_copy' && (
           <ToppersCopy />
+        )}
+
+        {activeTab === 'economy_master' && (
+          <EconomyMaster />
+        )}
+
+        {activeTab === 'admin_economy_master' && (
+          <AdminEconomyMaster />
         )}
 
         {activeTab === 'my_notes' && (
