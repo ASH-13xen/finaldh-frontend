@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EnhancementManager from './AdminToppersEnhancements';
+import ToppersSales from './AdminToppersSales';
 
 // ---------------------------------------------------------------------------
 // Admin console for the Toppers Copy section. Three sub-tabs:
@@ -10,7 +11,8 @@ import EnhancementManager from './AdminToppersEnhancements';
 //   2. PYQs — upload a cross-subject PYQ compilation PDF, let the AI extract
 //      question rows, review, commit -> ToppersPyq.
 //   3. Manage — list committed topics: publish/unpublish, generate AI analysis,
-//      delete.
+//      pick free-sample questions, delete.
+//   4. Sales — per-subject + all-subjects prices, and UPI purchase requests to approve.
 // All ingestion is provider-agnostic on the backend (Gemini or Claude via the
 // AI_PROVIDER env var).
 // ---------------------------------------------------------------------------
@@ -51,6 +53,7 @@ export default function AdminToppersCopy() {
           ['pyqs', 'PYQ Ingest'],
           ['pyqdata', 'Manage PYQs'],
           ['manage', 'Manage / Publish'],
+          ['sales', 'Pricing & Sales'],
         ].map(([k, label]) => (
           <button
             key={k}
@@ -68,6 +71,7 @@ export default function AdminToppersCopy() {
       {tab === 'pyqs' && <PyqIngest />}
       {tab === 'pyqdata' && <ManagePyqs />}
       {tab === 'manage' && <ManageTopics />}
+      {tab === 'sales' && <ToppersSales />}
     </div>
   );
 }
@@ -1239,6 +1243,7 @@ function ManageTopics() {
   const [msg, setMsg] = useState('');
   const [organiseId, setOrganiseId] = useState(null); // topic whose sub-topic editor is open
   const [enhanceId, setEnhanceId] = useState(null);   // topic whose enhancement manager is open
+  const [freeId, setFreeId] = useState(null);         // topic whose free-sample picker is open
 
   const loadSubjects = useCallback(async () => {
     setLoading(true);
@@ -1326,6 +1331,7 @@ function ManageTopics() {
                   <p className="text-[10px] text-text-tertiary mt-0.5">
                     {t.syllabusSection || '—'} · {t.questionCount} questions · {t.answerCount} answers · {t.pdfPageCount} pages
                     {t.questionCount ? ` · ${t.analyzedCount}/${t.questionCount} analyzed` : ''}
+                    {t.freeCount ? ` · ${t.freeCount} free sample${t.freeCount === 1 ? '' : 's'}` : ''}
                   </p>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -1358,6 +1364,14 @@ function ManageTopics() {
                 >
                   {enhanceId === t._id ? 'Close enhancements' : '✨ Enhancements'}
                 </button>
+                <button
+                  className={freeId === t._id ? btnPrimary : btnGhost}
+                  disabled={!t.questionCount}
+                  onClick={() => setFreeId((cur) => (cur === t._id ? null : t._id))}
+                  title="Questions anyone can open without buying this subject"
+                >
+                  {freeId === t._id ? 'Close free samples' : 'Free samples'}
+                </button>
                 <button className="px-3 py-1.5 text-[11px] font-bold text-status-danger-text cursor-pointer" disabled={busyId === t._id} onClick={() => remove(t)}>
                   Delete
                 </button>
@@ -1368,10 +1382,65 @@ function ManageTopics() {
               {enhanceId === t._id && (
                 <EnhancementManager topicId={t._id} topicName={t.topic} onClose={() => setEnhanceId(null)} />
               )}
+              {freeId === t._id && (
+                <FreeSamplePicker topicId={t._id} onChanged={loadSubjects} />
+              )}
               </Fragment>
             ))}
           </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================ Free-sample picker ============================
+// Ticks which questions of one topic students can open without buying the subject
+// (their copies, AI analysis and the topic's PYQ model answers). Saves per click.
+function FreeSamplePicker({ topicId, onChanged }) {
+  const [questions, setQuestions] = useState(null);
+  const [savingId, setSavingId] = useState(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    authedJson(`/api/toppers-copy/${topicId}`)
+      .then((r) => r.json())
+      .then((d) => setQuestions(d.toppersCopy?.questions || []))
+      .catch((e) => setErr(e.message));
+  }, [topicId]);
+
+  const toggle = async (q) => {
+    setSavingId(q._id); setErr('');
+    try {
+      const res = await authedJson(`/api/toppers-copy/admin/${topicId}/questions/${q._id}/free-preview`, {
+        method: 'PATCH',
+        body: JSON.stringify({ freePreview: !q.freePreview }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+      setQuestions((qs) => qs.map((x) => (x._id === q._id ? { ...x, freePreview: data.freePreview } : x)));
+      onChanged?.();
+    } catch (e) { setErr(e.message); } finally { setSavingId(null); }
+  };
+
+  if (!questions) return <div className="px-4 py-3 bg-sunken"><LoadingSpinner text="Loading questions…" /></div>;
+  return (
+    <div className="px-4 py-3 bg-sunken space-y-1.5">
+      <p className="text-[11px] text-text-secondary">
+        Ticked questions open in full for students who haven&apos;t bought this subject — pick 1–2 of your best as a sample.
+      </p>
+      {err && <p className="text-[11px] font-semibold text-status-danger-text">{err}</p>}
+      {questions.map((q, i) => (
+        <label key={q._id} className="flex items-start gap-2 text-xs text-text-primary cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5 accent-brand cursor-pointer"
+            checked={!!q.freePreview}
+            disabled={savingId === q._id}
+            onChange={() => toggle(q)}
+          />
+          <span><span className="font-bold text-text-tertiary mr-1">Q{i + 1}.</span>{q.questionText}</span>
+        </label>
       ))}
     </div>
   );
