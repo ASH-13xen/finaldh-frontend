@@ -75,7 +75,7 @@ const persistSeen = (obj) => {
   try { localStorage.setItem(SEEN_KEY, JSON.stringify(obj)); } catch { /* private mode, ignore */ }
 };
 
-export default function ToppersCopy() {
+export default function ToppersCopy({ isAdmin = false }) {
   const [subjects, setSubjects] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
 
@@ -490,6 +490,7 @@ export default function ToppersCopy() {
           activeTopicId={activeTopicId}
           onNote={openNote}
           noteFlash={noteFlash}
+          isAdmin={isAdmin}
         />
       ) : (
         <div className="w-full max-w-4xl mx-auto px-4 md:px-6 py-6">
@@ -699,7 +700,7 @@ const readLS = (k, fallback) => {
 function AnswerView({
   activeTc, activeQuestion, activeAnswer, activeAnswerIdx, setActiveAnswerIdx,
   loading, pdfUrl, token, pdfPanelRef, isFullscreen, toggleFullscreen, onBack,
-  isCompleted, onToggleCompleted, bookmarks, activeTopicId, onNote, noteFlash,
+  isCompleted, onToggleCompleted, bookmarks, activeTopicId, onNote, noteFlash, isAdmin,
 }) {
   const qRef = activeQuestion ? { refType: 'tc_question', toppersCopyId: activeTopicId, questionId: activeQuestion._id } : null;
   const aRef = activeQuestion && activeAnswer
@@ -787,6 +788,9 @@ function AnswerView({
           {noteFlash && <span className="text-[11px] font-bold text-brand">Saved to My Notes</span>}
           {qRef && (
             <BookmarkButton label="Bookmark question" activeLabel="Question saved" active={bookmarks.isBookmarked(qRef)} onToggle={() => bookmarks.toggle(qRef)} />
+          )}
+          {isAdmin && activeTc && activeQuestion?.answers?.length > 0 && (
+            <ExportPdfButton toppersCopy={activeTc} question={activeQuestion} answerIdx={activeAnswerIdx} />
           )}
           {qRef && (
             <button
@@ -942,6 +946,54 @@ function AnswerView({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Admin-only: download the open question as a PDF — the answer pages with their
+// green/blue margin notes, the takeaways and the AI analysis. Built in the browser;
+// the export code (and pdf-lib) is loaded only when the button is used.
+function ExportPdfButton({ toppersCopy, question, answerIdx }) {
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState('');
+  const count = question.answers.length;
+
+  const run = async (idx) => {
+    setOpen(false);
+    setBusy(true);
+    setError('');
+    try {
+      const { downloadQuestionPdf } = await import('../lib/exportQuestionPdf');
+      await downloadQuestionPdf({ toppersCopy, question, answerIdx: idx });
+    } catch (err) {
+      setError(err.message || 'Could not build the PDF');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const item = 'block w-full text-left px-3 py-2 text-[11px] font-bold text-text-secondary hover:bg-surface-raised hover:text-text-primary cursor-pointer';
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => (count > 1 ? setOpen((v) => !v) : run(null))}
+        title={error || 'Admin: download this question as a PDF (answer pages + notes + AI analysis)'}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-colors bg-surface ${
+          error ? 'border-status-danger-text text-status-danger-text' : 'border-border-default text-text-secondary hover:border-brand hover:text-text-primary'
+        } ${busy ? 'opacity-60 cursor-wait' : 'cursor-pointer'}`}
+      >
+        <span aria-hidden="true">⬇</span>
+        <span className="hidden sm:inline">{busy ? 'Building PDF…' : error ? 'PDF failed — retry' : 'Download PDF'}</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-20 w-44 bg-surface border border-border-default rounded-lg shadow-lg overflow-hidden">
+          <button type="button" className={item} onClick={() => run(null)}>All {count} toppers</button>
+          <button type="button" className={item} onClick={() => run(answerIdx)}>This topper only</button>
+        </div>
+      )}
     </div>
   );
 }

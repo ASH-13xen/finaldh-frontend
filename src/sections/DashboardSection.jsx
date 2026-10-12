@@ -100,7 +100,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
         )}
 
         {activeTab === 'toppers_copy' && (
-          <ToppersCopy />
+          <ToppersCopy isAdmin={!!user?.isAdmin} />
         )}
 
         {activeTab === 'economy_master' && (
