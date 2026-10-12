@@ -17,8 +17,14 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 //     to the user as a file.
 //   • `enhancement` (optional) draws the topper-copy enhancement layer: margin
 //     notes + brackets on wide panels, numbered pins on narrow ones.
-const MARGIN_W = 190;
-const MARGIN_MIN_PANEL_W = 720; // below this the margins would crush the page → pins
+const MARGIN_MIN_PANEL_W = 780; // below this the margins would crush the page → pins
+// Margin note width + text size grow with the panel, so full-screen reading gets bigger notes.
+const marginSize = (panelW) => {
+  if (panelW >= 1500) return { w: 320, font: 16 };
+  if (panelW >= 1200) return { w: 280, font: 15 };
+  if (panelW >= 950) return { w: 250, font: 14 };
+  return { w: 220, font: 13 };
+};
 const NOTES_KEY = 'tc_notes_on_v1';
 
 export default function PdfAnswerViewer({ fileUrl, token, startPage = 1, endPage = null, enhancement = null }) {
@@ -64,7 +70,8 @@ export default function PdfAnswerViewer({ fileUrl, token, startPage = 1, endPage
   const showNotes = hasNotes && notesOn;
   const marginMode = showNotes && box.w >= MARGIN_MIN_PANEL_W;
   const pageNotes = showNotes ? allNotes.filter((n) => n.page === cur) : [];
-  const sideW = marginMode ? MARGIN_W : 0;
+  const margin = marginSize(box.w);
+  const sideW = marginMode ? margin.w : 0;
 
   const pageProps = fit === 'width'
     ? { width: Math.max(120, box.w - 24 - sideW * 2) }
@@ -106,7 +113,7 @@ export default function PdfAnswerViewer({ fileUrl, token, startPage = 1, endPage
                 )}
               </div>
               {marginMode && pageNotes.length > 0 && pageSize.h > 0 && (
-                <EnhancementMargins notes={pageNotes} pageW={pageSize.w} pageH={pageSize.h} marginW={MARGIN_W} />
+                <EnhancementMargins notes={pageNotes} pageW={pageSize.w} pageH={pageSize.h} marginW={margin.w} fontSize={margin.font} />
               )}
             </div>
           </Document>
