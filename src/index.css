@@ -142,7 +142,7 @@ body {
   }
 }
 
-/* Copy deterrent (see src/lib/useCopyGuard.js) — on for everyone except admins. */
+/* Copy deterrent (see src/lib/useCopyGuard.js) — on for everyone, admins included. */
 .no-copy body {
   -webkit-user-select: none;
   user-select: none;

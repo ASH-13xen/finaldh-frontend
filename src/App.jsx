@@ -20,8 +20,8 @@ function App() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState(() => readTabFromHash());
 
-  // Copy deterrent for visitors and students; admins are exempt.
-  useCopyGuard(!user?.isAdmin);
+  // Copy deterrent for everyone — visitors, students and admins alike.
+  useCopyGuard(true);
   const googleButtonRef = useRef(null);
 
   // Wraps setActiveTab with a URL hash sync so refresh and browser back/forward preserve
