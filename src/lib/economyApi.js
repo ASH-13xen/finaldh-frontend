@@ -37,6 +37,10 @@ export const adminStatus = () => request('/admin/status');
 export const adminListTopics = (params = {}) => request(`/admin/topics${qs(params)}`);
 export const adminUpdateTopic = (id, patch) => request(`/admin/topics/${id}`, { method: 'PATCH', body: patch });
 export const adminAiExtras = (id) => request(`/admin/topics/${id}/ai-extras`, { method: 'POST' });
+export const adminThemeAiExtras = (key, { redraft = false } = {}) => request(`/admin/themes/${encodeURIComponent(key)}/ai-extras`, { method: 'POST', body: { redraft } });
+export const adminStopThemeAiExtras = (key) => request(`/admin/themes/${encodeURIComponent(key)}/ai-extras/stop`, { method: 'POST' });
+export const adminAiExtrasJobs = () => request('/admin/ai-extras-jobs');
+export const adminPublishThemeExtras = (key) => request(`/admin/themes/${encodeURIComponent(key)}/publish-extras`, { method: 'POST' });
 export const adminUpdateTheme = (key, patch) => request(`/admin/themes/${encodeURIComponent(key)}`, { method: 'PATCH', body: patch });
 export const adminImport = (file, { mode, dryRun, overwriteEdited }) => {
   const form = new FormData();

@@ -3,7 +3,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import TopicBody from '../components/economy/TopicBody';
 import { blocksToText, textToBlocks } from '../lib/economyMarkup';
 import {
-  adminStatus, adminListTopics, adminUpdateTopic, adminAiExtras, adminUpdateTheme, adminImport, adminUploadSourcePdf, SOURCE_LABEL,
+  adminStatus, adminListTopics, adminUpdateTopic, adminAiExtras, adminUpdateTheme,
+  adminThemeAiExtras, adminStopThemeAiExtras, adminAiExtrasJobs, adminPublishThemeExtras, adminImport, adminUploadSourcePdf, SOURCE_LABEL,
 } from '../lib/economyApi';
 
 // ---------------------------------------------------------------------------
@@ -157,16 +158,32 @@ function SetupPanel({ status, onChanged }) {
 
 function ThemesPanel({ status, onChanged }) {
   const [editing, setEditing] = useState(null); // theme key
+  const [jobs, setJobs] = useState({});
+  const anyRunning = Object.values(jobs).some((j) => j.running);
+
+  const pollJobs = useCallback(() => adminAiExtrasJobs().then((d) => setJobs(d.jobs)).catch(() => {}), []);
+  useEffect(() => { pollJobs(); }, [pollJobs]);
+  // While a draft job runs, poll its progress and refresh the theme counts as drafts land.
+  useEffect(() => {
+    if (!anyRunning) return undefined;
+    const id = setInterval(() => { pollJobs(); onChanged(); }, 3000);
+    return () => { clearInterval(id); onChanged(); };
+  }, [anyRunning, pollJobs, onChanged]);
+
   return (
     <div className="space-y-2">
+      <p className="text-xs text-text-tertiary">
+        <b>Draft extras</b> asks the AI ({status.ai}) for the “Real-world link” facts and “Beyond the book” research on every topic that has none yet.
+        Drafts stay hidden from students until you publish them, so spot-check a few in <b>Topics</b> first.
+      </p>
       {status.themes.map((t) => (
-        <ThemeRow key={t.key} theme={t} banks={status.banks} open={editing === t.key} onToggle={() => setEditing(editing === t.key ? null : t.key)} onChanged={onChanged} />
+        <ThemeRow key={t.key} theme={t} banks={status.banks} job={jobs[t.key]} onJobsChanged={pollJobs} open={editing === t.key} onToggle={() => setEditing(editing === t.key ? null : t.key)} onChanged={onChanged} />
       ))}
     </div>
   );
 }
 
-function ThemeRow({ theme: t, banks, open, onToggle, onChanged }) {
+function ThemeRow({ theme: t, banks, job, onJobsChanged, open, onToggle, onChanged }) {
   const [form, setForm] = useState({ title: t.title, description: t.description || '', subject: t.pyq?.subject || '', topics: t.pyq?.topics || [] });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -185,6 +202,25 @@ function ThemeRow({ theme: t, banks, open, onToggle, onChanged }) {
     }
   };
 
+  const run = async (fn) => {
+    setBusy(true);
+    setErr('');
+    try {
+      await fn();
+      await Promise.all([onJobsChanged(), onChanged()]);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const empty = t.topicCount - (t.extras.published || 0) - (t.extras.draft || 0);
+  const drafts = t.extras.draft || 0;
+  const publishDrafts = () => {
+    if (!window.confirm(`Publish the AI extras on ${drafts} topic(s) in “${t.title}”? Students will see them straight away.`)) return;
+    run(() => adminPublishThemeExtras(t.key));
+  };
+
   return (
     <div className={`${card} !p-0`}>
       <div className="flex flex-wrap items-center gap-3 px-4 py-3">
@@ -195,11 +231,33 @@ function ThemeRow({ theme: t, banks, open, onToggle, onChanged }) {
             {t.pyq?.topics?.length ? ` · PYQs: ${t.pyq.subject} (${t.pyq.topics.length} topics)` : ''}
           </p>
         </button>
+        {job?.running ? (
+          <span className="flex items-center gap-2 text-xs font-semibold text-text-secondary">
+            ✨ Drafting {job.done + job.failed}/{job.total}{job.failed ? ` (${job.failed} failed)` : ''}
+            <button disabled={busy} onClick={() => run(() => adminStopThemeAiExtras(t.key))} className={btnGhost}>Stop</button>
+          </span>
+        ) : (
+          <>
+            {empty > 0 && (
+              <button disabled={busy} onClick={() => run(() => adminThemeAiExtras(t.key))} className={btnGhost} title="AI-draft facts + research for topics that have none">
+                ✨ Draft extras ({empty})
+              </button>
+            )}
+            {drafts > 0 && (
+              <button disabled={busy} onClick={publishDrafts} className={btnGhost}>Publish {drafts} drafts</button>
+            )}
+          </>
+        )}
         <button disabled={busy} onClick={() => save({ isPublished: !t.isPublished })} className={t.isPublished ? `${btn} bg-status-success-bg text-status-success-text` : btnGhost}>
           {t.isPublished ? '● Published' : 'Publish'}
         </button>
         <button onClick={onToggle} className={btnGhost}>{open ? 'Close' : 'Edit'}</button>
       </div>
+      {(err || (!job?.running && job?.failed > 0)) && !open && (
+        <p className="px-4 pb-3 -mt-1 text-xs text-status-danger-text">
+          {err || `Last draft run: ${job.failed} topic(s) failed (${job.errors[job.errors.length - 1]?.error || 'unknown error'}) — click Draft extras again to retry them.`}
+        </p>
+      )}
       {open && (
         <div className="border-t border-border-default px-4 py-4 grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
