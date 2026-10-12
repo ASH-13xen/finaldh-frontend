@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PdfAnswerViewer from '../components/PdfAnswerViewer';
 import { TopperTakeaways } from '../components/AnswerEnhancementLayer';
@@ -153,6 +153,14 @@ export default function ToppersCopy() {
 
   const token = localStorage.getItem('token');
   const inAnswerView = !!activeQuestionId;
+
+  // Back from an answer: put the question list where it was when the question was opened.
+  const browseScrollRef = useRef(null);
+  useLayoutEffect(() => {
+    if (inAnswerView || browseScrollRef.current == null) return;
+    window.scrollTo({ top: browseScrollRef.current });
+    browseScrollRef.current = null;
+  }, [inAnswerView]);
 
   // Completion is explicit and reversible: the checkbox and the in-question
   // button both call this. Value is the owning topic id (legacy entries are
@@ -311,6 +319,8 @@ export default function ToppersCopy() {
   };
 
   const openQuestion = async (topicId, questionId) => {
+    // remember where the list was, so Back returns to the question that was clicked
+    browseScrollRef.current = window.scrollY;
     // force-refresh: analysis may have been (re)generated since this topic was cached
     await loadDetail(topicId, true);
     setActiveTopicId(topicId);
