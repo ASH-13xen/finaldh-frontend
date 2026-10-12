@@ -7,6 +7,7 @@ import CategorizedCourseGrid from "../components/courses/CategorizedCourseGrid";
 import SamplePreviewSection from "../components/courses/SamplePreviewSection";
 import CourseCategoryNav from "../components/courses/CourseCategoryNav";
 import ExamStageToggle from "../components/courses/ExamStageToggle";
+import { ownsCourse } from "../lib/courseOwnership";
 import {
   CAC_FEATURES,
   PRELIMS_FEATURES,
@@ -128,11 +129,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
     });
   };
 
-  const ownedCourseIds = (
-    Array.isArray(user?.interestedCourses) ? user.interestedCourses : []
-  ).map((c) => c.toLowerCase());
-  const isOwned = (courseId) =>
-    ownedCourseIds.includes((courseId || "").toLowerCase());
+  const isOwned = (courseId) => ownsCourse(user, courseId);
 
   const handleContinueComboToPayment = () => {
     if (!pickerCombo || pickerSelectedIds.length !== pickerCombo.pickCount)
@@ -253,14 +250,8 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
 
   // Determine course purchase status
   const getCourseStatus = (course) => {
-    // 1. Check if course is already in user's interestedCourses
-    const interestedList = Array.isArray(user?.interestedCourses)
-      ? user.interestedCourses
-      : [];
-    const hasPurchased = interestedList.some(
-      (cId) => cId.toLowerCase() === course.courseId.toLowerCase(),
-    );
-    if (hasPurchased) return { type: "purchased", label: "Purchased" };
+    // 1. Check if the user already owns the course
+    if (isOwned(course.courseId)) return { type: "purchased", label: "Purchased" };
 
     // 2. Check if user has a pending request
     const pendingRequest = purchaseRequests.find(
