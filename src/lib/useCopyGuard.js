@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-// Site-wide copy deterrent for everyone except admins: no text selection, no
+// Site-wide copy deterrent for everyone (admins included): no text selection, no
 // copy / cut, no right-click menu, no dragging text or images out, no print /
 // save-page / view-source shortcuts. Typing fields keep working normally, and
 // anything inside `.allow-select` can still be selected (the "Add to notes"
