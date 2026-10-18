@@ -27,6 +27,7 @@ const qs = (params) => {
 //   { refType: 'tc_pyq',      pyqId, toppersCopyId? }
 //   { refType: 'qb_question', quizQuestionId }
 //   { refType: 'em_topic',    economyTopicId }
+//   { refType: 'own' }        — a note written from scratch in My Notes (createNote takes a title)
 // refKeyOf mirrors the server's canonical key so a section can tell what's starred locally.
 export const refKeyOf = (ref) => {
   switch (ref?.refType) {
@@ -42,11 +43,24 @@ export const refKeyOf = (ref) => {
 export const listItems = (params = {}) => request(`/items${qs(params)}`);
 export const listBookmarkKeys = (section) => request(`/bookmarks${qs({ section })}`);
 export const toggleBookmark = (ref) => request('/bookmarks/toggle', { method: 'POST', body: ref });
-export const createNote = (ref, { quote, quoteFrom, body }) =>
-  request('/notes', { method: 'POST', body: { ...ref, quote, quoteFrom, body } });
+export const createNote = (ref, { quote, quoteFrom, body, title, notebookId }) =>
+  request('/notes', { method: 'POST', body: { ...ref, quote, quoteFrom, body, title, notebookId } });
 export const updateNote = (id, patch) => request(`/items/${id}`, { method: 'PATCH', body: patch });
+export const moveToNotebook = (id, notebookId) => updateNote(id, { notebookId: notebookId || null });
 export const deleteItem = (id) => request(`/items/${id}`, { method: 'DELETE' });
+export const restoreItem = (id) => request(`/items/${id}/restore`, { method: 'POST' });
+export const emptyBin = () => request('/bin', { method: 'DELETE' });
 export const markRevised = (id) => request(`/items/${id}/revised`, { method: 'POST' });
+
+export const listNotebooks = () => request('/notebooks');
+export const createNotebook = (name) => request('/notebooks', { method: 'POST', body: { name } });
+export const renameNotebook = (id, name) => request(`/notebooks/${id}`, { method: 'PATCH', body: { name } });
+export const deleteNotebook = (id) => request(`/notebooks/${id}`, { method: 'DELETE' });
+
+// The notebook "Add to notes" last saved into, so the next note defaults there.
+const LAST_NB = 'study_last_notebook';
+export const getLastNotebook = () => { try { return localStorage.getItem(LAST_NB) || ''; } catch { return ''; } };
+export const setLastNotebook = (id) => { try { localStorage.setItem(LAST_NB, id || ''); } catch { /* private mode */ } };
 
 export const getSeen = () => request('/tc-seen');
 export const setSeen = (questionId, seen, topicId) =>
