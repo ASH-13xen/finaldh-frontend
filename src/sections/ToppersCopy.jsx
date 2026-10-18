@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } fr
 import LoadingSpinner from '../components/LoadingSpinner';
 import PdfAnswerViewer from '../components/PdfAnswerViewer';
 import { TopperTakeaways } from '../components/AnswerEnhancementLayer';
+import BestPartsCard from '../components/BestPartsCard';
 import AnswerDiagram from '../components/AnswerDiagram';
 import PyqAnswerView from '../components/PyqAnswerView';
 import { diagramIsRenderable } from '../lib/answerDiagram';
@@ -950,6 +951,13 @@ function AnswerView({
               className="flex-grow overflow-y-auto p-4"
               onAdd={(quote) => qRef && onNote(qRef, qTitle, quote, 'AI analysis')}
             >
+              <BestPartsCard
+                parts={activeQuestion?.bestParts}
+                onOpenTopper={(p) => {
+                  const i = (activeQuestion?.answers || []).findIndex((a) => p.page >= a.startPage && p.page <= (a.endPage || a.startPage));
+                  if (i >= 0) setActiveAnswerIdx(i);
+                }}
+              />
               <TopperTakeaways enhancement={activeAnswer?.enhancement} topper={activeAnswer ? topperLabel(activeAnswer) : ''} />
               <AnalysisView analysis={activeQuestion?.aiAnalysis} />
             </SelectionToNote>
