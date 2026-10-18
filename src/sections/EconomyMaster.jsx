@@ -395,7 +395,7 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
     <div className="min-h-screen">
       {/* Sticky study bar — always on top while reading */}
       <div className="sticky z-40 bg-page/95 backdrop-blur border-b border-border-default" style={{ top: navH }}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-3">
+        <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 sm:px-6 pt-3">
           <div className="flex items-center gap-3">
             <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border-default hover:bg-surface-raised cursor-pointer text-text-secondary flex-shrink-0" aria-label="All themes">←</button>
             <div className="min-w-0 flex-1">
@@ -431,7 +431,7 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
         </div>
         {tab === 'topics' && (
           <div className="border-t border-border-default">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
               <Chip active={!source} onClick={() => setSource('')}>All</Chip>
               {Object.keys(counts.bySource).map((s) => (
                 <Chip key={s} active={source === s} onClick={() => setSource(s)}>{SOURCE_LABEL[s]}</Chip>
@@ -448,7 +448,7 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
         )}
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-5 pb-24">
+      <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 sm:px-6 py-5 pb-24">
         {data.theme.description && tab === 'topics' && <p className="text-sm text-text-secondary mb-4">{data.theme.description}</p>}
 
         {tab === 'topics' && (
@@ -557,7 +557,9 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
 function TopicCard({ topic: t, progress: p, open = true, collapsible = false, onToggleOpen, plain, bookmarked, onBookmark, onStatus, onNote, onOpenPage }) {
   const status = p?.status || null;
   const due = isDue(p);
-  const hasExtras = t.facts?.length > 0 || !!t.research;
+  // "Mains angle" lines are no longer shown — older drafts still have them.
+  const researchLines = (t.research || '').split('\n').filter((l) => l.trim() && !/^\s*mains angle\s*:/i.test(l));
+  const hasExtras = t.facts?.length > 0 || researchLines.length > 0;
 
   return (
     <article id={`em-topic-${t._id}`} className="bg-surface border border-border-default rounded-2xl transition-shadow scroll-mt-40">
@@ -585,36 +587,37 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
 
       {open && (
         <>
-          <div className="px-4 sm:px-5 sm:pl-14 pb-3">
+          <div className={`px-4 sm:px-5 sm:pl-14 pb-3 ${hasExtras ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5' : ''}`}>
             <SelectionToNote onAdd={(text) => onNote(text)}>
               <TopicBody blocks={t.blocks} plain={plain} />
             </SelectionToNote>
-          </div>
 
-          {hasExtras && (
-            <div className="mx-4 sm:ml-14 sm:mr-5 mb-3 grid gap-2 sm:grid-cols-2">
-              {t.facts?.length > 0 && (
-                <div className="rounded-xl bg-status-info-bg/60 border border-status-info-text/15 px-3.5 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-status-info-text mb-1.5">Real-world link</p>
-                  <ul className="space-y-1.5 text-[13px] text-text-secondary leading-relaxed">
-                    {t.facts.map((f, i) => <li key={i}>{f}</li>)}
-                  </ul>
-                </div>
-              )}
-              {t.research && (
-                <div className="rounded-xl bg-accent-soft-bg border border-accent-soft-border px-3.5 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-brand mb-1.5">Beyond the book</p>
-                  <div className="space-y-1 text-[13px] text-text-secondary leading-relaxed">
-                    {t.research.split('\n').filter(Boolean).map((line, i) => {
-                      const m = line.match(/^([^:]{2,24}):\s*(.*)$/);
-                      return <p key={i}>{m ? <><span className="font-semibold text-text-primary">{m[1]}:</span> {m[2]}</> : line}</p>;
-                    })}
+            {/* Value addition: below the notes on small screens, a right-hand column on wide ones */}
+            {hasExtras && (
+              <aside className="mt-3 lg:mt-0 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 lg:content-start">
+                {t.facts?.length > 0 && (
+                  <div className="rounded-xl bg-status-success-bg border border-status-success-text/20 px-3.5 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-status-success-text mb-1.5">Conceptual depth</p>
+                    <ul className="space-y-1.5 text-[13px] text-text-secondary leading-relaxed">
+                      {t.facts.map((f, i) => <li key={i}>{f}</li>)}
+                    </ul>
                   </div>
-                </div>
-              )}
-              {t.extrasStatus === 'draft' && <p className="sm:col-span-2 text-[10px] font-bold text-status-warning-text">Admin preview — these add-ons are still a draft.</p>}
-            </div>
-          )}
+                )}
+                {researchLines.length > 0 && (
+                  <div className="rounded-xl bg-status-info-bg border border-status-info-text/20 px-3.5 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-status-info-text mb-1.5">Additional facts &amp; peripheral knowledge</p>
+                    <div className="space-y-1 text-[13px] text-text-secondary leading-relaxed">
+                      {researchLines.map((line, i) => {
+                        const m = line.match(/^([^:]{2,24}):\s*(.*)$/);
+                        return <p key={i}>{m ? <><span className="font-semibold text-text-primary">{m[1]}:</span> {m[2]}</> : line}</p>;
+                      })}
+                    </div>
+                  </div>
+                )}
+                {t.extrasStatus === 'draft' && <p className="sm:col-span-2 lg:col-span-1 text-[10px] font-bold text-status-warning-text">Admin preview — these add-ons are still a draft.</p>}
+              </aside>
+            )}
+          </div>
 
           <footer className="flex flex-wrap items-center gap-1.5 px-4 sm:pl-14 sm:pr-5 py-3 border-t border-border-default">
             <div className="flex rounded-lg border border-border-default overflow-hidden" role="group" aria-label="Progress">

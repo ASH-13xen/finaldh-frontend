@@ -9,8 +9,8 @@ import {
 
 // ---------------------------------------------------------------------------
 // Admin → Economy Data. Load the parsed Master File, publish themes, link them to Question
-// Bank PYQs, fix anything the parser got wrong, and add the "Real-world link" / "Beyond the
-// book" extras (hand-written or AI-drafted, then published per topic).
+// Bank PYQs, fix anything the parser got wrong, and add the "Conceptual depth" / "Additional
+// facts & peripheral knowledge" extras (hand-written or AI-drafted, then published per topic).
 // ---------------------------------------------------------------------------
 
 const card = 'bg-surface border border-border-default rounded-2xl p-5';
@@ -173,7 +173,7 @@ function ThemesPanel({ status, onChanged }) {
   return (
     <div className="space-y-2">
       <p className="text-xs text-text-tertiary">
-        <b>Draft extras</b> asks the AI ({status.ai}) for the “Real-world link” facts and “Beyond the book” research on every topic that has none yet.
+        <b>Draft extras</b> asks the AI ({status.ai}) for the “Conceptual depth” and “Additional facts &amp; peripheral knowledge” on every topic that has none yet.
         Drafts stay hidden from students until you publish them, so spot-check a few in <b>Topics</b> first.
       </p>
       {status.themes.map((t) => (
@@ -470,11 +470,11 @@ function TopicEditor({ topic, themes, ai, onSaved }) {
         </div>
         <div className="grid md:grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase text-text-tertiary">Real-world link · one per line</label>
+            <label className="text-[11px] font-bold uppercase text-text-tertiary">Conceptual depth (green) · one per line</label>
             <textarea className={input} rows={5} value={facts} onChange={(e) => setFacts(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase text-text-tertiary">Beyond the book · “Label: text” per line</label>
+            <label className="text-[11px] font-bold uppercase text-text-tertiary">Additional facts &amp; peripheral knowledge (blue) · “Label: text” per line</label>
             <textarea className={input} rows={5} value={research} onChange={(e) => setResearch(e.target.value)} />
           </div>
         </div>
