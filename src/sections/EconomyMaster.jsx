@@ -395,7 +395,7 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
     <div className="min-h-screen">
       {/* Sticky study bar — always on top while reading */}
       <div className="sticky z-40 bg-page/95 backdrop-blur border-b border-border-default" style={{ top: navH }}>
-        <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 sm:px-6 pt-3">
+        <div className="max-w-4xl lg:max-w-6xl xl:max-w-[1440px] mx-auto px-4 sm:px-6 pt-3">
           <div className="flex items-center gap-3">
             <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border-default hover:bg-surface-raised cursor-pointer text-text-secondary flex-shrink-0" aria-label="All themes">←</button>
             <div className="min-w-0 flex-1">
@@ -431,7 +431,7 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
         </div>
         {tab === 'topics' && (
           <div className="border-t border-border-default">
-            <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <div className="max-w-4xl lg:max-w-6xl xl:max-w-[1440px] mx-auto px-4 sm:px-6 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
               <Chip active={!source} onClick={() => setSource('')}>All</Chip>
               {Object.keys(counts.bySource).map((s) => (
                 <Chip key={s} active={source === s} onClick={() => setSource(s)}>{SOURCE_LABEL[s]}</Chip>
@@ -448,7 +448,7 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
         )}
       </div>
 
-      <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 sm:px-6 py-5 pb-24">
+      <div className="max-w-4xl lg:max-w-6xl xl:max-w-[1440px] mx-auto px-4 sm:px-6 py-5 pb-24">
         {data.theme.description && tab === 'topics' && <p className="text-sm text-text-secondary mb-4">{data.theme.description}</p>}
 
         {tab === 'topics' && (
@@ -587,7 +587,7 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
 
       {open && (
         <>
-          <div className={`px-4 sm:px-5 sm:pl-14 pb-3 ${hasExtras ? 'lg:grid lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)] lg:gap-5' : ''}`}>
+          <div className={`px-4 sm:px-5 sm:pl-14 pb-3 ${hasExtras ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-5' : ''}`}>
             <SelectionToNote onAdd={(text) => onNote(text)}>
               <TopicBody blocks={t.blocks} plain={plain} />
             </SelectionToNote>
