@@ -587,14 +587,14 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
 
       {open && (
         <>
-          <div className={`px-4 sm:px-5 sm:pl-14 pb-3 ${hasExtras ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5' : ''}`}>
+          <div className={`px-4 sm:px-5 sm:pl-14 pb-3 ${hasExtras ? 'lg:grid lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)] lg:gap-5' : ''}`}>
             <SelectionToNote onAdd={(text) => onNote(text)}>
               <TopicBody blocks={t.blocks} plain={plain} />
             </SelectionToNote>
 
-            {/* Value addition: below the notes on small screens, a right-hand column on wide ones */}
+            {/* Value addition: below the notes on small screens; on wide ones green + blue sit side by side to the right */}
             {hasExtras && (
-              <aside className="mt-3 lg:mt-0 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 lg:content-start">
+              <aside className="mt-3 lg:mt-0 grid gap-2 sm:grid-cols-2 content-start items-start">
                 {t.facts?.length > 0 && (
                   <div className="rounded-xl bg-status-success-bg border border-status-success-text/20 px-3.5 py-3">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-status-success-text mb-1.5">Conceptual depth</p>
@@ -614,7 +614,7 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
                     </div>
                   </div>
                 )}
-                {t.extrasStatus === 'draft' && <p className="sm:col-span-2 lg:col-span-1 text-[10px] font-bold text-status-warning-text">Admin preview — these add-ons are still a draft.</p>}
+                {t.extrasStatus === 'draft' && <p className="sm:col-span-2 text-[10px] font-bold text-status-warning-text">Admin preview — these add-ons are still a draft.</p>}
               </aside>
             )}
           </div>
