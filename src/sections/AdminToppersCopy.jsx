@@ -939,8 +939,70 @@ function PyqAnswerEditor({ pyqId, initial, initialStatus, onStatusChange }) {
 // ============================ 3. Manage committed PYQs ============================
 const PAGE = 300;
 
+// Where a PYQ shows up as a "Related PYQ" in Toppers Copy. The AI places PYQs
+// automatically on import/edit; this lets an admin see its pick and override it.
+//   '__auto' = let the AI decide · '__none' = in no topic · <topic id> = this topic
+function PyqPlacement({ row, topics, onUpdated }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const options = topics.filter((t) => t.subject === row.subject);
+  const label = (id) => topics.find((t) => t._id === id)?.label || 'a deleted topic';
+  const manual = row.tcTopicSource === 'manual';
+  const value = manual ? (row.tcTopic || '__none') : '__auto';
+
+  const send = async (path, init) => {
+    setBusy(true); setErr('');
+    try {
+      const res = await authedJson(path, init);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      onUpdated(data.pyq);
+    } catch (e) { setErr(e.message); } finally { setBusy(false); }
+  };
+  const pick = (v) => send(`/api/toppers-copy/admin/pyqs/${row._id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(v === '__auto' ? { tcTopicAuto: true } : { tcTopicId: v === '__none' ? null : v }),
+  });
+
+  const aiLine = row.tcTopicSource === 'ai'
+    ? `AI placed it under ${row.tcTopic ? `“${label(row.tcTopic)}”` : 'no topic'}${row.tcTopicReason ? ` — ${row.tcTopicReason}` : ''}`
+    : manual ? 'Set by an admin — the AI won’t change it.'
+      : 'Not placed yet — the AI will place it shortly (until then it shows only where its topic name matches).';
+
+  return (
+    <div className="border border-border-default rounded-lg p-2 bg-surface space-y-1">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[11px] font-bold text-text-secondary">Show in Toppers Copy under</span>
+        <select className={`${inputClass} w-auto flex-grow min-w-[200px]`} value={value} disabled={busy} onChange={(e) => pick(e.target.value)}>
+          <option value="__auto">Let the AI decide{row.tcTopicSource === 'ai' ? ` (now: ${row.tcTopic ? label(row.tcTopic) : 'no topic'})` : ''}</option>
+          {options.map((t) => <option key={t._id} value={t._id}>{t.label}</option>)}
+          <option value="__none">Not in any topic</option>
+        </select>
+        <button className={btnGhost} disabled={busy} onClick={() => send(`/api/toppers-copy/admin/pyqs/${row._id}/retag`, { method: 'POST' })}>
+          {busy ? '…' : 'Ask AI again'}
+        </button>
+      </div>
+      <p className="text-[11px] text-text-tertiary">{aiLine}</p>
+      {!options.length && <p className="text-[11px] text-status-warning-text">No Toppers Copy topics in {row.subject} yet.</p>}
+      {err && <p className="text-[11px] text-status-danger-text">{err}</p>}
+    </div>
+  );
+}
+
+const placementBadge = (r, topics) => {
+  if (r.tcTopicSource === 'ai' || r.tcTopicSource === 'manual') {
+    const who = r.tcTopicSource === 'ai' ? 'AI' : 'admin';
+    if (!r.tcTopic) return <span className="text-text-tertiary font-bold"> · NO TOPIC ({who})</span>;
+    const t = topics.find((x) => x._id === r.tcTopic);
+    return <span className="text-brand font-bold"> · → {t ? t.label : 'deleted topic'} ({who})</span>;
+  }
+  return <span className="text-status-warning-text font-bold"> · NOT PLACED</span>;
+};
+
 function ManagePyqs() {
-  const [filters, setFilters] = useState({ subject: '', q: '', year: '' });
+  const [filters, setFilters] = useState({ subject: '', q: '', year: '', tcTopic: '' });
+  const [tcTopics, setTcTopics] = useState([]);
+  const [untagged, setUntagged] = useState(0);
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [subjects, setSubjects] = useState([]);
@@ -960,12 +1022,15 @@ function ManagePyqs() {
       if (filters.subject) p.set('subject', filters.subject);
       if (filters.q.trim()) p.set('q', filters.q.trim());
       if (filters.year.trim()) p.set('year', filters.year.trim());
+      if (filters.tcTopic) p.set('tcTopic', filters.tcTopic);
       const res = await authedJson(`/api/toppers-copy/admin/pyqs?${p.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Load failed');
       setRows((prev) => (append ? [...prev, ...data.pyqs] : data.pyqs).map((r) => ({ ...r, _dirty: false })));
       setTotal(data.total || 0);
       if (data.subjects?.length) setSubjects(data.subjects);
+      setTcTopics(data.tcTopics || []);
+      setUntagged(data.untagged || 0);
       if (!append) setSelected(new Set());
     } catch (err) {
       setMsg(err.message);
@@ -1012,6 +1077,24 @@ function ManagePyqs() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  // AI-place this subject's PYQs in the background (only the not-yet-placed ones, or all
+  // the AI's own placements too). Admin placements are never touched.
+  const [placing, setPlacing] = useState(false);
+  const aiPlace = async (onlyUntagged) => {
+    const scope = filters.subject || 'every subject';
+    if (!onlyUntagged && !confirm(`Let the AI re-place every PYQ in ${scope}? PYQs you placed by hand stay as they are.`)) return;
+    setPlacing(true); setMsg('');
+    try {
+      const res = await authedJson('/api/toppers-copy/admin/pyqs/retag', {
+        method: 'POST',
+        body: JSON.stringify({ subject: filters.subject || undefined, onlyUntagged }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      setMsg(data.message);
+    } catch (err) { setMsg(err.message); } finally { setPlacing(false); }
   };
 
   const remove = async (row) => {
@@ -1137,7 +1220,32 @@ function ManagePyqs() {
           <input className={inputClass} placeholder="type to filter…" value={filters.q}
             onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))} />
         </div>
+        <div>
+          <label className={labelClass}>Shown in Toppers Copy under</label>
+          <select className={`${inputClass} w-auto max-w-[260px]`} value={filters.tcTopic}
+            onChange={(e) => setFilters((f) => ({ ...f, tcTopic: e.target.value }))}>
+            <option value="">Any</option>
+            <option value="untagged">Not placed yet</option>
+            <option value="none">No topic</option>
+            <option value="manual">Placed by admin</option>
+            {tcTopics.filter((t) => !filters.subject || t.subject === filters.subject).map((t) => (
+              <option key={t._id} value={t._id}>{filters.subject ? '' : `${t.subject}: `}{t.label}</option>
+            ))}
+          </select>
+        </div>
         <button className={btnGhost} onClick={() => load(0, false)} disabled={loading}>Refresh</button>
+        <div className="w-full flex items-center gap-3 flex-wrap border-t border-border-default pt-3">
+          <span className="text-[11px] text-text-secondary">
+            The AI places each PYQ under the right Toppers Copy topic when it’s imported or edited.
+            {untagged > 0 && <b className="text-status-warning-text"> {untagged} not placed yet{filters.subject ? ` in ${filters.subject}` : ''}.</b>}
+          </span>
+          <button className={btnPrimary} disabled={placing || !untagged} onClick={() => aiPlace(true)}>
+            {placing ? '…' : `AI-place ${untagged || ''} not placed`}
+          </button>
+          <button className="text-[11px] font-bold text-text-tertiary hover:text-text-primary cursor-pointer" disabled={placing} onClick={() => aiPlace(false)}>
+            Re-place all with AI…
+          </button>
+        </div>
       </div>
 
       {msg && <p className="text-xs font-semibold text-status-info-text">{msg}</p>}
@@ -1195,6 +1303,7 @@ function ManagePyqs() {
                                   {r.pyqAnswerStatus === 'published' && <span className="text-status-success-text font-bold"> · PUBLISHED</span>}
                                   {r.pyqAnswerStatus === 'draft' && <span className="text-status-warning-text font-bold"> · DRAFT</span>}
                                   {r.pyqAnswer?.source === 'pdf' && <span className="text-status-info-text font-bold"> · FROM BOOK</span>}
+                                  {placementBadge(r, tcTopics)}
                                 </p>
                               </button>
                               <span className="text-text-tertiary text-xs mt-1">{isExpanded ? '▾' : '▸'}</span>
@@ -1223,6 +1332,13 @@ function ManagePyqs() {
                                     Delete
                                   </button>
                                 </div>
+                                <PyqPlacement
+                                  row={r}
+                                  topics={tcTopics}
+                                  onUpdated={(pyq) => setRows((rs) => rs.map((x) => (x._id === r._id
+                                    ? { ...x, tcTopic: pyq.tcTopic || null, tcTopicSource: pyq.tcTopicSource || '', tcTopicReason: pyq.tcTopicReason || '' }
+                                    : x)))}
+                                />
                                 <PyqAnswerEditor
                                   pyqId={r._id}
                                   initial={r.pyqAnswer}
