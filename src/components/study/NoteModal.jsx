@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { createNote, listNotebooks, createNotebook, getLastNotebook, setLastNotebook } from '../../lib/studyApi';
+import { createNote, listNotebooks, createNotebook, getLastNotebook, setLastNotebook, notebookOptions } from '../../lib/studyApi';
 
 const NEW_NB = '__new__';
 
@@ -138,7 +138,7 @@ export default function NoteModal({ studyRef, title, quote = '', quoteFrom = '',
                 className={`${field} sm:flex-1`}
               >
                 <option value="">No notebook</option>
-                {(notebooks || []).map((nb) => <option key={nb._id} value={nb._id}>{nb.name}</option>)}
+                {notebookOptions(notebooks || []).map((nb) => <option key={nb._id} value={nb._id}>{nb.label}</option>)}
                 <option value={NEW_NB}>+ New notebook…</option>
               </select>
               {nbId === NEW_NB && (

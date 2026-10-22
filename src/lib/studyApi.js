@@ -53,9 +53,19 @@ export const emptyBin = () => request('/bin', { method: 'DELETE' });
 export const markRevised = (id) => request(`/items/${id}/revised`, { method: 'POST' });
 
 export const listNotebooks = () => request('/notebooks');
-export const createNotebook = (name) => request('/notebooks', { method: 'POST', body: { name } });
+// With parentId it creates a sub-topic inside that notebook.
+export const createNotebook = (name, parentId) => request('/notebooks', { method: 'POST', body: { name, parentId } });
 export const renameNotebook = (id, name) => request(`/notebooks/${id}`, { method: 'PATCH', body: { name } });
 export const deleteNotebook = (id) => request(`/notebooks/${id}`, { method: 'DELETE' });
+
+// Notebooks in sidebar order — each top-level notebook followed by its sub-topics — with a
+// `label` for pickers and badges ("Polity", "Polity › Parliament").
+export const notebookOptions = (notebooks = []) => notebooks
+  .filter((n) => !n.parent)
+  .flatMap((t) => [
+    { ...t, label: t.name },
+    ...notebooks.filter((n) => n.parent === t._id).map((s) => ({ ...s, label: `${t.name} › ${s.name}` })),
+  ]);
 
 // The notebook "Add to notes" last saved into, so the next note defaults there.
 const LAST_NB = 'study_last_notebook';

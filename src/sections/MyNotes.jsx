@@ -4,14 +4,14 @@ import NoteModal from '../components/study/NoteModal';
 import MatchListsView from './quiz/MatchListsView';
 import {
   listItems, updateNote, deleteItem, markRevised, moveToNotebook, restoreItem, emptyBin,
-  listNotebooks, createNotebook, renameNotebook, deleteNotebook,
+  listNotebooks, createNotebook, renameNotebook, deleteNotebook, notebookOptions,
 } from '../lib/studyApi';
 import { jumpTo } from '../lib/studyJump';
 
 // ---------------------------------------------------------------------------
 // "My Notes" — every bookmark and note the student saved in Toppers Copy, the Question Bank
 // and the Economy Master File, plus notes they wrote themselves. A sidebar picks the view
-// (All / Starred / one of their named notebooks / Recently deleted); inside it, filter by
+// (All / Starred / one of their named notebooks or its sub-topics / Recently deleted); inside it, filter by
 // section / subject, search, edit, file into a notebook, delete (to the bin), jump back to
 // the source, or step through the list in Revision mode.
 // ---------------------------------------------------------------------------
@@ -81,11 +81,13 @@ const Tab = ({ active, onClick, children }) => (
   </button>
 );
 
-const NavItem = ({ active, onClick, icon, label, count }) => (
+const NavItem = ({ active, onClick, icon, label, count, sub = false }) => (
   <button
     type="button"
     onClick={onClick}
-    className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm text-left cursor-pointer transition-colors ${
+    className={`w-full flex items-center justify-between gap-2 pr-3 rounded-lg text-left cursor-pointer transition-colors ${
+      sub ? 'pl-8 py-1.5 text-[13px]' : 'pl-3 py-2 text-sm'
+    } ${
       active ? 'bg-surface-raised text-text-primary font-bold' : 'text-text-secondary hover:bg-surface-raised hover:text-text-primary'
     }`}
   >
@@ -123,13 +125,31 @@ export default function MyNotes() {
   const [nb, setNb] = useState({ notebooks: [], counts: { all: 0, starred: 0, bin: 0 }, binDays: 30 });
   const [nbQuery, setNbQuery] = useState('');
   const [creatingNb, setCreatingNb] = useState(false);
+  const [creatingSubFor, setCreatingSubFor] = useState(null); // notebook id getting a new sub-topic
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem(SIDEBAR_KEY) !== 'closed'; } catch { return true; }
   });
   const [mobileNav, setMobileNav] = useState(false);
 
   const inBin = view.type === 'bin';
-  const currentNb = view.type === 'notebook' ? nb.notebooks.find((n) => n._id === view.id) : null;
+
+  // Top-level notebooks with their sub-topics; a notebook's count includes its sub-topics'.
+  const tree = useMemo(() => nb.notebooks.filter((n) => !n.parent).map((t) => {
+    const subs = nb.notebooks.filter((n) => n.parent === t._id);
+    return { ...t, subs, total: t.count + subs.reduce((a, s) => a + s.count, 0) };
+  }), [nb.notebooks]);
+  const currentNb = useMemo(() => {
+    if (view.type !== 'notebook') return null;
+    const top = tree.find((t) => t._id === view.id);
+    if (top) return { ...top, count: top.total };
+    const n = nb.notebooks.find((x) => x._id === view.id);
+    return n ? { ...n, parentNb: tree.find((t) => t._id === n.parent) || null } : null;
+  }, [view, tree, nb.notebooks]);
+  // Notebook ids whose items show in the current notebook view (itself + its sub-topics).
+  const viewNbIds = useMemo(
+    () => new Set(currentNb ? [currentNb._id, ...(currentNb.subs || []).map((s) => s._id)] : []),
+    [currentNb],
+  );
 
   const refreshNotebooks = useCallback(() => {
     listNotebooks().then(setNb).catch(() => { /* sidebar keeps its last counts */ });
@@ -273,13 +293,13 @@ export default function MyNotes() {
     try {
       const { item: updated } = await moveToNotebook(item._id, notebookId);
       const now = updated.notebook || null;
-      if (view.type === 'notebook' && now !== view.id) dropFromList(item);
+      if (view.type === 'notebook' && !viewNbIds.has(now)) dropFromList(item);
       else patchItem(item._id, { notebook: now });
       refreshNotebooks();
     } catch (err) {
       setError(err.message);
     }
-  }, [view, dropFromList, patchItem, refreshNotebooks]);
+  }, [view, viewNbIds, dropFromList, patchItem, refreshNotebooks]);
 
   const doEmptyBin = async () => {
     if (!window.confirm(`Delete all ${nb.counts.bin} notes in Recently deleted for good? This can’t be undone.`)) return;
@@ -301,6 +321,13 @@ export default function MyNotes() {
     pickView({ type: 'notebook', id: notebook._id });
   };
 
+  const addSubtopic = async (parentId, name) => {
+    const { notebook } = await createNotebook(name, parentId);
+    setCreatingSubFor(null);
+    refreshNotebooks();
+    pickView({ type: 'notebook', id: notebook._id });
+  };
+
   const doRenameNotebook = async (name) => {
     await renameNotebook(currentNb._id, name);
     refreshNotebooks();
@@ -308,24 +335,33 @@ export default function MyNotes() {
 
   const doDeleteNotebook = async () => {
     const n = currentNb.count;
-    const msg = n
-      ? `Delete the notebook “${currentNb.name}”? Its ${n} item${n === 1 ? '' : 's'} stay in All notes.`
-      : `Delete the notebook “${currentNb.name}”?`;
+    const what = `${n} item${n === 1 ? '' : 's'}`;
+    const parent = currentNb.parentNb;
+    const subs = currentNb.subs?.length || 0;
+    const msg = parent
+      ? `Delete the sub-topic “${currentNb.name}”?${n ? ` Its ${what} move to “${parent.name}”.` : ''}`
+      : `Delete the notebook “${currentNb.name}”${subs ? ` and its ${subs} sub-topic${subs === 1 ? '' : 's'}` : ''}?${n ? ` Its ${what} stay in All notes.` : ''}`;
     if (!window.confirm(msg)) return;
     try {
       await deleteNotebook(currentNb._id);
       refreshNotebooks();
-      pickView({ type: 'all' });
+      pickView(parent ? { type: 'notebook', id: parent._id } : { type: 'all' });
     } catch (err) {
       setError(err.message);
     }
   };
 
-  const nbNames = useMemo(() => new Map(nb.notebooks.map((n) => [n._id, n.name])), [nb.notebooks]);
+  // id -> "Polity" / "Polity › Parliament", for the badge on each card
+  const nbLabels = useMemo(() => new Map(notebookOptions(nb.notebooks).map((n) => [n._id, n.label])), [nb.notebooks]);
+  // Search keeps a notebook if it or one of its sub-topics matches (all its sub-topics if the notebook does).
   const shownNotebooks = useMemo(() => {
     const q = nbQuery.trim().toLowerCase();
-    return q ? nb.notebooks.filter((n) => n.name.toLowerCase().includes(q)) : nb.notebooks;
-  }, [nb.notebooks, nbQuery]);
+    if (!q) return tree;
+    const hit = (n) => n.name.toLowerCase().includes(q);
+    return tree
+      .map((t) => (hit(t) ? t : { ...t, subs: t.subs.filter(hit) }))
+      .filter((t) => hit(t) || t.subs.length);
+  }, [tree, nbQuery]);
 
   if (revising) {
     return (
@@ -339,7 +375,7 @@ export default function MyNotes() {
 
   const viewTitle = inBin ? 'Recently deleted'
     : view.type === 'starred' ? 'Starred'
-      : currentNb ? currentNb.name
+      : currentNb ? (currentNb.parentNb ? `${currentNb.parentNb.name} › ${currentNb.name}` : currentNb.name)
         : 'All notes';
   const filtered = !!(section || subject || debouncedQuery);
   const canWrite = view.type === 'all' || view.type === 'notebook';
@@ -358,16 +394,40 @@ export default function MyNotes() {
       <NavItem active={view.type === 'starred'} onClick={() => pickView({ type: 'starred' })} icon="★" label="Starred" count={nb.counts.starred} />
 
       <p className="px-3 pt-4 pb-1 text-[11px] font-extrabold uppercase tracking-widest text-text-tertiary">Notebooks</p>
-      {shownNotebooks.map((n) => (
-        <NavItem
-          key={n._id}
-          active={view.type === 'notebook' && view.id === n._id}
-          onClick={() => pickView({ type: 'notebook', id: n._id })}
-          icon="📓"
-          label={n.name}
-          count={n.count}
-        />
-      ))}
+      {shownNotebooks.map((n) => {
+        const open = view.type === 'notebook' && (view.id === n._id || n.subs.some((s) => s._id === view.id));
+        return (
+          <div key={n._id}>
+            <NavItem
+              active={view.type === 'notebook' && view.id === n._id}
+              onClick={() => pickView({ type: 'notebook', id: n._id })}
+              icon="📓"
+              label={n.name}
+              count={n.total}
+            />
+            {n.subs.map((s) => (
+              <NavItem
+                key={s._id}
+                sub
+                active={view.type === 'notebook' && view.id === s._id}
+                onClick={() => pickView({ type: 'notebook', id: s._id })}
+                icon="›"
+                label={s.name}
+                count={s.count}
+              />
+            ))}
+            {open && (creatingSubFor === n._id ? (
+              <div className="pl-6">
+                <NameInput placeholder="Sub-topic name" submitLabel="Add" onSubmit={(name) => addSubtopic(n._id, name)} onCancel={() => setCreatingSubFor(null)} />
+              </div>
+            ) : (
+              <button type="button" onClick={() => setCreatingSubFor(n._id)} className="w-full text-left pl-8 pr-3 py-1.5 text-[13px] font-semibold text-brand hover:text-brand-hover cursor-pointer">
+                + Add sub-topic
+              </button>
+            ))}
+          </div>
+        );
+      })}
       {nbQuery && !shownNotebooks.length && <p className="px-3 py-1 text-xs text-text-tertiary">No notebook matches.</p>}
       {creatingNb ? (
         <NameInput placeholder="Notebook name" submitLabel="Create" onSubmit={addNotebook} onCancel={() => setCreatingNb(false)} />
@@ -418,7 +478,13 @@ export default function MyNotes() {
                 {sidebarOpen ? '‹' : '›'}
               </button>
               {currentNb ? (
-                <NotebookTitle key={currentNb._id} notebook={currentNb} onRename={doRenameNotebook} onDelete={doDeleteNotebook} />
+                <NotebookTitle
+                  key={currentNb._id}
+                  notebook={currentNb}
+                  onOpenParent={currentNb.parentNb ? () => pickView({ type: 'notebook', id: currentNb.parentNb._id }) : null}
+                  onRename={doRenameNotebook}
+                  onDelete={doDeleteNotebook}
+                />
               ) : (
                 <h1 className="text-xl md:text-2xl font-extrabold text-text-primary tracking-tight truncate">{viewTitle}</h1>
               )}
@@ -524,7 +590,11 @@ export default function MyNotes() {
                               key={it._id}
                               item={it}
                               notebooks={nb.notebooks}
-                              notebookName={view.type === 'notebook' ? '' : nbNames.get(it.notebook) || ''}
+                              notebookName={
+                                view.type !== 'notebook' ? nbLabels.get(it.notebook) || ''
+                                  : it.notebook === view.id ? ''
+                                    : nb.notebooks.find((n) => n._id === it.notebook)?.name || ''
+                              }
                               onPatch={patchItem}
                               onDelete={removeItem}
                               onMove={moveItem}
@@ -629,14 +699,14 @@ function NameInput({ initial = '', placeholder, submitLabel, onSubmit, onCancel 
   );
 }
 
-function NotebookTitle({ notebook, onRename, onDelete }) {
+function NotebookTitle({ notebook, onOpenParent, onRename, onDelete }) {
   const [renaming, setRenaming] = useState(false);
   if (renaming) {
     return (
       <div className="w-72 max-w-full">
         <NameInput
           initial={notebook.name}
-          placeholder="Notebook name"
+          placeholder={notebook.parentNb ? 'Sub-topic name' : 'Notebook name'}
           submitLabel="Rename"
           onSubmit={async (name) => { await onRename(name); setRenaming(false); }}
           onCancel={() => setRenaming(false)}
@@ -646,6 +716,11 @@ function NotebookTitle({ notebook, onRename, onDelete }) {
   }
   return (
     <div className="flex items-center gap-1 min-w-0">
+      {onOpenParent && (
+        <button type="button" onClick={onOpenParent} className="text-xl md:text-2xl font-extrabold text-text-tertiary hover:text-text-primary tracking-tight truncate cursor-pointer flex-shrink min-w-0">
+          {notebook.parentNb.name} ›
+        </button>
+      )}
       <h1 className="text-xl md:text-2xl font-extrabold text-text-primary tracking-tight truncate">{notebook.name}</h1>
       <button type="button" onClick={() => setRenaming(true)} className="text-[11px] font-bold text-text-tertiary hover:text-text-primary cursor-pointer px-2 py-1">
         Rename
@@ -766,7 +841,7 @@ function NoteCard({ item, notebooks, notebookName, onPatch, onDelete, onMove, on
               title="File in a notebook"
             >
               <option value="">📓 No notebook</option>
-              {notebooks.map((n) => <option key={n._id} value={n._id}>📓 {n.name}</option>)}
+              {notebookOptions(notebooks).map((n) => <option key={n._id} value={n._id}>📓 {n.label}</option>)}
             </select>
           )}
           <div className="flex items-center gap-1 flex-wrap justify-end">
