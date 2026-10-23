@@ -5,12 +5,14 @@ import { blocksToText, textToBlocks } from '../lib/economyMarkup';
 import {
   adminStatus, adminListTopics, adminUpdateTopic, adminAiExtras, adminUpdateTheme,
   adminThemeAiExtras, adminStopThemeAiExtras, adminAiExtrasJobs, adminPublishThemeExtras, adminImport, adminUploadSourcePdf, SOURCE_LABEL,
+  adminListPyqs, adminPlacePyq, adminStartPyqTagging, adminStopPyqTagging, adminPyqTagging,
 } from '../lib/economyApi';
 
 // ---------------------------------------------------------------------------
 // Admin → Economy Data. Load the parsed Master File, publish themes, link them to Question
 // Bank PYQs, fix anything the parser got wrong, and add the "Conceptual depth" / "Additional
 // facts & peripheral knowledge" extras (hand-written or AI-drafted, then published per topic).
+// PYQs tab: place Economy Question Bank PYQs under topics (AI first, then review by hand).
 // ---------------------------------------------------------------------------
 
 const card = 'bg-surface border border-border-default rounded-2xl p-5';
@@ -22,7 +24,7 @@ const input = 'w-full bg-surface border border-border-default rounded-lg px-3 py
 export default function AdminEconomyMaster() {
   const [status, setStatus] = useState(null);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState('themes'); // themes | topics | setup
+  const [tab, setTab] = useState('themes'); // themes | topics | pyqs | setup
 
   const reload = useCallback(() => adminStatus().then(setStatus).catch((e) => setError(e.message)), []);
   useEffect(() => { reload(); }, [reload]);
@@ -40,7 +42,7 @@ export default function AdminEconomyMaster() {
           <p className="text-sm text-text-secondary">{totalTopics} topics · {status.themes.filter((t) => t.isPublished).length}/{status.themes.length} themes published</p>
         </div>
         <div className="flex gap-1 bg-sunken rounded-xl p-1">
-          {[['themes', 'Themes'], ['topics', 'Topics'], ['setup', 'Import & PDF']].map(([k, l]) => (
+          {[['themes', 'Themes'], ['topics', 'Topics'], ['pyqs', 'PYQs'], ['setup', 'Import & PDF']].map(([k, l]) => (
             <button key={k} onClick={() => setTab(k)} className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${tab === k ? 'bg-surface text-text-primary shadow-sm' : 'text-text-tertiary'}`}>{l}</button>
           ))}
         </div>
@@ -55,6 +57,7 @@ export default function AdminEconomyMaster() {
       {tab === 'setup' && <SetupPanel status={status} onChanged={reload} />}
       {tab === 'themes' && <ThemesPanel status={status} onChanged={reload} />}
       {tab === 'topics' && <TopicsPanel themes={status.themes} ai={status.ai} />}
+      {tab === 'pyqs' && <PyqsPanel themes={status.themes} />}
     </div>
   );
 }
@@ -488,6 +491,221 @@ function TopicEditor({ topic, themes, ai, onSaved }) {
           <button disabled={!!busy} onClick={() => saveAll({ extrasStatus: 'draft' })} className={btnGhost}>Unpublish extras</button>
         )}
         {msg && <span className={`text-xs ${msg.startsWith('Saved') || msg.startsWith('AI') ? 'text-status-success-text' : 'text-status-danger-text'}`}>{msg}</span>}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================ PYQ placement
+
+const PYQ_STATUS = [
+  ['', 'All'],
+  ['placed', 'Placed'],
+  ['low', 'AI — low confidence'],
+  ['unplaced', 'No topic found'],
+  ['untagged', 'Not tagged yet'],
+  ['admin', 'Placed by hand'],
+];
+
+function PyqsPanel({ themes }) {
+  const [filters, setFilters] = useState({ status: '', section: '', q: '' });
+  const [data, setData] = useState(null);
+  const [tagging, setTagging] = useState(null);   // { job, summary, model }
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const themeTitle = useMemo(() => Object.fromEntries(themes.map((t) => [t.key, t.title])), [themes]);
+
+  const load = useCallback(() => adminListPyqs(filters).then(setData).catch((e) => setErr(e.message)), [filters]);
+  useEffect(() => {
+    const id = setTimeout(() => { setData(null); load(); }, filters.q ? 300 : 0);
+    return () => clearTimeout(id);
+  }, [filters, load]);
+
+  const loadTagging = useCallback(() => adminPyqTagging().then(setTagging).catch((e) => setErr(e.message)), []);
+  useEffect(() => { loadTagging(); }, [loadTagging]);
+  const running = !!tagging?.job?.running;
+  useEffect(() => {
+    if (!running) return undefined;
+    const id = setInterval(loadTagging, 2500);
+    return () => clearInterval(id);
+  }, [running, loadTagging]);
+  // refresh the list once a job finishes
+  useEffect(() => { if (tagging?.job && !running) load(); }, [running]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const start = async (opts, confirmText) => {
+    if (confirmText && !window.confirm(confirmText)) return;
+    setBusy(true);
+    setErr('');
+    try {
+      await adminStartPyqTagging(opts);
+      await loadTagging();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sum = tagging?.summary || data?.summary;
+  const replace = (id, patch) => setData((d) => ({ ...d, pyqs: d.pyqs.map((q) => (q._id === id ? { ...q, ...patch } : q)) }));
+
+  return (
+    <div className="space-y-4">
+      <div className={`${card} space-y-3`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold text-text-primary">Economy PYQs → Master File topics</p>
+            {sum && (
+              <p className="text-[11px] text-text-tertiary font-semibold">
+                {sum.total} PYQs · {sum.placed} placed · {sum.unplaced} no topic found · {sum.untagged} not tagged yet · {sum.byAdmin} by hand
+              </p>
+            )}
+            {sum?.total === 0 && (
+              <p className="text-xs text-status-warning-text mt-1">
+                No Economy bank yet — run <code>scripts/import_bank_questions.mjs --subject Economy</code> first.
+              </p>
+            )}
+          </div>
+          {running ? (
+            <span className="flex items-center gap-2 text-xs font-semibold text-text-secondary">
+              ✨ Placing {tagging.job.done + tagging.job.failed}/{tagging.job.total}{tagging.job.failed ? ` (${tagging.job.failed} failed)` : ''}
+              <button disabled={busy} onClick={() => adminStopPyqTagging().then(loadTagging)} className={btnGhost}>Stop</button>
+            </span>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              <button disabled={busy || !sum?.untagged} onClick={() => start({ limit: 3 })} className={btnGhost} title="Tag 3 questions to check the quality first">Try 3</button>
+              <button
+                disabled={busy || !sum?.untagged}
+                onClick={() => start({}, `AI-place ${sum.untagged} untagged PYQ(s) with ${tagging?.model}? Runs in batches of 15.`)}
+                className={btnPrimary}
+              >
+                ✨ AI-place {sum?.untagged || 0} untagged
+              </button>
+              <button
+                disabled={busy || !sum?.total}
+                onClick={() => start({ retag: true }, 'Redo every AI placement? Questions you placed by hand are kept.')}
+                className={btnGhost}
+              >
+                Redo AI placements
+              </button>
+            </div>
+          )}
+        </div>
+        {tagging?.job && !running && tagging.job.finishedAt && (
+          <p className="text-[11px] text-text-tertiary">
+            Last run: {tagging.job.placed}/{tagging.job.total} placed{tagging.job.failed ? `, ${tagging.job.failed} failed` : ''}.
+            {tagging.job.errors?.map((e, i) => <span key={i} className="block text-status-danger-text">{e.error}</span>)}
+          </p>
+        )}
+        <div className="grid sm:grid-cols-[180px_220px_1fr] gap-1.5">
+          <select className={input} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+            {PYQ_STATUS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+          <select className={input} value={filters.section} onChange={(e) => setFilters({ ...filters, section: e.target.value })}>
+            <option value="">All sections</option>
+            {data?.sections?.map((x) => <option key={x} value={x}>{x}</option>)}
+          </select>
+          <input className={input} placeholder="Search question, year or ref (econ-pyq:6.14)…" value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} />
+        </div>
+        {err && <p className="text-xs text-status-danger-text">{err}</p>}
+      </div>
+
+      {!data && <div className="py-10 flex justify-center"><LoadingSpinner /></div>}
+      {data?.pyqs.length === 0 && <p className={`${card} text-sm text-text-tertiary`}>No PYQs match.</p>}
+      {data?.pyqs.length === 500 && <p className="text-[11px] text-text-tertiary">Showing the first 500 — narrow the filters to see the rest.</p>}
+      <div className="space-y-2">
+        {data?.pyqs.map((q) => <PyqRow key={q._id} q={q} themeTitle={themeTitle} onChanged={(patch) => replace(q._id, patch)} />)}
+      </div>
+    </div>
+  );
+}
+
+function PyqRow({ q, themeTitle, onChanged }) {
+  const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const correct = q.options.find((o) => o.key === q.correctKey);
+  const conf = q.econTag?.confidence;
+
+  const place = async (topics) => {
+    setBusy(true);
+    setErr('');
+    try {
+      const d = await adminPlacePyq(q._id, topics.map((t) => t._id));
+      onChanged({ topics: d.pyq.topics, econTag: d.pyq.econTag });
+      setAdding(false);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={`${card} !p-3.5`}>
+      <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+        <span className="text-text-tertiary">{q.sourceRef?.replace('econ-pyq:', '#') || '—'}</span>
+        <span className="px-1.5 py-0.5 rounded-md bg-accent-soft-bg text-brand">{q.examSource}</span>
+        <span className="text-text-tertiary uppercase tracking-wide">{q.section}</span>
+        {q.econTag?.by === 'admin' && <span className="px-1.5 py-0.5 rounded-md bg-status-success-bg text-status-success-text">by hand</span>}
+        {q.econTag?.by === 'ai' && conf != null && (
+          <span className={`px-1.5 py-0.5 rounded-md ${conf < 0.75 ? 'bg-status-warning-bg text-status-warning-text' : 'bg-sunken text-text-tertiary'}`}>AI {Math.round(conf * 100)}%</span>
+        )}
+        {!q.econTag?.by && <span className="px-1.5 py-0.5 rounded-md bg-sunken text-text-tertiary">not tagged</span>}
+      </div>
+      <button onClick={() => setOpen(!open)} className="block w-full text-left mt-1.5 cursor-pointer">
+        <p className={`text-sm text-text-primary leading-snug ${open ? 'whitespace-pre-line' : 'line-clamp-2'}`}>
+          {[q.questionText, ...(open ? q.statements : [])].join('\n')}
+        </p>
+      </button>
+      {open && (
+        <ul className="mt-1 text-[13px] text-text-secondary">
+          {q.options.map((o) => <li key={o.key} className={o.key === q.correctKey ? 'font-semibold text-status-success-text' : ''}>({o.key.toLowerCase()}) {o.text}</li>)}
+        </ul>
+      )}
+      {!open && correct && <p className="text-[11px] text-text-tertiary mt-0.5">Answer: ({q.correctKey.toLowerCase()}) {correct.text}</p>}
+
+      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+        {q.topics.length === 0 && <span className="text-[11px] text-text-tertiary">No topic.</span>}
+        {q.topics.map((t) => (
+          <span key={t._id} className="inline-flex items-center gap-1 text-[11px] font-semibold pl-2 pr-1 py-0.5 rounded-md border border-border-default bg-surface text-text-primary">
+            <span className="text-text-tertiary">{themeTitle[t.themeKey] || t.themeKey} ·</span> {t.title}
+            <span className="text-[9px] text-text-tertiary uppercase">{SOURCE_LABEL[t.source]}</span>
+            <button disabled={busy} onClick={() => place(q.topics.filter((x) => x._id !== t._id))} className="px-1 text-text-tertiary hover:text-status-danger-text cursor-pointer" aria-label={`Remove ${t.title}`}>×</button>
+          </span>
+        ))}
+        {!adding && <button disabled={busy} onClick={() => setAdding(true)} className={btnGhost}>+ Topic</button>}
+      </div>
+      {adding && <TopicPicker exclude={q.topics} themeTitle={themeTitle} onPick={(t) => place([...q.topics, t])} onClose={() => setAdding(false)} />}
+      {err && <p className="text-xs text-status-danger-text mt-1">{err}</p>}
+    </div>
+  );
+}
+
+function TopicPicker({ exclude, themeTitle, onPick, onClose }) {
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState([]);
+  useEffect(() => {
+    if (q.trim().length < 2) { setResults([]); return undefined; }
+    const id = setTimeout(() => adminListTopics({ q }).then((d) => setResults(d.topics.slice(0, 30))).catch(() => setResults([])), 250);
+    return () => clearTimeout(id);
+  }, [q]);
+  const taken = new Set(exclude.map((t) => t._id));
+
+  return (
+    <div className="mt-2 rounded-xl border border-border-default bg-sunken p-2 space-y-1.5">
+      <div className="flex gap-1.5">
+        <input autoFocus className={input} placeholder="Search Master File topics…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <button onClick={onClose} className={btnGhost}>Cancel</button>
+      </div>
+      <div className="max-h-56 overflow-y-auto">
+        {results.filter((t) => !taken.has(t._id)).map((t) => (
+          <button key={t._id} onClick={() => onPick(t)} className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-surface cursor-pointer">
+            <span className="text-[13px] text-text-primary">{t.title}</span>
+            <span className="text-[10px] font-semibold text-text-tertiary"> · {themeTitle[t.themeKey] || t.themeKey} · {SOURCE_LABEL[t.source]}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import NoteModal from '../components/study/NoteModal';
 import SelectionToNote from '../components/study/SelectionToNote';
 import TopicBody from '../components/economy/TopicBody';
 import SourcePageModal from '../components/economy/SourcePageModal';
+import TopicPyqs from '../components/economy/TopicPyqs';
 import QuizRunner from './quiz/QuizRunner';
 import QuizSummary from './quiz/QuizSummary';
 import useBookmarks from '../lib/useBookmarks';
@@ -371,7 +372,7 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
     const p = progress[t._id];
     if (show === 'todo') return !p?.status;
     if (show === 'due') return isDue(p);
-    if (show === 'pyq') return t.pyqTags.length > 0;
+    if (show === 'pyq') return t.pyqTags.length > 0 || t.pyqCount > 0;
     return true;
   }), [topics, progress, source, show]);
 
@@ -439,7 +440,7 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
               <span className="w-px h-5 bg-border-default mx-1 flex-shrink-0" />
               <Chip active={show === 'todo'} onClick={() => setShow(show === 'todo' ? 'all' : 'todo')}>Not read</Chip>
               {counts.due > 0 && <Chip active={show === 'due'} onClick={() => setShow(show === 'due' ? 'all' : 'due')}>Due</Chip>}
-              <Chip active={show === 'pyq'} onClick={() => setShow(show === 'pyq' ? 'all' : 'pyq')}>PYQ-tagged</Chip>
+              <Chip active={show === 'pyq'} onClick={() => setShow(show === 'pyq' ? 'all' : 'pyq')}>Has PYQs</Chip>
               <span className="w-px h-5 bg-border-default mx-1 flex-shrink-0" />
               <Chip active={outline} onClick={() => updatePrefs({ outline: !outline })} title="Show titles only; tap a topic to open it">Outline</Chip>
               <Chip active={!prefs.plain} onClick={() => updatePrefs({ plain: !prefs.plain })} title="Show the PDF's highlights">Highlights</Chip>
@@ -473,7 +474,7 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
           </div>
         )}
 
-        {tab === 'pyqs' && <PyqsTab themeKey={themeKey} onOpenTopic={scrollToTopic} />}
+        {tab === 'pyqs' && <PyqsTab themeKey={themeKey} topics={topics} onOpenTopic={scrollToTopic} />}
 
         {tab === 'progress' && (
           <ProgressTab
@@ -575,6 +576,7 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
             {t.pyqTags.map((tag) => (
               <span key={tag} className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-accent-soft-bg text-brand border border-accent-soft-border">PYQ · {tag}</span>
             ))}
+            {t.pyqCount > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-accent-soft-bg text-brand border border-accent-soft-border">{t.pyqCount} PYQ{t.pyqCount > 1 ? 's' : ''}</span>}
             {status && <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${STATUS[status].cls}`}>{STATUS[status].label}</span>}
             {due && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-status-warning-bg text-status-warning-text">Revise today</span>}
           </div>
@@ -619,6 +621,8 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
             )}
           </div>
 
+          {t.pyqCount > 0 && <TopicPyqs topicId={t._id} count={t.pyqCount} />}
+
           <footer className="flex flex-wrap items-center gap-1.5 px-4 sm:pl-14 sm:pr-5 py-3 border-t border-border-default">
             <div className="flex rounded-lg border border-border-default overflow-hidden" role="group" aria-label="Progress">
               {['read', 'revised', 'mastered'].map((s) => (
@@ -652,7 +656,7 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
 
 // ============================================================================ PYQs
 
-function PyqsTab({ themeKey, onOpenTopic }) {
+function PyqsTab({ themeKey, topics, onOpenTopic }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [run, setRun] = useState(null);            // { subject, topic }
@@ -682,8 +686,25 @@ function PyqsTab({ themeKey, onOpenTopic }) {
   if (error) return <p className="text-sm text-status-danger-text">{error}</p>;
   if (!data) return <div className="py-16 flex justify-center"><LoadingSpinner /></div>;
 
+  const withPyqs = topics.filter((t) => t.pyqCount > 0);
+
   return (
     <div className="space-y-6">
+      {withPyqs.length > 0 && (
+        <section>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-1">PYQs by topic</h2>
+          <p className="text-xs text-text-secondary mb-2">Open a topic to read its notes and try the PYQs asked on it.</p>
+          <div className="bg-surface border border-border-default rounded-2xl divide-y divide-border-default">
+            {withPyqs.map((t) => (
+              <button key={t._id} onClick={() => onOpenTopic(t._id)} className="w-full text-left px-4 py-3 hover:bg-surface-raised cursor-pointer flex items-center justify-between gap-3">
+                <span className="text-sm text-text-primary font-semibold min-w-0">{t.title} <span className="text-[10px] font-bold uppercase tracking-wide text-text-tertiary">{SOURCE_LABEL[t.source]}</span></span>
+                <span className="text-[11px] font-bold text-brand whitespace-nowrap">{t.pyqCount} PYQ{t.pyqCount > 1 ? 's' : ''} →</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section>
         <h2 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-2">Practise PYQs</h2>
         {data.linked?.topics?.length ? (
@@ -701,7 +722,7 @@ function PyqsTab({ themeKey, onOpenTopic }) {
           </div>
         ) : (
           <p className="text-sm text-text-tertiary bg-surface border border-dashed border-border-default rounded-xl px-4 py-5 text-center">
-            Theme-wise MCQ practice for this theme is coming soon.
+            {withPyqs.length ? 'A timed practice set for this theme is coming soon — try the PYQs by topic above.' : 'Theme-wise MCQ practice for this theme is coming soon.'}
           </p>
         )}
       </section>
