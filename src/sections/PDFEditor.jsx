@@ -127,10 +127,17 @@ export default function PDFEditor() {
     setErrorMsg('');
     try {
       const baseUrl = import.meta.env.VITE_API_URL || '';
-      const absoluteUrl = (url.startsWith('/uploads/') || url.startsWith('uploads/')) && baseUrl
-        ? `${baseUrl.replace(/\/$/, '')}${url.startsWith('/') ? url : `/${url}`}`
+      // Edited files are served by an authenticated API route (no more public /uploads folder), so
+      // pdf.js has to send the login token itself.
+      const isEditFile = url.startsWith('/api/pdf-editor/file/');
+      const absoluteUrl = isEditFile && baseUrl
+        ? `${baseUrl.replace(/\/$/, '')}${url}`
         : url;
-      const loadingTask = window.pdfjsLib.getDocument(absoluteUrl);
+      const loadingTask = window.pdfjsLib.getDocument(
+        isEditFile
+          ? { url: absoluteUrl, httpHeaders: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+          : absoluteUrl
+      );
       const pdf = await loadingTask.promise;
       setPdfDocument(pdf);
       setNumPages(pdf.numPages);
@@ -663,7 +670,7 @@ export default function PDFEditor() {
           </button>
           
           <a
-            href={`${import.meta.env.VITE_API_URL || ''}/api/pdf-editor/download/${editId}`}
+            href={`${import.meta.env.VITE_API_URL || ''}/api/pdf-editor/download/${encodeURIComponent(editId)}?token=${encodeURIComponent(localStorage.getItem('token') || '')}`}
             download
             className="flex items-center gap-1.5 px-4 py-2 bg-accent-650 hover:bg-accent-600 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
           >
