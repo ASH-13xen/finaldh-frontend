@@ -59,6 +59,7 @@ export default function UploadCourse() {
   const [courseId, setCourseId] = useState('');
   const [name, setName] = useState('');
   const [subject, setSubject] = useState('');
+  const [examStage, setExamStage] = useState('Mains');
   const [price, setPrice] = useState('499');
   const [discountedPrice, setDiscountedPrice] = useState('499');
   const [useDiscount, setUseDiscount] = useState(false);
@@ -500,6 +501,7 @@ export default function UploadCourse() {
     setCourseId('');
     setName('');
     setSubject('');
+    setExamStage('Mains');
     setPrice('499');
     setDiscountedPrice('499');
     setUseDiscount(false);
@@ -519,6 +521,7 @@ export default function UploadCourse() {
     setCourseId(course.courseId || '');
     setName(course.name || '');
     setSubject(course.subject || '');
+    setExamStage(course.examStage === 'Prelims' ? 'Prelims' : 'Mains');
     setPrice(String(course.price || 499));
     setDiscountedPrice(String(course.discountedPrice !== undefined ? course.discountedPrice : (course.price || 499)));
     setUseDiscount(!!course.useDiscount);
@@ -580,6 +583,7 @@ export default function UploadCourse() {
     formData.append('courseId', courseId);
     formData.append('name', name);
     formData.append('subject', subject);
+    formData.append('examStage', examStage);
     formData.append('price', price);
     formData.append('discountedPrice', discountedPrice);
     formData.append('useDiscount', useDiscount);
@@ -821,6 +825,7 @@ export default function UploadCourse() {
                   <th className="px-6 py-4">Course ID</th>
                   <th className="px-6 py-4">Name</th>
                   <th className="px-6 py-4">Subject</th>
+                  <th className="px-6 py-4">Exam Stage</th>
                   <th className="px-6 py-4">Price (₹)</th>
                   <th className="px-6 py-4">Use Discount</th>
                   <th className="px-6 py-4">50 Stud Tag</th>
@@ -841,6 +846,11 @@ export default function UploadCourse() {
                       </td>
                       <td className="px-6 py-4 font-semibold text-text-primary max-w-xs truncate">{course.name}</td>
                       <td className="px-6 py-4 text-text-secondary font-medium">{subDisplayName}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold border ${course.examStage === 'Prelims' ? 'bg-accent-soft-bg border-accent-soft-border text-brand' : 'bg-sunken border-border-default text-text-secondary'}`}>
+                          {course.examStage === 'Prelims' ? 'Prelims' : 'Mains'}
+                        </span>
+                      </td>
                       <td className="px-6 py-4">
                         {course.useDiscount ? (
                           <div className="flex flex-col">
@@ -1307,6 +1317,22 @@ export default function UploadCourse() {
                   {availableSubjects.map((sub) => (
                     <option key={sub.id} value={sub.id}>{sub.name}</option>
                   ))}
+                </select>
+              </div>
+
+              {/* Exam Stage - controls which top-level section (Prelims or Mains) this
+                  course appears under on the Buy Courses / Purchase Courses pages. */}
+              <div>
+                <label htmlFor="modal-course-exam-stage" className="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1.5">Exam Stage</label>
+                <select
+                  id="modal-course-exam-stage"
+                  value={examStage}
+                  onChange={(e) => setExamStage(e.target.value)}
+                  className="w-full px-4.5 py-2.5 bg-sunken border border-border-default rounded-xl text-xs text-text-primary focus:outline-none focus:border-brand transition-all font-semibold"
+                  required
+                >
+                  <option value="Mains">Mains</option>
+                  <option value="Prelims">Prelims</option>
                 </select>
               </div>
 
