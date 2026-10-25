@@ -406,93 +406,199 @@ function CompendiumIngest() {
 
 // ============================ 2. PYQ ingest ============================
 function PyqIngest() {
+  const [sourceType, setSourceType] = useState('pdf'); // 'pdf' | 'json'
   const [file, setFile] = useState(null);
   const [sourceLabel, setSourceLabel] = useState('');
+  const [defaultSubject, setDefaultSubject] = useState('');
+  const [defaultSection, setDefaultSection] = useState('');
+  const [publishOnCommit, setPublishOnCommit] = useState(false);
   const [starting, setStarting] = useState(false);
   const [jobId, setJobId] = useState(null);
+  const [jsonJobResult, setJsonJobResult] = useState(null); // { mergedFragments, diagramReport } — json path only, resolves instantly
   const [msg, setMsg] = useState('');
-  const job = useJobPoll(jobId);
+  const job = useJobPoll(sourceType === 'pdf' ? jobId : null);
 
   const [rows, setRows] = useState([]);
   const [filterSubject, setFilterSubject] = useState('');
   const [committing, setCommitting] = useState(false);
+  const [commitResult, setCommitResult] = useState(null); // { message, conflicts }
+  const [formatProgress, setFormatProgress] = useState(null); // { done, total } while auto-formatting newly-committed book answers
 
   useEffect(() => {
     if (job?.status === 'done' && job.extractedPyqs) setRows(job.extractedPyqs.map((r) => ({ ...r })));
   }, [job?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const jsonJobDone = sourceType === 'json' && rows.length > 0 && !!jobId;
+
   const start = async () => {
-    if (!file) { setMsg('A PDF file is required.'); return; }
-    setStarting(true); setMsg('');
+    if (!file) { setMsg(`A ${sourceType === 'pdf' ? 'PDF' : 'JSON'} file is required.`); return; }
+    setStarting(true); setMsg(''); setCommitResult(null); setJsonJobResult(null);
     try {
       const fd = new FormData();
-      fd.append('pdf', file);
-      const res = await authedForm('/api/toppers-copy/admin/pyq/start', fd);
+      fd.append(sourceType === 'pdf' ? 'pdf' : 'json', file);
+      if (defaultSubject.trim()) fd.append('defaultSubject', defaultSubject.trim());
+      if (sourceType === 'pdf' && defaultSection.trim()) fd.append('defaultSection', defaultSection.trim());
+      const res = await authedForm(`/api/toppers-copy/admin/pyq/${sourceType === 'pdf' ? 'start' : 'start-json'}`, fd);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to start');
       setJobId(data.jobId);
+      if (sourceType === 'json') {
+        setJsonJobResult({ mergedFragments: data.mergedFragments, diagramReport: data.diagramReport || [] });
+        // json jobs resolve synchronously — fetch the job doc once for its extractedPyqs
+        const jr = await authedJson(`/api/toppers-copy/admin/jobs/${data.jobId}`);
+        const jd = await jr.json();
+        setRows((jd.extractedPyqs || []).map((r) => ({ ...r })));
+      }
     } catch (err) { setMsg(err.message); } finally { setStarting(false); }
   };
 
   const updateRow = (i, key, val) => setRows((r) => r.map((row, idx) => (idx === i ? { ...row, [key]: val } : row)));
   const removeRow = (i) => setRows((r) => r.filter((_, idx) => idx !== i));
 
+  // Runs the cheap reformat-only pass over every newly-committed/merged book
+  // answer, one at a time (mirrors the admin "Analyze N Q" client-side loop
+  // pattern elsewhere in this panel) so a bulk commit's HTTP request doesn't
+  // block on dozens of AI calls. Fire-and-forget — admin can navigate away.
+  const runFormatPending = async (ids) => {
+    if (!ids?.length) return;
+    setFormatProgress({ done: 0, total: ids.length });
+    for (let i = 0; i < ids.length; i++) {
+      try {
+        await authedJson(`/api/toppers-copy/admin/pyqs/${ids[i]}/answer/format`, { method: 'POST', body: JSON.stringify({}) });
+      } catch { /* one failure shouldn't stop the batch — re-run manually via the Reformat button */ }
+      setFormatProgress({ done: i + 1, total: ids.length });
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  };
+
   const commit = async () => {
-    setCommitting(true); setMsg('');
+    setCommitting(true); setMsg(''); setCommitResult(null);
     try {
       const res = await authedJson(`/api/toppers-copy/admin/pyq/${jobId}/commit`, {
         method: 'POST',
         body: JSON.stringify({
           sourceLabel,
+          defaultSubject: defaultSubject.trim(),
+          publish: publishOnCommit,
           pyqs: rows.map((r) => ({ ...r, year: Number(r.year), marks: r.marks === '' || r.marks == null ? null : Number(r.marks) })),
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Commit failed');
-      setMsg(`${data.message} ${data.skipped?.length ? `(${data.skipped.length} skipped)` : ''}`);
-      setJobId(null); setRows([]); setFile(null);
+      setCommitResult(data);
+      setMsg(data.message);
+      setJobId(null); setRows([]); setFile(null); setJsonJobResult(null);
+      runFormatPending(data.formatPending); // don't await — runs in the background
     } catch (err) { setMsg(err.message); } finally { setCommitting(false); }
   };
 
   const shown = filterSubject ? rows.filter((r) => r.subject === filterSubject) : rows;
   const subjectsInRows = [...new Set(rows.map((r) => r.subject))].filter(Boolean).sort();
+  const reviewReady = sourceType === 'pdf' ? job?.status === 'done' : jsonJobDone;
 
   return (
     <div className="space-y-5">
       <div className="bg-surface border border-border-default rounded-2xl p-5 space-y-4">
+        <div className="flex gap-2">
+          {[['pdf', 'PDF (AI-extracted questions)'], ['json', 'JSON (book already has answers)']].map(([k, label]) => (
+            <button key={k}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${sourceType === k ? 'bg-brand text-text-on-accent' : 'bg-sunken text-text-secondary border border-border-default'}`}
+              onClick={() => { setSourceType(k); setFile(null); setJobId(null); setRows([]); setMsg(''); setJsonJobResult(null); }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div>
-          <label className={labelClass}>PYQ compilation PDF (all subjects)</label>
-          <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)}
+          <label className={labelClass}>{sourceType === 'pdf' ? 'PYQ compilation PDF (all subjects)' : 'PYQ + answer JSON (subject/topic/subtopic/year/question/model_answer)'}</label>
+          <input type="file" accept={sourceType === 'pdf' ? 'application/pdf' : 'application/json'} onChange={(e) => setFile(e.target.files?.[0] || null)}
             className="text-xs text-text-secondary file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-brand file:text-text-on-accent file:text-xs file:font-bold" />
+          {sourceType === 'json' && (
+            <p className="text-[10px] text-text-tertiary mt-1">
+              For a source book that already prints a model answer per question. The answer is used verbatim, never AI-rewritten. Marks/diagram-placeholder/page-footer cleanup runs automatically.
+            </p>
+          )}
         </div>
         <div>
           <label className={labelClass}>Source label (optional)</label>
           <input className={`${inputClass} max-w-sm`} placeholder="e.g. Civilsdaily Microthemes 2026" value={sourceLabel}
             onChange={(e) => setSourceLabel(e.target.value)} />
         </div>
-        <button className={btnPrimary} disabled={starting || !!jobId} onClick={start}>
-          {starting ? 'Uploading…' : jobId ? 'Job running…' : 'Upload & extract PYQs'}
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label className={labelClass}>{sourceType === 'pdf' ? 'Force subject (optional)' : 'Subject'}</label>
+            <select className={inputClass} value={defaultSubject} onChange={(e) => setDefaultSubject(e.target.value)}>
+              <option value="">{sourceType === 'pdf' ? '— read from the PDF —' : '— choose —'}</option>
+              {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            {sourceType === 'pdf' && (
+              <p className="text-[10px] text-text-tertiary mt-1">Set this for a single-subject book that never prints its subject on the page.</p>
+            )}
+          </div>
+          {sourceType === 'pdf' && (
+            <div>
+              <label className={labelClass}>Default section (optional)</label>
+              <input className={inputClass} placeholder="only if the PDF has no section headings" value={defaultSection}
+                onChange={(e) => setDefaultSection(e.target.value)} />
+            </div>
+          )}
+        </div>
+        <button className={btnPrimary} disabled={starting || !!jobId || (sourceType === 'json' && !defaultSubject.trim())} onClick={start}>
+          {starting ? 'Uploading…' : jobId ? 'Loaded — review below' : sourceType === 'pdf' ? 'Upload & extract PYQs' : 'Upload & clean JSON'}
         </button>
         {msg && <p className="text-xs font-semibold text-status-info-text">{msg}</p>}
+        {formatProgress && (
+          <p className="text-[11px] text-text-tertiary">
+            Formatting book answers for display: {formatProgress.done}/{formatProgress.total}
+            {formatProgress.done === formatProgress.total ? ' — done.' : '… (safe to leave this tab)'}
+          </p>
+        )}
+        {commitResult?.conflicts?.length > 0 && (
+          <div className="border border-status-warning-text/40 bg-status-warning-bg rounded-lg p-2 space-y-1">
+            <p className="text-[11px] font-bold text-status-warning-text">{commitResult.conflicts.length} question(s) already had a published answer — left untouched, review in Manage PYQs:</p>
+            {commitResult.conflicts.map((c) => <p key={c.id} className="text-[11px] text-text-secondary">• {c.questionText.slice(0, 90)}</p>)}
+          </div>
+        )}
       </div>
 
       {job && <JobProgress job={job} />}
+      {jsonJobResult && (
+        <p className="text-[11px] text-text-tertiary">
+          {jsonJobResult.mergedFragments} chunk-boundary fragment(s) auto-merged. {jsonJobResult.diagramReport.length} question(s) flag a diagram to re-upload after commit.
+        </p>
+      )}
 
-      {job?.status === 'done' && (
+      {reviewReady && (
         <div className="bg-surface border border-border-default rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h3 className="text-sm font-extrabold text-text-primary">Review PYQs ({shown.length}{filterSubject ? ` of ${rows.length}` : ''})</h3>
-            <select className={`${inputClass} w-auto`} value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}>
-              <option value="">All subjects</option>
-              {subjectsInRows.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <div className="flex items-center gap-2 flex-wrap">
+              {(() => {
+                const blank = rows.filter((r) => !String(r.subject || '').trim()).length;
+                return blank > 0 && defaultSubject.trim() ? (
+                  <button
+                    className="text-[11px] font-bold text-brand border border-brand/40 rounded-lg px-2 py-1 cursor-pointer"
+                    onClick={() => setRows((rs) => rs.map((r) => (String(r.subject || '').trim() ? r : { ...r, subject: defaultSubject.trim() })))}
+                  >
+                    Set {blank} blank → “{defaultSubject.trim()}”
+                  </button>
+                ) : null;
+              })()}
+              <select className={`${inputClass} w-auto`} value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}>
+                <option value="">All subjects</option>
+                {subjectsInRows.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
           </div>
           <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="sticky top-0 bg-surface">
                 <tr className="text-[10px] font-bold uppercase text-text-tertiary text-left">
                   <th className="py-1 pr-2">Subj</th><th className="py-1 px-2">Section</th><th className="py-1 px-2">Topic</th><th className="py-1 px-2">Microtheme</th>
-                  <th className="py-1 px-2">Question</th><th className="py-1 px-2">Yr</th><th className="py-1 px-2">Mk</th><th />
+                  <th className="py-1 px-2">Question</th><th className="py-1 px-2">Yr</th><th className="py-1 px-2">Mk</th>
+                  {sourceType === 'json' && <th className="py-1 px-2">Answer</th>}
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -509,6 +615,11 @@ function PyqIngest() {
                       </td>
                       <td className="py-1 px-2 w-14"><input className={inputClass} value={r.year ?? ''} onChange={(e) => updateRow(i, 'year', e.target.value)} /></td>
                       <td className="py-1 px-2 w-12"><input className={inputClass} value={r.marks ?? ''} onChange={(e) => updateRow(i, 'marks', e.target.value)} /></td>
+                      {sourceType === 'json' && (
+                        <td className="py-1 px-2 w-16 text-center">
+                          {r.answerText ? <span className="text-[10px] font-bold text-status-success-text" title={r.answerText.slice(0, 200)}>✓ {r.answerText.length}ch</span> : <span className="text-text-tertiary">—</span>}
+                        </td>
+                      )}
                       <td className="py-1 pl-2"><button className="text-status-danger-text font-bold cursor-pointer" onClick={() => removeRow(i)}>✕</button></td>
                     </tr>
                   );
@@ -516,17 +627,291 @@ function PyqIngest() {
               </tbody>
             </table>
           </div>
-          <button className={btnPrimary} disabled={committing || rows.length === 0} onClick={commit}>
-            {committing ? 'Saving…' : `Commit ${rows.length} PYQ(s)`}
-          </button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button className={btnPrimary} disabled={committing || rows.length === 0} onClick={commit}>
+              {committing ? 'Saving…' : `Commit ${rows.length} PYQ(s)`}
+            </button>
+            <label className="flex items-center gap-2 text-xs font-bold text-text-secondary cursor-pointer">
+              <input type="checkbox" checked={publishOnCommit} onChange={(e) => setPublishOnCommit(e.target.checked)} />
+              Publish answers immediately
+            </label>
+            {publishOnCommit && sourceType === 'json' && (
+              <span className="text-[10px] text-text-tertiary">Answers go live unformatted for a few seconds until the background format pass finishes.</span>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
+// ---- per-PYQ house-style model answer: generate / edit / images / publish ----
+function PyqAnswerEditor({ pyqId, initial, initialStatus, onStatusChange }) {
+  const [answer, setAnswer] = useState(initial || null);
+  const [status, setStatus] = useState(initialStatus || 'none');
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
+  const [dirty, setDirty] = useState(false);
+
+  const setField = (k, v) => { setAnswer((a) => ({ ...a, [k]: v })); setDirty(true); };
+  const setSection = (i, patch) => {
+    setAnswer((a) => ({ ...a, sections: a.sections.map((s, idx) => (idx === i ? { ...s, ...patch } : s)) }));
+    setDirty(true);
+  };
+  const setPoint = (si, pi, patch) => setSection(si, {
+    points: answer.sections[si].points.map((p, idx) => (idx === pi ? { ...p, ...patch } : p)),
+  });
+
+  const pushStatus = (s) => { setStatus(s); onStatusChange?.(s); };
+
+  const generate = async (force = false) => {
+    setBusy('gen'); setMsg('');
+    try {
+      const res = await authedJson(`/api/toppers-copy/admin/pyqs/${pyqId}/answer`, {
+        method: 'POST',
+        body: JSON.stringify(force ? { force: true } : {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Generation failed');
+      setAnswer(data.pyqAnswer); setDirty(false); pushStatus('draft');
+      setMsg('Generated. Review, edit, then Publish.');
+    } catch (e) { setMsg(e.message); } finally { setBusy(''); }
+  };
+
+  const formatAnswer = async (force = false) => {
+    setBusy('format'); setMsg('');
+    try {
+      const res = await authedJson(`/api/toppers-copy/admin/pyqs/${pyqId}/answer/format`, {
+        method: 'POST',
+        body: JSON.stringify(force ? { force: true } : {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Formatting failed');
+      setAnswer(data.pyqAnswer);
+      setMsg('Formatted for display.');
+    } catch (e) { setMsg(e.message); } finally { setBusy(''); }
+  };
+
+  const resolveDiagramPage = async (page) => {
+    setBusy('save'); setMsg('');
+    try {
+      const res = await authedJson(`/api/toppers-copy/admin/pyqs/${pyqId}/answer`, {
+        method: 'PATCH',
+        body: JSON.stringify({ resolveDiagramPage: page }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+      setAnswer(data.pyqAnswer);
+    } catch (e) { setMsg(e.message); } finally { setBusy(''); }
+  };
+
+  const savePatch = async (extra = {}) => {
+    setBusy('save'); setMsg('');
+    try {
+      const res = await authedJson(`/api/toppers-copy/admin/pyqs/${pyqId}/answer`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          rawText: answer.rawText,
+          openingLine: answer.openingLine,
+          closingLine: answer.closingLine,
+          quote: answer.quote,
+          sections: answer.sections,
+          imageCaptions: Object.fromEntries((answer.images || []).map((im) => [im.id, im.caption || ''])),
+          ...extra,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+      setAnswer(data.pyqAnswer); setDirty(false); pushStatus(data.pyqAnswer.published ? 'published' : 'draft');
+      setMsg('Saved.');
+    } catch (e) { setMsg(e.message); } finally { setBusy(''); }
+  };
+
+  const uploadImage = async (file) => {
+    if (!file) return;
+    setBusy('img'); setMsg('');
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await authedForm(`/api/toppers-copy/admin/pyqs/${pyqId}/answer/images`, fd);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      setAnswer(data.pyqAnswer);
+      setMsg('Image added.');
+    } catch (e) { setMsg(e.message); } finally { setBusy(''); }
+  };
+
+  const deleteImage = async (imageId) => {
+    setBusy('img'); setMsg('');
+    try {
+      const res = await authedJson(`/api/toppers-copy/admin/pyqs/${pyqId}/answer/images/${imageId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
+      setAnswer(data.pyqAnswer);
+    } catch (e) { setMsg(e.message); } finally { setBusy(''); }
+  };
+
+  if (!answer) {
+    return (
+      <div className="border-t border-border-default pt-2 mt-1 flex items-center gap-3">
+        <button className={btnGhost} disabled={busy === 'gen'} onClick={generate}>
+          {busy === 'gen' ? 'Generating…' : 'Generate model answer (AI)'}
+        </button>
+        {msg && <span className="text-[11px] text-status-info-text">{msg}</span>}
+      </div>
+    );
+  }
+
+  const isFromBook = answer.source === 'pdf';
+
+  return (
+    <div className="border-t border-border-default pt-3 mt-1 space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${status === 'published' ? 'bg-status-success-bg text-status-success-text' : 'bg-status-warning-bg text-status-warning-text'}`}>
+          {status === 'published' ? 'PUBLISHED' : 'DRAFT'}
+        </span>
+        {isFromBook && (
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-status-info-bg text-status-info-text">FROM BOOK</span>
+        )}
+        {isFromBook ? (
+          <>
+            <button className={btnGhost} disabled={busy === 'format'}
+              onClick={() => formatAnswer(!!answer.sections?.length)}>
+              {busy === 'format' ? 'Formatting…' : answer.sections?.length ? 'Reformat' : 'Format for display'}
+            </button>
+            <button className={btnGhost} disabled={busy === 'gen'}
+              onClick={() => { if (confirm('This answer is verbatim from the source book. Replace it with an AI-written one instead? This cannot be undone here.')) generate(true); }}>
+              {busy === 'gen' ? 'Generating…' : 'Replace with AI answer'}
+            </button>
+          </>
+        ) : (
+          <button className={btnGhost} disabled={busy === 'gen'} onClick={() => { if (confirm('Regenerate — discards unsaved edits, keeps images.')) generate(); }}>
+            {busy === 'gen' ? 'Regenerating…' : 'Regenerate'}
+          </button>
+        )}
+        <button className={btnPrimary} disabled={!dirty || busy === 'save'} onClick={() => savePatch()}>
+          {busy === 'save' ? 'Saving…' : 'Save edits'}
+        </button>
+        <button
+          className={status === 'published' ? btnGhost : btnPrimary}
+          disabled={busy === 'save'}
+          onClick={() => savePatch({ published: status !== 'published' })}
+        >
+          {status === 'published' ? 'Unpublish' : 'Save & Publish'}
+        </button>
+        {msg && <span className="text-[11px] text-status-info-text">{msg}</span>}
+      </div>
+
+      {isFromBook && (
+        <details className="text-[11px]">
+          <summary className="cursor-pointer font-bold text-text-tertiary uppercase tracking-wider">
+            {answer.sections?.length ? 'View / edit original book text' : 'Answer (verbatim from source book)'}
+          </summary>
+          <textarea rows={12} className={`${inputClass} font-mono text-[11px] mt-1.5`} value={answer.rawText || ''}
+            onChange={(e) => setField('rawText', e.target.value)} />
+        </details>
+      )}
+
+      {(!isFromBook || answer.sections?.length > 0) ? (
+        <>
+          <div>
+            <label className={labelClass}>Opening line</label>
+            <textarea rows={2} className={inputClass} value={answer.openingLine || ''} onChange={(e) => setField('openingLine', e.target.value)} />
+          </div>
+
+          <div className="space-y-2">
+            <label className={labelClass}>Sections</label>
+            {(answer.sections || []).map((s, si) => (
+              <div key={si} className="border border-border-default rounded-lg p-2 space-y-1.5 bg-surface">
+                <div className="flex gap-2">
+                  <input className={`${inputClass} font-bold`} placeholder="Heading" value={s.heading}
+                    onChange={(e) => setSection(si, { heading: e.target.value })} />
+                  <button className="text-status-danger-text text-xs font-bold px-2 cursor-pointer"
+                    onClick={() => { setAnswer((a) => ({ ...a, sections: a.sections.filter((_, i) => i !== si) })); setDirty(true); }}>✕</button>
+                </div>
+                {(s.points || []).map((p, pi) => (
+                  <div key={pi} className="flex gap-1.5 items-start pl-2">
+                    <span className="text-brand font-bold text-xs mt-1.5">•</span>
+                    <input className={inputClass} placeholder="Claim" value={p.claim} onChange={(e) => setPoint(si, pi, { claim: e.target.value })} />
+                    <input className={inputClass} placeholder="Eg: example" value={p.example} onChange={(e) => setPoint(si, pi, { example: e.target.value })} />
+                    <button className="text-text-tertiary text-xs px-1 cursor-pointer"
+                      onClick={() => setSection(si, { points: s.points.filter((_, i) => i !== pi) })}>✕</button>
+                  </div>
+                ))}
+                <button className="text-[11px] font-bold text-brand pl-2 cursor-pointer"
+                  onClick={() => setSection(si, { points: [...(s.points || []), { claim: '', example: '' }] })}>+ point</button>
+              </div>
+            ))}
+            <button className="text-[11px] font-bold text-brand cursor-pointer"
+              onClick={() => { setAnswer((a) => ({ ...a, sections: [...(a.sections || []), { heading: '', points: [{ claim: '', example: '' }] }] })); setDirty(true); }}>
+              + section
+            </button>
+          </div>
+
+          <div>
+            <label className={labelClass}>Closing line</label>
+            <textarea rows={2} className={inputClass} value={answer.closingLine || ''} onChange={(e) => setField('closingLine', e.target.value)} />
+          </div>
+          <div>
+            <label className={labelClass}>Quote (optional)</label>
+            <input className={inputClass} value={answer.quote || ''} onChange={(e) => setField('quote', e.target.value)} />
+          </div>
+        </>
+      ) : null}
+
+      {isFromBook && (answer.pendingDiagramPages || []).length > 0 && (
+        <div className="border border-status-warning-text/40 bg-status-warning-bg rounded-lg p-2 space-y-1">
+          <p className="text-[11px] font-bold text-status-warning-text">
+            Source has a diagram not yet re-uploaded ({answer.pendingDiagramPages.length}):
+          </p>
+          {answer.pendingDiagramPages.map((page) => (
+            <div key={page} className="flex items-center gap-2 text-[11px]">
+              <span>Page {page} of the source PDF</span>
+              <button className="text-brand font-bold cursor-pointer" onClick={() => resolveDiagramPage(page)}>
+                mark resolved (after uploading below)
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        <label className={labelClass}>Images ({(answer.images || []).length}/6)</label>
+        <div className="flex flex-wrap gap-2">
+          {(answer.images || []).map((im) => (
+            <div key={im.id} className="w-28 space-y-1">
+              <div className="relative">
+                <img src={`/api/toppers-copy/pyqs/${pyqId}/answer/image/${im.id}?token=${encodeURIComponent(token())}`}
+                  alt="" className="w-28 h-20 object-cover rounded border border-border-default" />
+                <button className="absolute -top-1.5 -right-1.5 bg-status-danger-text text-white rounded-full w-4 h-4 text-[10px] leading-none cursor-pointer"
+                  onClick={() => deleteImage(im.id)}>✕</button>
+              </div>
+              <input className={`${inputClass} text-[10px]`} placeholder="caption" value={im.caption || ''}
+                onChange={(e) => { setAnswer((a) => ({ ...a, images: a.images.map((x) => (x.id === im.id ? { ...x, caption: e.target.value } : x)) })); setDirty(true); }} />
+            </div>
+          ))}
+          {(answer.images || []).length < 6 && (
+            <label className="w-28 h-20 border-2 border-dashed border-border-default rounded flex items-center justify-center text-[11px] text-text-tertiary cursor-pointer hover:border-brand">
+              {busy === 'img' ? '…' : '+ image'}
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadImage(e.target.files?.[0])} />
+            </label>
+          )}
+        </div>
+      </div>
+
+      {answer.diagram?.kind && (
+        <p className="text-[11px] text-text-tertiary">
+          Diagram: <b>{answer.diagram.kind}</b>{answer.diagram.title ? ` — ${answer.diagram.title}` : ''}.{' '}
+          <button className="text-brand font-bold cursor-pointer" onClick={() => savePatch({ clearDiagram: true })}>remove diagram</button>
+          {' · '}<span>edit by Regenerate</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ============================ 3. Manage committed PYQs ============================
-const PAGE = 100;
+const PAGE = 300;
 
 function ManagePyqs() {
   const [filters, setFilters] = useState({ subject: '', q: '', year: '' });
@@ -536,6 +921,10 @@ function ManagePyqs() {
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [msg, setMsg] = useState('');
+  const [selected, setSelected] = useState(() => new Set());
+  const [expanded, setExpanded] = useState(() => new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = useCallback(async (skip = 0, append = false) => {
     setLoading(true);
@@ -551,6 +940,7 @@ function ManagePyqs() {
       setRows((prev) => (append ? [...prev, ...data.pyqs] : data.pyqs).map((r) => ({ ...r, _dirty: false })));
       setTotal(data.total || 0);
       if (data.subjects?.length) setSubjects(data.subjects);
+      if (!append) setSelected(new Set());
     } catch (err) {
       setMsg(err.message);
     } finally {
@@ -586,7 +976,10 @@ function ManagePyqs() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Save failed');
-      setRows((rs) => rs.map((r) => (r._id === row._id ? { ...data.pyq, _dirty: false } : r)));
+      // keep the (differently-shaped) answer status the list endpoint gave us
+      setRows((rs) => rs.map((r) => (r._id === row._id
+        ? { ...data.pyq, pyqAnswer: r.pyqAnswer, pyqAnswerStatus: r.pyqAnswerStatus, _dirty: false }
+        : r)));
       setMsg('Saved.');
     } catch (err) {
       setMsg(err.message);
@@ -603,6 +996,7 @@ function ManagePyqs() {
       const res = await authedJson(`/api/toppers-copy/admin/pyqs/${row._id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error((await res.json()).error || 'Delete failed');
       setRows((rs) => rs.filter((r) => r._id !== row._id));
+      setSelected((s) => { const n = new Set(s); n.delete(row._id); return n; });
       setTotal((t) => Math.max(0, t - 1));
     } catch (err) {
       setMsg(err.message);
@@ -610,6 +1004,91 @@ function ManagePyqs() {
       setBusyId(null);
     }
   };
+
+  const toggleSelected = (id) => setSelected((s) => {
+    const n = new Set(s);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+  const toggleExpanded = (id) => setExpanded((s) => {
+    const n = new Set(s);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+  const selectAllLoaded = () => setSelected(new Set(rows.map((r) => r._id)));
+  const clearSelection = () => setSelected(new Set());
+
+  const deleteSelected = async () => {
+    if (!selected.size) return;
+    if (!confirm(`Delete ${selected.size} selected PYQ(s) permanently? This cannot be undone.`)) return;
+    setBulkBusy(true); setMsg('');
+    try {
+      const res = await authedJson('/api/toppers-copy/admin/pyqs/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids: [...selected] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Bulk delete failed');
+      setRows((rs) => rs.filter((r) => !selected.has(r._id)));
+      setTotal((t) => Math.max(0, t - data.deletedCount));
+      setSelected(new Set());
+      setMsg(data.message);
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const deleteAllMatching = async () => {
+    const hasFilter = filters.subject || filters.year || filters.q.trim();
+    const label = hasFilter
+      ? `everything matching the current filter (${total} PYQ${total === 1 ? '' : 's'})`
+      : `ALL ${total} PYQs in the database`;
+    if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
+    if (!confirm('Really sure? This is permanent and cannot be recovered.')) return;
+    setBulkBusy(true); setMsg('');
+    try {
+      const res = await authedJson('/api/toppers-copy/admin/pyqs/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ allMatching: true, filter: filters }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Bulk delete failed');
+      setMsg(data.message);
+      load(0, false);
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  // Section -> Topic grouping of the currently loaded rows, so a subject with
+  // hundreds of PYQs is browsable instead of one long flat always-expanded list.
+  const groups = (() => {
+    const bySection = new Map();
+    for (const r of rows) {
+      const sectionKey = r.section || '(no section)';
+      if (!bySection.has(sectionKey)) bySection.set(sectionKey, new Map());
+      const byTopic = bySection.get(sectionKey);
+      const topicKey = r.topic || '(no topic)';
+      if (!byTopic.has(topicKey)) byTopic.set(topicKey, []);
+      byTopic.get(topicKey).push(r);
+    }
+    const out = [...bySection.entries()].map(([section, byTopic]) => {
+      const topics = [...byTopic.entries()].map(([topic, topicRows]) => ({ topic, rows: topicRows }));
+      return { section, topics, count: topics.reduce((n, t) => n + t.rows.length, 0) };
+    });
+    out.sort((a, b) => b.count - a.count);
+    return out;
+  })();
+
+  const toggleGroup = (section) => setCollapsedGroups((s) => {
+    const n = new Set(s);
+    if (n.has(section)) n.delete(section); else n.add(section);
+    return n;
+  });
 
   return (
     <div className="space-y-4">
@@ -637,35 +1116,103 @@ function ManagePyqs() {
 
       {msg && <p className="text-xs font-semibold text-status-info-text">{msg}</p>}
 
-      <p className="text-[11px] text-text-tertiary">
-        {loading ? 'Loading…' : `Showing ${rows.length} of ${total} PYQ(s).`} Edits save per row. Deletes are permanent.
-      </p>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-[11px] text-text-tertiary">
+          {loading ? 'Loading…' : `Showing ${rows.length} of ${total} PYQ(s).`} Click a question to expand it.
+        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button className={btnGhost} onClick={selectAllLoaded} disabled={!rows.length}>Select all loaded ({rows.length})</button>
+          {total > 0 && (
+            <button className="text-[11px] font-bold text-status-danger-text cursor-pointer" disabled={bulkBusy} onClick={deleteAllMatching}>
+              Delete ALL {total} matching filter…
+            </button>
+          )}
+        </div>
+      </div>
 
-      <div className="space-y-2">
-        {rows.map((r) => (
-          <div key={r._id} className="border border-border-default rounded-xl p-3 bg-surface-raised space-y-2">
-            <div className="flex flex-wrap gap-2">
-              <select className={`${inputClass} w-28`} value={r.subject} onChange={(e) => editRow(r._id, 'subject', e.target.value)}>
-                {[r.subject, ...SUBJECTS.filter((s) => s !== r.subject)].map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <input className={`${inputClass} w-20`} placeholder="Year" value={r.year ?? ''} onChange={(e) => editRow(r._id, 'year', e.target.value)} />
-              <input className={`${inputClass} w-20`} placeholder="Marks" value={r.marks ?? ''} onChange={(e) => editRow(r._id, 'marks', e.target.value)} />
-              <input className={`${inputClass} flex-grow min-w-[120px]`} placeholder="Section" value={r.section || ''} onChange={(e) => editRow(r._id, 'section', e.target.value)} />
-              <input className={`${inputClass} flex-grow min-w-[120px]`} placeholder="Topic" value={r.topic || ''} onChange={(e) => editRow(r._id, 'topic', e.target.value)} />
-              <input className={`${inputClass} flex-grow min-w-[120px]`} placeholder="Microtheme" value={r.microtheme || ''} onChange={(e) => editRow(r._id, 'microtheme', e.target.value)} />
-            </div>
-            <textarea rows={2} className={inputClass} placeholder="Question text" value={r.questionText || ''}
-              onChange={(e) => editRow(r._id, 'questionText', e.target.value)} />
-            <div className="flex items-center gap-2">
-              <input className={`${inputClass} flex-grow`} placeholder="Source label" value={r.sourceLabel || ''}
-                onChange={(e) => editRow(r._id, 'sourceLabel', e.target.value)} />
-              <button className={btnPrimary} disabled={busyId === r._id || !r._dirty} onClick={() => save(r)}>
-                {busyId === r._id ? '…' : 'Save'}
-              </button>
-              <button className="px-3 py-1.5 text-[11px] font-bold text-status-danger-text cursor-pointer" disabled={busyId === r._id} onClick={() => remove(r)}>
-                Delete
-              </button>
-            </div>
+      {selected.size > 0 && (
+        <div className="sticky top-0 z-10 bg-status-warning-bg border border-status-warning-text/40 rounded-xl p-2.5 flex items-center gap-3 flex-wrap">
+          <span className="text-[11px] font-bold text-status-warning-text">{selected.size} selected</span>
+          <button className="text-[11px] font-bold text-status-danger-text cursor-pointer" disabled={bulkBusy} onClick={deleteSelected}>
+            {bulkBusy ? 'Deleting…' : `Delete ${selected.size} selected`}
+          </button>
+          <button className="text-[11px] font-bold text-text-tertiary cursor-pointer" onClick={clearSelection}>Clear</button>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {groups.map(({ section, topics, count }) => (
+          <div key={section} className="border border-border-default rounded-2xl overflow-hidden">
+            <button
+              className="w-full flex items-center justify-between px-3 py-2 bg-surface-raised cursor-pointer"
+              onClick={() => toggleGroup(section)}
+            >
+              <span className="text-xs font-extrabold text-text-primary">{section} <span className="text-text-tertiary font-semibold">({count})</span></span>
+              <span className="text-text-tertiary text-xs">{collapsedGroups.has(section) ? '▸' : '▾'}</span>
+            </button>
+            {!collapsedGroups.has(section) && (
+              <div className="p-2 space-y-3 bg-surface">
+                {topics.map(({ topic, rows: topicRows }) => (
+                  <div key={topic}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary px-1 mb-1">{topic} ({topicRows.length})</p>
+                    <div className="space-y-1.5">
+                      {topicRows.map((r) => {
+                        const isExpanded = expanded.has(r._id);
+                        return (
+                          <div key={r._id} className="border border-border-default rounded-xl bg-surface-raised">
+                            <div className="flex items-start gap-2 p-2">
+                              <input type="checkbox" className="mt-1 cursor-pointer" checked={selected.has(r._id)} onChange={() => toggleSelected(r._id)} />
+                              <button className="flex-grow text-left cursor-pointer" onClick={() => toggleExpanded(r._id)}>
+                                <p className="text-xs font-semibold text-text-primary line-clamp-2">{r.questionText}</p>
+                                <p className="text-[10px] text-text-tertiary mt-0.5">
+                                  {r.subject} · {r.year}{r.marks ? ` · ${r.marks}m` : ''}
+                                  {r.pyqAnswerStatus === 'published' && <span className="text-status-success-text font-bold"> · PUBLISHED</span>}
+                                  {r.pyqAnswerStatus === 'draft' && <span className="text-status-warning-text font-bold"> · DRAFT</span>}
+                                  {r.pyqAnswer?.source === 'pdf' && <span className="text-status-info-text font-bold"> · FROM BOOK</span>}
+                                </p>
+                              </button>
+                              <span className="text-text-tertiary text-xs mt-1">{isExpanded ? '▾' : '▸'}</span>
+                            </div>
+                            {isExpanded && (
+                              <div className="px-3 pb-3 space-y-2">
+                                <div className="flex flex-wrap gap-2">
+                                  <select className={`${inputClass} w-28`} value={r.subject} onChange={(e) => editRow(r._id, 'subject', e.target.value)}>
+                                    {[r.subject, ...SUBJECTS.filter((s) => s !== r.subject)].map((s) => <option key={s} value={s}>{s}</option>)}
+                                  </select>
+                                  <input className={`${inputClass} w-20`} placeholder="Year" value={r.year ?? ''} onChange={(e) => editRow(r._id, 'year', e.target.value)} />
+                                  <input className={`${inputClass} w-20`} placeholder="Marks" value={r.marks ?? ''} onChange={(e) => editRow(r._id, 'marks', e.target.value)} />
+                                  <input className={`${inputClass} flex-grow min-w-[120px]`} placeholder="Section" value={r.section || ''} onChange={(e) => editRow(r._id, 'section', e.target.value)} />
+                                  <input className={`${inputClass} flex-grow min-w-[120px]`} placeholder="Topic" value={r.topic || ''} onChange={(e) => editRow(r._id, 'topic', e.target.value)} />
+                                  <input className={`${inputClass} flex-grow min-w-[120px]`} placeholder="Microtheme" value={r.microtheme || ''} onChange={(e) => editRow(r._id, 'microtheme', e.target.value)} />
+                                </div>
+                                <textarea rows={2} className={inputClass} placeholder="Question text" value={r.questionText || ''}
+                                  onChange={(e) => editRow(r._id, 'questionText', e.target.value)} />
+                                <div className="flex items-center gap-2">
+                                  <input className={`${inputClass} flex-grow`} placeholder="Source label" value={r.sourceLabel || ''}
+                                    onChange={(e) => editRow(r._id, 'sourceLabel', e.target.value)} />
+                                  <button className={btnPrimary} disabled={busyId === r._id || !r._dirty} onClick={() => save(r)}>
+                                    {busyId === r._id ? '…' : 'Save'}
+                                  </button>
+                                  <button className="px-3 py-1.5 text-[11px] font-bold text-status-danger-text cursor-pointer" disabled={busyId === r._id} onClick={() => remove(r)}>
+                                    Delete
+                                  </button>
+                                </div>
+                                <PyqAnswerEditor
+                                  pyqId={r._id}
+                                  initial={r.pyqAnswer}
+                                  initialStatus={r.pyqAnswerStatus}
+                                  onStatusChange={(s) => setRows((rs) => rs.map((x) => (x._id === r._id ? { ...x, pyqAnswerStatus: s } : x)))}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
