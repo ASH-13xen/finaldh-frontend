@@ -43,6 +43,15 @@ export const categorizeCourses = (courses, excludedIds = []) => ({
   other: courses.filter((c) => !isGsCoreSubject(c.subject) && !isOptionalSubject(c.subject)),
 });
 
+// Top-level exam-stage split. Courses created before the examStage field existed default to
+// 'Mains' server-side, but we also treat any missing/unrecognized value as Mains here so the
+// UI never silently drops a course if that default is ever bypassed (e.g. a raw DB write).
+export const isPrelimsCourse = (course) => course?.examStage === 'Prelims';
+export const splitByExamStage = (courses) => ({
+  prelims: courses.filter((c) => isPrelimsCourse(c)),
+  mains: courses.filter((c) => !isPrelimsCourse(c)),
+});
+
 export const subjectDisplayName = (subject) =>
   subject?.startsWith('GS-') ? subject : OPTIONAL_NAMES[subject]?.replace('Optional: ', '') || subject;
 
@@ -59,4 +68,11 @@ export const CAC_FEATURES = [
   'PYQ Linkage — PYQs, Value Addition Box and Keywords all arranged Topic-Wise for better utility of the content.',
   'Brainstorming Sheets — Carefully curated List of Probable Mains questions for Brainstorming and active learning. (with Value Addition)',
   'Additional Topics from Relevant sources and editorials in One-Pager Format in Dedicated Group.',
+];
+
+export const PRELIMS_FEATURES = [
+  'Syllabus-wise & Topic-wise Compilation built specifically for Prelims-style recall and speed.',
+  'Quick Revision Boxes (QRBs) after every topic for rapid last-mile revision.',
+  'Dedicated Notes Space to add your own value-addition points.',
+  'Enhanced Content Coverage curated to close Prelims-specific gaps.',
 ];
