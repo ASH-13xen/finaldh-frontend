@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EnhancementManager from './AdminToppersEnhancements';
 import BestPartsManager from './AdminToppersBestParts';
+import ValueAdditionManager from './AdminToppersValueAdditions';
 
 // ---------------------------------------------------------------------------
 // Admin console for the Toppers Copy section. Three sub-tabs:
@@ -1266,6 +1267,7 @@ function ManageTopics() {
   const [organiseId, setOrganiseId] = useState(null); // topic whose sub-topic editor is open
   const [enhanceId, setEnhanceId] = useState(null);   // topic whose enhancement manager is open
   const [bestPartsId, setBestPartsId] = useState(null); // topic whose best-part crops are open
+  const [valueAddId, setValueAddId] = useState(null); // topic whose value-addition entries are open
 
   const loadSubjects = useCallback(async () => {
     setLoading(true);
@@ -1393,6 +1395,13 @@ function ManageTopics() {
                 >
                   {bestPartsId === t._id ? 'Close best parts' : '📸 Best parts'}
                 </button>
+                <button
+                  className={valueAddId === t._id ? btnPrimary : btnGhost}
+                  onClick={() => setValueAddId((cur) => (cur === t._id ? null : t._id))}
+                  title="Value-addition notes and PDFs students open from the PYQs drawer"
+                >
+                  {valueAddId === t._id ? 'Close value addition' : '➕ Value addition'}
+                </button>
                 <button className="px-3 py-1.5 text-[11px] font-bold text-status-danger-text cursor-pointer" disabled={busyId === t._id} onClick={() => remove(t)}>
                   Delete
                 </button>
@@ -1405,6 +1414,9 @@ function ManageTopics() {
               )}
               {bestPartsId === t._id && (
                 <BestPartsManager topicId={t._id} topicName={t.topic} onClose={() => setBestPartsId(null)} />
+              )}
+              {valueAddId === t._id && (
+                <ValueAdditionManager topicId={t._id} topicName={t.topic} onClose={() => setValueAddId(null)} />
               )}
               </Fragment>
             ))}

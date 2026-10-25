@@ -96,6 +96,8 @@ export default function ToppersCopy({ isAdmin = false }) {
 
   const [pyqOpen, setPyqOpen] = useState(false);
   const [selectedPyqId, setSelectedPyqId] = useState(null);
+  const [drawerTab, setDrawerTab] = useState('pyqs'); // 'pyqs' | 'value' (Value addition)
+  const [selectedVaId, setSelectedVaId] = useState(null);
   const [seen, setSeen] = useState(loadSeen);
   const bookmarks = useBookmarks('toppers_copy');
   const [noteDraft, setNoteDraft] = useState(null); // { studyRef, title, quote, quoteFrom }
@@ -358,6 +360,10 @@ export default function ToppersCopy({ isAdmin = false }) {
   // The PYQ whose model answer is open in the side panel — only valid while it is
   // in the current topic's list (so switching topics closes the panel).
   const selectedPyq = drawerPyqs.find((p) => p._id === selectedPyqId) || null;
+  const drawerVas = drawerDetail?.valueAdditions || [];
+  const selectedVa = drawerTab === 'value' ? drawerVas.find((v) => v._id === selectedVaId) || null : null;
+  const readingPyq = drawerTab === 'pyqs' ? selectedPyq : null;
+  const closeReading = () => { setSelectedPyqId(null); setSelectedVaId(null); };
 
   if (loadingSubjects) {
     return (
@@ -388,7 +394,20 @@ export default function ToppersCopy({ isAdmin = false }) {
       >
         <div className="px-5 py-4 border-b border-border-default flex items-start justify-between flex-shrink-0">
           <div className="min-w-0">
-            <h3 className="font-bold text-text-primary text-base">Related PYQs</h3>
+            <div className="flex items-center gap-1 -ml-1">
+              {[['pyqs', 'Related PYQs', drawerPyqs.length], ['value', 'Value addition', drawerVas.length]].map(([key, label, n]) => (
+                <button
+                  key={key}
+                  onClick={() => setDrawerTab(key)}
+                  className={`px-2 py-1 rounded-lg text-sm font-bold cursor-pointer transition-colors ${
+                    drawerTab === key ? 'bg-accent-soft-bg text-brand' : 'text-text-secondary hover:bg-sunken'
+                  }`}
+                >
+                  {label}
+                  {n ? <span className="ml-1 text-[11px] font-bold opacity-70">{n}</span> : null}
+                </button>
+              ))}
+            </div>
             <p className="text-[11px] text-text-tertiary font-medium mt-0.5 truncate">
               {drawerTopicName || 'Pick a topic'}
             </p>
@@ -402,6 +421,13 @@ export default function ToppersCopy({ isAdmin = false }) {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4">
+          {drawerTab === 'value' ? (
+            <ValueAdditionList
+              items={drawerVas}
+              selectedId={selectedVaId}
+              onOpen={(v) => setSelectedVaId((cur) => (cur === v._id ? null : v._id))}
+            />
+          ) : (
           <PyqList
             pyqs={drawerPyqs}
             selectedId={selectedPyqId}
@@ -409,15 +435,16 @@ export default function ToppersCopy({ isAdmin = false }) {
             isBookmarked={(q) => bookmarks.isBookmarked({ refType: 'tc_pyq', pyqId: q._id })}
             onBookmark={(q) => bookmarks.toggle({ refType: 'tc_pyq', pyqId: q._id, toppersCopyId: drawerTopicId })}
           />
+          )}
         </div>
       </div>
 
-      {/* ---- model-answer panel, sits right of the PYQ list ---- */}
-      {pyqOpen && selectedPyq && (
+      {/* ---- reading panel (PYQ model answer / value addition), sits right of the drawer ---- */}
+      {pyqOpen && (readingPyq || selectedVa) && (
         <>
           <div
             className="fixed inset-0 top-[73px] z-40 bg-black/30 sm:hidden"
-            onClick={() => setSelectedPyqId(null)}
+            onClick={closeReading}
           />
           <div
             className="fixed top-[73px] bottom-0 right-0 left-0 sm:left-auto z-[45] w-full bg-surface border-l border-border-default shadow-2xl flex flex-col"
@@ -434,6 +461,10 @@ export default function ToppersCopy({ isAdmin = false }) {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-border-default group-hover:bg-brand" />
               </div>
             )}
+            {selectedVa ? (
+              <ValueAdditionReader item={selectedVa} topicName={drawerTopicName} onClose={closeReading} />
+            ) : (
+            <>
             <div className="px-5 py-3.5 border-b border-border-default flex-shrink-0 flex items-start gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -467,6 +498,8 @@ export default function ToppersCopy({ isAdmin = false }) {
             >
               <PyqAnswerView answer={selectedPyq.pyqAnswer} pyqId={selectedPyq._id} />
             </SelectionToNote>
+            </>
+            )}
           </div>
         </>
       )}
@@ -477,7 +510,7 @@ export default function ToppersCopy({ isAdmin = false }) {
           className="fixed left-0 top-1/2 -translate-y-1/2 z-40 bg-brand hover:bg-brand-hover text-text-on-accent text-[11px] font-extrabold px-2 py-4 rounded-r-xl shadow-xl cursor-pointer tracking-widest uppercase"
           style={{ writingMode: 'vertical-rl' }}
         >
-          PYQs
+          PYQs · Value addition
         </button>
       )}
 
@@ -1088,6 +1121,99 @@ function PyqList({ pyqs, selectedId, onOpen, isBookmarked, onBookmark }) {
         />
       ))}
     </div>
+  );
+}
+
+function ValueAdditionList({ items, selectedId, onOpen }) {
+  if (!items.length) {
+    return <p className="text-sm text-text-tertiary italic">No value addition for this topic yet.</p>;
+  }
+  return (
+    <div className="space-y-2.5">
+      {items.map((v) => {
+        const selected = v._id === selectedId;
+        return (
+          <button
+            key={v._id}
+            onClick={() => onOpen(v)}
+            className={`w-full text-left p-3 border rounded-xl transition-colors cursor-pointer ${
+              selected ? 'bg-surface border-brand' : 'bg-sunken border-border-default hover:border-brand/50'
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              {v.hasPdf ? (
+                <span className="text-[11px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">PDF</span>
+              ) : null}
+              {v.body?.trim() ? (
+                <span className="text-[11px] font-bold text-text-secondary bg-surface px-1.5 py-0.5 rounded">Notes</span>
+              ) : null}
+              {!v.published ? (
+                <span className="text-[11px] font-bold text-status-warning-text bg-status-warning-bg px-1.5 py-0.5 rounded">draft</span>
+              ) : null}
+            </div>
+            <p className="font-reading text-sm text-text-primary leading-relaxed font-semibold">{v.title}</p>
+            <p className="mt-1.5 text-xs font-bold text-brand">{selected ? 'Open' : 'Open →'}</p>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Admin-written notes: blank lines split paragraphs, "- " / "• " lines become bullets.
+function ValueAdditionNotes({ text }) {
+  const blocks = text.trim().split(/\n\s*\n/);
+  return (
+    <div className="font-reading text-sm text-text-primary leading-relaxed space-y-3">
+      {blocks.map((block, i) => {
+        const lines = block.split('\n').filter((l) => l.trim());
+        const bullets = lines.length && lines.every((l) => /^\s*[-•*]\s+/.test(l));
+        return bullets ? (
+          <ul key={i} className="list-disc pl-5 space-y-1">
+            {lines.map((l, j) => <li key={j}>{l.replace(/^\s*[-•*]\s+/, '')}</li>)}
+          </ul>
+        ) : (
+          <p key={i} className="whitespace-pre-line">{block.trim()}</p>
+        );
+      })}
+    </div>
+  );
+}
+
+function ValueAdditionReader({ item, topicName, onClose }) {
+  const hasNotes = !!item.body?.trim();
+  return (
+    <>
+      <div className="px-5 py-3.5 border-b border-border-default flex-shrink-0 flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wide mb-1 truncate">
+            Value addition{topicName ? ` · ${topicName}` : ''}
+          </p>
+          <p className="font-reading text-sm font-semibold text-text-primary leading-snug">{item.title}</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-sunken text-text-secondary cursor-pointer text-lg leading-none flex-shrink-0"
+          aria-label="Close value addition"
+        >
+          ✕
+        </button>
+      </div>
+      {hasNotes && (
+        <div className={`px-5 py-4 overflow-y-auto ${item.hasPdf ? 'max-h-[40%] flex-shrink-0 border-b border-border-default' : 'flex-1'}`}>
+          <ValueAdditionNotes text={item.body} />
+        </div>
+      )}
+      {item.hasPdf && (
+        <div className="relative flex-1 min-h-[260px]">
+          <PdfAnswerViewer
+            key={`${item._id}-${item.updatedAt}`}
+            fileUrl={`/api/toppers-copy/value-additions/${item._id}/pdf`}
+            token={localStorage.getItem('token')}
+          />
+        </div>
+      )}
+    </>
   );
 }
 
