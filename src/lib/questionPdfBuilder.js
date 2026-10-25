@@ -45,7 +45,7 @@ const hex = (h) => {
 const C = {
   ink: hex('#1f1a14'),
   secondary: hex('#5c5447'),
-  tertiary: hex('#8c8270'),
+  tertiary: hex('#6b6150'),
   border: hex('#d8c9a8'),
   borderSoft: hex('#e8ddc8'),
   sunken: hex('#f3ecdf'),
@@ -68,7 +68,7 @@ const TONE = {
 // Sheet geometry (points). Every page is SHEET_W wide; heights vary — a marked
 // page grows to hold its notes, text pages are cropped to their content.
 const SHEET_W = 900;
-const PAGE_W = 500;                         // the scanned page, as drawn
+const PAGE_W = 460;                         // the scanned page, as drawn
 const MARGIN_W = (SHEET_W - PAGE_W) / 2;    // note margin on each side
 const NOTE_X = 8;
 const NOTE_W = MARGIN_W - 22;
@@ -214,7 +214,7 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
         return api.text(runs, { ...o, x: x + indent, w: width - x - indent });
       },
       chips(items, o = {}) {
-        const { size = 7.5, bg = C.sunken, color = C.secondary, border = C.border, padX = 5, padY = 3, gapX = 4, gapY = 4 } = o;
+        const { size = 8.5, bg = C.sunken, color = C.secondary, border = C.border, padX = 5, padY = 3, gapX = 4, gapY = 4 } = o;
         const list = (items || []).map((t) => clean(t).trim()).filter(Boolean);
         if (!list.length) return api;
         const h = size + padY * 2;
@@ -294,7 +294,7 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
       const head = makeBox(SHEET_W - MX * 2);
       if (first) {
         head.gap(26);
-        if (kicker) head.text(kicker.toUpperCase(), { size: 7.5, font: F.b, color: kickerColor });
+        if (kicker) head.text(kicker.toUpperCase(), { size: 8.5, font: F.b, color: kickerColor });
         head.gap(2).text(title, { size: 16, font: F.b, color: C.ink, lead: 1.25 });
         if (sub) head.gap(1).text(sub, { size: 9.5, color: C.secondary });
         head.gap(9);
@@ -371,7 +371,7 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
     b.gap(24);
 
     b.child(card(W, { pad: 16, bg: C.raised, border: C.borderSoft, r: 8 }, (c) => {
-      c.text('INSIDE THIS PDF', { size: 7.5, font: F.b, color: C.tertiary }).gap(8);
+      c.text('INSIDE THIS PDF', { size: 8.5, font: F.b, color: C.tertiary }).gap(8);
       const row = (color, title, text) => {
         c.rrect({ x: 0, y: c.h + 3, w: 8, h: 8, r: 2, fill: color });
         c.text([{ text: `${title}  `, font: F.b, color: C.ink }, { text, color: C.secondary }], { size: 9.5, x: 18 }).gap(6);
@@ -383,7 +383,7 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
       }
       if (anyTakeaways) row(C.brand, 'What we learn from each copy', 'techniques, an enrichment bank and an alternate introduction and conclusion.');
       if (analysis) row(C.secondary, 'AI analysis', 'a fresh model answer, a diagram you can draw, the key learnings and a keyword bank.');
-      c.gap(8).text('TOPPERS IN THIS PDF', { size: 7.5, font: F.b, color: C.tertiary }).gap(6);
+      c.gap(8).text('TOPPERS IN THIS PDF', { size: 8.5, font: F.b, color: C.tertiary }).gap(6);
       answers.forEach((a, i) => {
         const n = Math.max(0, (a.endPage || 0) - (a.startPage || 0) + 1);
         c.text([
@@ -408,13 +408,13 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
   const noteBox = (note) => {
     const t = TONE[note.kind];
     const left = note.kind === 'works';
-    const size = 8.3;
-    return card(NOTE_W, { pad: 6.5, bg: C.white, border: t.color, sw: 0.7, r: 4, bar: left ? 'left' : 'right', barColor: t.color }, (c) => {
+    const size = 10;
+    return card(NOTE_W, { pad: 8, bg: C.white, border: t.color, sw: 0.7, r: 4, bar: left ? 'left' : 'right', barColor: t.color }, (c) => {
       c.text(note.title || t.label, { size, font: F.b, color: t.color, lead: 1.3 });
-      if (note.text) c.gap(1.5).text(note.text, { size, lead: 1.34 });
-      if (note.use) c.gap(3).text([{ text: 'Use it: ', font: F.b, color: t.color }, note.use], { size, lead: 1.34 });
-      (note.points || []).filter(Boolean).forEach((p) => c.gap(2).bullet(p, { size, lead: 1.34, indent: 8, markerColor: t.color }));
-      if (note.diagram) c.gap(3).text([{ text: 'Draw: ', font: F.b, color: t.color }, note.diagram], { size, lead: 1.34 });
+      if (note.text) c.gap(2).text(note.text, { size, lead: 1.36, color: C.ink });
+      if (note.use) c.gap(4).text([{ text: 'Use it: ', font: F.b, color: t.color }, note.use], { size, lead: 1.36, color: C.ink });
+      (note.points || []).filter(Boolean).forEach((p) => c.gap(3).bullet(p, { size, lead: 1.36, indent: 9, markerColor: t.color, color: C.ink }));
+      if (note.diagram) c.gap(4).text([{ text: 'Draw: ', font: F.b, color: t.color }, note.diagram], { size, lead: 1.36, color: C.ink });
     });
   };
 
@@ -468,19 +468,19 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
       // header: topper + page count, then the two margin titles over their columns
       page.drawText(fit(label, F.b, 11, SHEET_W - 220), { x: 24, y: H - 24, size: 11, font: F.b, color: C.ink });
       const pg = `Answer copy  ·  page ${idx + 1} of ${nums.length}`;
-      page.drawText(pg, { x: SHEET_W - 24 - F.r.widthOfTextAtSize(pg, 8.5), y: H - 23, size: 8.5, font: F.r, color: C.tertiary });
+      page.drawText(pg, { x: SHEET_W - 24 - F.r.widthOfTextAtSize(pg, 9.5), y: H - 23, size: 9.5, font: F.r, color: C.tertiary });
       page.drawRectangle({ x: 24, y: H - 33, width: SHEET_W - 48, height: 0.7, color: C.border });
       if (notes.length) {
-        page.drawRectangle({ x: NOTE_X, y: H - 50, width: 7, height: 7, color: C.green });
-        page.drawText('DONE WELL', { x: NOTE_X + 11, y: H - 49.5, size: 7.5, font: F.b, color: C.green });
+        page.drawRectangle({ x: NOTE_X, y: H - 51, width: 8, height: 8, color: C.green });
+        page.drawText('DONE WELL', { x: NOTE_X + 12, y: H - 50.5, size: 9, font: F.b, color: C.green });
         const mk = 'MAKE IT STRONGER';
-        const mkW = F.b.widthOfTextAtSize(mk, 7.5);
-        page.drawRectangle({ x: SHEET_W - NOTE_X - 7, y: H - 50, width: 7, height: 7, color: C.blue });
-        page.drawText(mk, { x: SHEET_W - NOTE_X - 11 - mkW, y: H - 49.5, size: 7.5, font: F.b, color: C.blue });
+        const mkW = F.b.widthOfTextAtSize(mk, 9);
+        page.drawRectangle({ x: SHEET_W - NOTE_X - 8, y: H - 51, width: 8, height: 8, color: C.blue });
+        page.drawText(mk, { x: SHEET_W - NOTE_X - 12 - mkW, y: H - 50.5, size: 9, font: F.b, color: C.blue });
       }
       if (qShort) {
-        const q = fit(qShort, F.i, 7.8, PAGE_W);
-        page.drawText(q, { x: pageL + (PAGE_W - F.i.widthOfTextAtSize(q, 7.8)) / 2, y: H - 49.5, size: 7.8, font: F.i, color: C.tertiary });
+        const q = fit(qShort, F.i, 9, PAGE_W);
+        page.drawText(q, { x: pageL + (PAGE_W - F.i.widthOfTextAtSize(q, 9)) / 2, y: H - 50.5, size: 9, font: F.i, color: C.secondary });
       }
 
       // the scanned page
@@ -549,7 +549,7 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
     const labelled = (label, part, opts, extra) => {
       if (!part?.text) return;
       flow.place(card(COL_W, { pad: 10, r: 6, ...opts }, (c) => {
-        c.text([{ text: label.toUpperCase(), font: F.b, color: C.brand }, ...words(part.wordCount)], { size: 7.5 }).gap(4);
+        c.text([{ text: label.toUpperCase(), font: F.b, color: C.brand }, ...words(part.wordCount)], { size: 8.5 }).gap(4);
         c.text(part.text, { size: 9.5, color: C.ink });
         extra?.(c);
       }));
@@ -566,13 +566,13 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
       (part.points || []).forEach((p) => {
         if (!p?.text) return;
         const b = makeBox(COL_W).bullet([p.text, ...(p.tag ? [{ text: `  [${String(p.tag).toUpperCase()}]`, font: F.b, color: C.tertiary }] : [])], { color: C.ink });
-        if (p.unconventionalBecause) b.text(`Why it stands out: ${p.unconventionalBecause}`, { size: 8, font: F.i, color: C.tertiary, x: 11 });
+        if (p.unconventionalBecause) b.text(`Why it stands out: ${p.unconventionalBecause}`, { size: 9.5, font: F.i, color: C.secondary, x: 11 });
         flow.place(b.gap(5));
       });
       flow.gap(5);
     });
     labelled('Way forward', ma.wayForward, { bg: C.brandSoft, border: C.brandSoftBorder }, (c) => {
-      if (ma.wayForward.sources?.length) c.gap(4).text(`Sources: ${ma.wayForward.sources.join(' · ')}`, { size: 8, font: F.b, color: C.tertiary });
+      if (ma.wayForward.sources?.length) c.gap(4).text(`Sources: ${ma.wayForward.sources.join(' · ')}`, { size: 9, font: F.b, color: C.secondary });
     });
     labelled('Conclusion', ma.conclusion, { bg: C.sunken, border: C.border }, (c) => {
       if (ma.conclusion.quote) {
@@ -601,7 +601,7 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
         const b = makeBox(COL_W).bullet(l.lesson, { marker: `${i + 1}.`, indent: 15, color: C.ink });
         const dot = (v) => String(v).trim().replace(/[.\s]+$/, '');
         const tail = `${l.seenIn ? `Seen in: ${dot(l.seenIn)}. ` : ''}${l.applyElsewhere ? `Use it on: ${dot(l.applyElsewhere)}.` : ''}`;
-        if (tail) b.text(tail, { size: 8, font: F.i, color: C.tertiary, x: 15 });
+        if (tail) b.text(tail, { size: 9.5, font: F.i, color: C.secondary, x: 15 });
         flow.place(b.gap(6));
       });
       flow.gap(8);
@@ -620,9 +620,9 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
     const mb = page.getMediaBox();
     const y = mb.y + 12;
     page.drawRectangle({ x: 24, y: y + 11, width: SHEET_W - 48, height: 0.5, color: C.borderSoft });
-    page.drawText('The Dark Horse UPSC  ·  Toppers Copy', { x: 24, y, size: 7.5, font: F.b, color: C.tertiary });
+    page.drawText('The Dark Horse UPSC  ·  Toppers Copy', { x: 24, y, size: 8.5, font: F.b, color: C.tertiary });
     const n = `${i + 1} / ${pages.length}`;
-    page.drawText(n, { x: SHEET_W - 24 - F.r.widthOfTextAtSize(n, 7.5), y, size: 7.5, font: F.r, color: C.tertiary });
+    page.drawText(n, { x: SHEET_W - 24 - F.r.widthOfTextAtSize(n, 8.5), y, size: 8.5, font: F.r, color: C.tertiary });
   });
 
   return pdf.save();
@@ -698,7 +698,7 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
           });
         }
         if (d.unit || d.source) {
-          c.gap(4).text(`${d.unit ? `Figures in ${d.unit}. ` : ''}${d.source ? `Source: ${d.source}` : ''}`, { size: 7.5, color: C.tertiary });
+          c.gap(4).text(`${d.unit ? `Figures in ${d.unit}. ` : ''}${d.source ? `Source: ${d.source}` : ''}`, { size: 8.5, color: C.secondary });
         }
       }
     }));
