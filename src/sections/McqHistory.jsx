@@ -1,63 +1,92 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import LoadingSpinner from '../components/LoadingSpinner';
-import Button from '../components/Button';
+import Icon from '../components/mcq/Icon';
+import { ActionButton, Card, EmptyState, ErrorBanner, ModeBadge } from '../components/mcq/ui';
+import { mcq, errorMessage, formatDate, formatDuration } from '../lib/mcqApi';
+import { displaySubjectName } from '../lib/mcqSubjects';
 
 const TOPIC_LINE_COLORS = ['var(--color-status-warning-text)', 'var(--color-status-info-text)', 'var(--color-status-success-text)'];
+const MODES = [['all', 'All attempts'], ['test', 'Tests'], ['practice', 'Practice']];
+
+const ProgressTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  const row = payload[0].payload;
+  return (
+    <div className="bg-surface-raised border border-border-default rounded-lg px-3 py-2 text-sm text-text-secondary shadow-xl max-w-64">
+      <p className="font-bold text-text-primary">{row.title}</p>
+      <p className="text-xs text-text-tertiary mb-1">{row.date}</p>
+      {payload.map((p) => p.value != null && <p key={p.dataKey} style={{ color: p.color }}>{p.name}: {p.value}%</p>)}
+    </div>
+  );
+};
 
 export default function McqHistory({ onBack, onViewAttempt }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [subject, setSubject] = useState('all');
+  const [mode, setMode] = useState('all');
 
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
-    const fetchHistory = async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await fetch('/api/mcq/attempts/history', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load history');
-        setHistory(data.history || []);
+        const data = await mcq('/attempts/history');
+        if (!cancelled) setHistory(data.history || []);
       } catch (err) {
-        console.error(err);
-        setError(err.message || 'Failed to load history.');
+        if (!cancelled) setError(errorMessage(err, 'Failed to load history.'));
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
-    fetchHistory();
-  }, []);
+    })();
+    return () => { cancelled = true; };
+  }, [reloadKey]);
+  const retry = () => { setLoading(true); setError(''); setReloadKey((k) => k + 1); };
 
-  const topTopics = useMemo(() => {
-    if (history.length === 0) return [];
-    const latest = history[history.length - 1];
-    return [...latest.topicAccuracy].sort((a, b) => a.accuracy - b.accuracy).slice(0, 3).map(t => t.topic);
-  }, [history]);
+  const subjects = useMemo(() => [...new Set(history.map((h) => h.subject))].sort(), [history]);
 
-  const chartData = useMemo(() => history.map((h, idx) => {
-    const row = { label: `#${idx + 1}`, date: new Date(h.submittedAt).toLocaleDateString(), overall: h.accuracyPercent };
-    topTopics.forEach(topic => {
-      const found = h.topicAccuracy.find(t => t.topic === topic);
-      row[topic] = found ? found.accuracy : null;
-    });
+  // Attempts oldest -> newest after filtering. The chart is always about ONE kind of thing: a single
+  // subject when one is picked, otherwise per-attempt accuracy labelled by test (it used to blend every
+  // test into one misleading "progress" line).
+  const filtered = useMemo(
+    () => history.filter((h) => (subject === 'all' || h.subject === subject) && (mode === 'all' || h.mode === mode)),
+    [history, subject, mode]
+  );
+
+  const weakestTopics = useMemo(() => {
+    if (subject === 'all' || filtered.length === 0) return [];
+    const latest = filtered[filtered.length - 1];
+    return [...latest.topicAccuracy].sort((a, b) => a.accuracy - b.accuracy).slice(0, 3).map((t) => t.topic);
+  }, [filtered, subject]);
+
+  // Flagged / mistakes sessions mix questions from many tests, so they are listed below but not plotted:
+  // a 100% on three hand-picked questions is not comparable with a full test.
+  const chartData = useMemo(() => filtered.filter((h) => (h.source || 'test') === 'test').map((h, i) => {
+    const row = { label: `#${i + 1}`, title: h.testTitle, date: formatDate(h.submittedAt), overall: h.accuracyPercent };
+    weakestTopics.forEach((t) => { row[t] = h.topicAccuracy.find((x) => x.topic === t)?.accuracy ?? null; });
     return row;
-  }), [history, topTopics]);
+  }), [filtered, weakestTopics]);
 
-  const improvement = useMemo(() => {
-    if (history.length < 2) return null;
-    const prev = history[history.length - 2];
-    const latest = history[history.length - 1];
-    const deltas = [];
-    latest.topicAccuracy.forEach(lt => {
-      const pt = prev.topicAccuracy.find(t => t.topic === lt.topic);
-      if (pt) deltas.push({ topic: lt.topic, delta: Math.round((lt.accuracy - pt.accuracy) * 100) / 100 });
-    });
-    if (deltas.length === 0) return null;
-    deltas.sort((a, b) => b.delta - a.delta);
-    return { most: deltas[0], least: deltas[deltas.length - 1] };
-  }, [history]);
+  // "Compared with last time": latest attempt vs the previous attempt on the SAME test
+  const comparison = useMemo(() => {
+    if (filtered.length < 2) return null;
+    const latest = filtered[filtered.length - 1];
+    const previous = [...filtered.slice(0, -1)].reverse().find((h) => h.testId && h.testId === latest.testId);
+    if (!previous) return null;
+    const deltas = latest.topicAccuracy
+      .map((t) => { const p = previous.topicAccuracy.find((x) => x.topic === t.topic); return p ? { topic: t.topic, delta: Math.round((t.accuracy - p.accuracy) * 100) / 100 } : null; })
+      .filter(Boolean)
+      .sort((a, b) => b.delta - a.delta);
+    return {
+      title: latest.testTitle,
+      accuracyDelta: Math.round((latest.accuracyPercent - previous.accuracyPercent) * 100) / 100,
+      best: deltas[0], worst: deltas[deltas.length - 1]
+    };
+  }, [filtered]);
+
+  const list = [...filtered].reverse();
 
   if (loading) {
     return (
@@ -68,77 +97,100 @@ export default function McqHistory({ onBack, onViewAttempt }) {
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-6 py-10 flex flex-col gap-6">
-      <div className="flex items-center justify-between border-b border-border-default pb-5">
-        <div>
-          <h1 className="text-2xl font-display font-extrabold text-text-primary tracking-tight">My MCQ History</h1>
-          <p className="text-text-tertiary text-sm mt-1 font-medium">Track your progress across all attempts.</p>
-        </div>
-        <Button variant="secondary" size="sm" onClick={onBack}>Back to Tests</Button>
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 md:py-10 flex flex-col gap-6">
+      <div>
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-bold text-text-secondary hover:text-brand mb-3 cursor-pointer">
+          <Icon name="arrowLeft" className="w-4 h-4" /> Back
+        </button>
+        <h1 className="text-3xl font-display font-extrabold text-text-primary tracking-tight">My progress</h1>
+        <p className="text-base text-text-secondary mt-1">Every attempt you have finished, and how you are improving.</p>
       </div>
 
-      {error && <div className="p-4 bg-status-danger-bg border border-status-danger-text/30 rounded-xl text-status-danger-text text-sm font-semibold">{error}</div>}
+      {error && <ErrorBanner onRetry={retry}>{error}</ErrorBanner>}
 
       {!error && history.length === 0 ? (
-        <div className="bg-surface border border-border-default rounded-2xl p-16 text-center text-text-tertiary">
-          You haven't completed any MCQ tests yet.
-        </div>
+        <EmptyState icon="chart" title="No finished attempts yet" action={<ActionButton tone="primary" icon="arrowLeft" onClick={onBack}>Find a test</ActionButton>}>
+          Once you finish a test or practice session, your results and progress show up here.
+        </EmptyState>
       ) : (
         <>
-          <div className="bg-surface border border-border-default rounded-2xl p-6">
-            <h2 className="text-sm font-extrabold text-text-primary mb-1">Progress Over Time</h2>
-            <p className="text-[11px] text-text-tertiary mb-4">Overall accuracy, plus your 3 weakest topics from your latest attempt.</p>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
-                  <XAxis dataKey="label" stroke="var(--color-text-tertiary)" fontSize={10} />
-                  <YAxis domain={[0, 100]} stroke="var(--color-text-tertiary)" fontSize={10} />
-                  <Tooltip contentStyle={{ background: 'var(--color-surface-raised)', border: '1px solid var(--color-border-default)', borderRadius: 8, fontSize: 11, color: 'var(--color-text-primary)' }} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Line type="monotone" dataKey="overall" name="Overall Accuracy" stroke="var(--color-brand)" strokeWidth={2.5} dot={{ r: 3 }} />
-                  {topTopics.map((topic, i) => (
-                    <Line key={topic} type="monotone" dataKey={topic} name={topic} stroke={TOPIC_LINE_COLORS[i % TOPIC_LINE_COLORS.length]} strokeWidth={1.5} dot={{ r: 2 }} connectNulls />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            {improvement && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                <div className="p-3 bg-status-success-bg border border-status-success-text/30 rounded-xl text-[11px]">
-                  <span className="font-bold text-status-success-text">Most Improved: </span>
-                  <span className="text-text-secondary">{improvement.most.topic} ({improvement.most.delta >= 0 ? '+' : ''}{improvement.most.delta}%)</span>
-                </div>
-                <div className="p-3 bg-status-danger-bg border border-status-danger-text/30 rounded-xl text-[11px]">
-                  <span className="font-bold text-status-danger-text">Most Regressed: </span>
-                  <span className="text-text-secondary">{improvement.least.topic} ({improvement.least.delta >= 0 ? '+' : ''}{improvement.least.delta}%)</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-surface border border-border-default rounded-2xl p-6">
-            <h2 className="text-sm font-extrabold text-text-primary mb-4">All Attempts</h2>
-            <div className="space-y-2">
-              {[...history].reverse().map((h) => (
-                <button
-                  key={h.attemptId}
-                  onClick={() => onViewAttempt(h.attemptId)}
-                  className="w-full flex items-center justify-between gap-3 p-3 bg-sunken hover:bg-surface-raised border border-border-default hover:border-brand/50 rounded-xl text-left transition cursor-pointer"
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-text-primary truncate">{h.testTitle}</p>
-                    <p className="text-[10px] text-text-tertiary mt-0.5">{new Date(h.submittedAt).toLocaleString()} · {h.subject}</p>
-                  </div>
-                  <div className="flex items-center gap-3 flex-shrink-0 text-right">
-                    <span className="text-xs font-bold text-brand">{h.totalMarksObtained}/{h.totalMarks}</span>
-                    <span className="text-[10px] text-text-tertiary">{h.accuracyPercent}%</span>
-                  </div>
-                </button>
+          <div className="flex flex-col md:flex-row gap-3 md:items-center">
+            <label className="flex items-center gap-2 text-sm font-bold text-text-secondary">
+              Subject
+              <select value={subject} onChange={(e) => setSubject(e.target.value)} className="bg-surface border border-border-default focus:border-brand rounded-xl px-3 py-2 text-sm font-semibold text-text-primary max-w-72">
+                <option value="all">All subjects</option>
+                {subjects.map((s) => <option key={s} value={s}>{displaySubjectName(s)}</option>)}
+              </select>
+            </label>
+            <div className="flex gap-2" role="tablist" aria-label="Attempt type">
+              {MODES.map(([id, label]) => (
+                <button key={id} role="tab" aria-selected={mode === id} onClick={() => setMode(id)} className={`px-4 py-2 rounded-full text-sm font-bold cursor-pointer ${mode === id ? 'bg-brand text-text-on-accent' : 'bg-surface border border-border-default text-text-secondary hover:border-text-tertiary'}`}>{label}</button>
               ))}
             </div>
           </div>
+
+          {filtered.length === 0 ? (
+            <EmptyState icon="filter" title="No attempts match these filters" action={<ActionButton tone="secondary" onClick={() => { setSubject('all'); setMode('all'); }}>Clear filters</ActionButton>} />
+          ) : (
+            <>
+              <Card
+                title="Accuracy over time"
+                subtitle={subject === 'all' ? 'Accuracy of each attempt, oldest to newest. Pick a subject to also see your weakest topics.' : `Accuracy in ${displaySubjectName(subject)}, plus your 3 weakest topics from the latest attempt.`}
+              >
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
+                      <XAxis dataKey="label" stroke="var(--color-text-tertiary)" fontSize={12} />
+                      <YAxis domain={[0, 100]} stroke="var(--color-text-tertiary)" fontSize={12} />
+                      <Tooltip content={<ProgressTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 13 }} />
+                      <Line type="monotone" dataKey="overall" name="Accuracy" stroke="var(--color-brand)" strokeWidth={3} dot={{ r: 4 }} />
+                      {weakestTopics.map((t, i) => (
+                        <Line key={t} type="monotone" dataKey={t} name={t} stroke={TOPIC_LINE_COLORS[i % TOPIC_LINE_COLORS.length]} strokeWidth={1.75} dot={{ r: 3 }} connectNulls />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {comparison && (
+                  <div className="grid md:grid-cols-3 gap-3 mt-4 text-sm">
+                    <div className="p-3.5 bg-sunken border border-border-default rounded-xl">
+                      <b className="text-text-primary">Vs your previous attempt on “{comparison.title}”: </b>
+                      <span className={comparison.accuracyDelta >= 0 ? 'text-status-success-text font-bold' : 'text-status-danger-text font-bold'}>{comparison.accuracyDelta >= 0 ? '+' : ''}{comparison.accuracyDelta}% accuracy</span>
+                    </div>
+                    {comparison.best && <div className="p-3.5 bg-status-success-bg border border-status-success-text/30 rounded-xl"><b className="text-status-success-text">Most improved: </b><span className="text-text-secondary">{comparison.best.topic} ({comparison.best.delta >= 0 ? '+' : ''}{comparison.best.delta}%)</span></div>}
+                    {comparison.worst && comparison.worst !== comparison.best && <div className="p-3.5 bg-status-danger-bg border border-status-danger-text/30 rounded-xl"><b className="text-status-danger-text">Slipped most: </b><span className="text-text-secondary">{comparison.worst.topic} ({comparison.worst.delta >= 0 ? '+' : ''}{comparison.worst.delta}%)</span></div>}
+                  </div>
+                )}
+              </Card>
+
+              <Card title="All attempts" subtitle="Tap one to see its full results and explanations.">
+                <ul className="flex flex-col gap-2.5">
+                  {list.map((h) => (
+                    <li key={h.attemptId}>
+                      <button onClick={() => onViewAttempt(h.attemptId)} className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-4 bg-sunken hover:bg-surface-raised border border-border-default hover:border-brand/60 rounded-xl text-left transition cursor-pointer">
+                        <div className="min-w-0">
+                          <p className="text-base font-bold text-text-primary truncate">{h.testTitle}</p>
+                          <p className="text-sm text-text-tertiary mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <ModeBadge mode={h.mode} source={h.source} />
+                            <span>{formatDate(h.submittedAt)}</span>
+                            <span>· {displaySubjectName(h.subject)}</span>
+                            {h.totalTimeSpentSeconds > 0 && <span>· {formatDuration(h.totalTimeSpentSeconds)}</span>}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4 shrink-0">
+                          <span className="text-lg font-extrabold text-brand">{h.totalMarksObtained}<span className="text-sm text-text-tertiary font-semibold">/{h.totalMarks}</span></span>
+                          <span className="text-sm font-bold text-text-secondary w-14 text-right">{h.accuracyPercent}%</span>
+                          <Icon name="chevronRight" className="w-5 h-5 text-text-tertiary" />
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            </>
+          )}
         </>
       )}
     </div>
