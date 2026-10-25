@@ -90,8 +90,10 @@ export default function QuestionUploader({ syllabusData }) {
     formData.append('file', file);
 
     try {
+      // Uploading runs a paid AI extraction, so the server now requires an admin login.
       const res = await fetch('/api/questions/upload', {
         method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
         body: formData
       });
 
