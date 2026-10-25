@@ -1,83 +1,167 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import McqSubjectsLanding from './McqSubjectsLanding';
 import McqTestList from './McqTestList';
-import McqInstructions from './McqInstructions';
+import McqStartSheet from './McqStartSheet';
 import McqTestRunner from './McqTestRunner';
 import McqAnalyzer from './McqAnalyzer';
 import McqHistory from './McqHistory';
+import McqFlagged from './McqFlagged';
 import QuizFlow from './quiz/QuizFlow';
+import { ToastProvider, useToast } from '../components/Toast';
+import { HelpModal, WelcomeTour } from '../components/mcq/HelpAndTour';
+import { hasSeenTour } from '../lib/mcqTour';
+import { mcq, errorMessage } from '../lib/mcqApi';
 
-// Owns the subject -> test list -> instructions -> runner -> analyzer/history flow as plain
-// local state, mirroring how DashboardSection already tracks PYQRecommender's selected course.
-// startTest/getAttempt are resumable server-side, so losing this state on remount (e.g. the
-// user re-clicks "MCQ Tests" in the Navbar) never loses an in-progress attempt.
-export default function McqFlow({ user }) {
-  const [screen, setScreen] = useState('subjects');
-  const [selectedSubject, setSelectedSubject] = useState(null);
-  const [selectedTest, setSelectedTest] = useState(null);
-  const [selectedBankSubject, setSelectedBankSubject] = useState(null);
-  const [activeAttemptId, setActiveAttemptId] = useState(null);
+// Owns the subject -> tests -> start -> runner -> results flow as plain local state (there is no router
+// in this app). Each screen change is also pushed onto the browser history, so the Back button walks
+// back through the MCQ screens instead of jumping out to whatever tab the student came from.
+// Attempts are resumable server-side, so losing this state on a refresh never loses work.
+function Flow({ user }) {
+  const toast = useToast();
+  const [view, setView] = useState({ screen: 'home' });
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(() => !hasSeenTour());
 
-  if (screen === 'testList' && selectedSubject) {
-    return (
-      <McqTestList
-        subject={selectedSubject}
-        user={user}
-        onSelectTest={(test) => { setSelectedTest(test); setScreen('instructions'); }}
-        onBack={() => { setSelectedSubject(null); setScreen('subjects'); }}
-      />
-    );
-  }
+  useEffect(() => {
+    window.history.replaceState({ ...(window.history.state || {}), mcqView: { screen: 'home' } }, '');
+    const onPop = (e) => { if (e.state?.mcqView) setView(e.state.mcqView); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
-  if (screen === 'instructions' && selectedTest) {
-    return (
-      <McqInstructions
-        test={selectedTest}
-        onStart={(attemptId) => { setActiveAttemptId(attemptId); setScreen('runner'); }}
-        onBack={() => setScreen('testList')}
-      />
-    );
-  }
+  const go = useCallback((next) => {
+    setView(next);
+    window.history.pushState({ ...(window.history.state || {}), mcqView: next }, '');
+    window.scrollTo({ top: 0 });
+  }, []);
 
-  if (screen === 'runner' && activeAttemptId) {
-    return (
-      <McqTestRunner
-        attemptId={activeAttemptId}
-        onSubmitted={(attemptId) => { setActiveAttemptId(attemptId); setScreen('analyzer'); }}
-      />
-    );
-  }
+  // The navbar's "MCQ Tests" link, clicked while already in this area, brings the student back to the start.
+  useEffect(() => {
+    const home = () => go({ screen: 'home' });
+    window.addEventListener('mcq:home', home);
+    return () => window.removeEventListener('mcq:home', home);
+  }, [go]);
 
-  if (screen === 'analyzer' && activeAttemptId) {
-    return (
-      <McqAnalyzer
-        attemptId={activeAttemptId}
-        user={user}
-        onBackToTests={() => { setActiveAttemptId(null); setScreen(selectedSubject ? 'testList' : 'subjects'); }}
-        onViewHistory={() => setScreen('history')}
-      />
-    );
-  }
+  // Sessions built from the student's flagged questions / mistakes
+  const startFlagged = async (subject) => {
+    try {
+      const data = await mcq('/practice/flagged', { method: 'POST', body: { subject: subject || undefined } });
+      go({ screen: 'runner', attemptId: data.attemptId, subject: view.subject });
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  };
+  const startMistakes = async (attemptId) => {
+    try {
+      const data = await mcq('/practice/mistakes', { method: 'POST', body: { attemptId } });
+      go({ screen: 'runner', attemptId: data.attemptId, subject: view.subject });
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  };
 
-  if (screen === 'history') {
-    return (
-      <McqHistory
-        onBack={() => setScreen(selectedSubject ? 'testList' : 'subjects')}
-        onViewAttempt={(attemptId) => { setActiveAttemptId(attemptId); setScreen('analyzer'); }}
-      />
-    );
-  }
+  const backToTests = () => go(view.subject ? { screen: 'testList', subject: view.subject } : { screen: 'home' });
 
-  // Question Bank practice — reached from a bank card on the subjects landing.
-  if (screen === 'quizPractice' && selectedBankSubject) {
-    return <QuizFlow subject={selectedBankSubject} onExitToMcq={() => { setSelectedBankSubject(null); setScreen('subjects'); }} />;
+  let body;
+  switch (view.screen) {
+    case 'testList':
+      body = (
+        <McqTestList
+          subject={view.subject}
+          user={user}
+          onBack={() => go({ screen: 'home' })}
+          onStart={(test, mode) => go({ screen: 'start', subject: view.subject, test, mode })}
+          onResume={(attemptId) => go({ screen: 'runner', attemptId, subject: view.subject })}
+          onReview={(attemptId) => go({ screen: 'analyzer', attemptId, subject: view.subject })}
+          onOpenFlagged={() => go({ screen: 'flagged', subject: view.subject })}
+          onHelp={() => setHelpOpen(true)}
+        />
+      );
+      break;
+    case 'start':
+      body = (
+        <McqStartSheet
+          test={view.test}
+          initialMode={view.mode}
+          onBack={() => go({ screen: 'testList', subject: view.subject })}
+          onStarted={(attemptId) => go({ screen: 'runner', attemptId, subject: view.subject })}
+        />
+      );
+      break;
+    case 'runner':
+      body = (
+        <McqTestRunner
+          key={view.attemptId}
+          attemptId={view.attemptId}
+          onExit={backToTests}
+          onSubmitted={(attemptId) => go({ screen: 'analyzer', attemptId, subject: view.subject })}
+        />
+      );
+      break;
+    case 'analyzer':
+      body = (
+        <McqAnalyzer
+          key={view.attemptId}
+          attemptId={view.attemptId}
+          onBack={backToTests}
+          onViewHistory={() => go({ screen: 'history', subject: view.subject })}
+          onPracticeMistakes={startMistakes}
+          onOpenFlagged={() => go({ screen: 'flagged', subject: view.subject })}
+        />
+      );
+      break;
+    case 'history':
+      body = (
+        <McqHistory
+          onBack={backToTests}
+          onViewAttempt={(attemptId) => go({ screen: 'analyzer', attemptId, subject: view.subject })}
+        />
+      );
+      break;
+    case 'flagged':
+      body = (
+        <McqFlagged
+          onBack={backToTests}
+          onPractice={startFlagged}
+        />
+      );
+      break;
+    case 'quizPractice':
+      // Question Bank practice — reached from a bank card on the subjects landing.
+      body = <QuizFlow subject={view.bankSubject} onExitToMcq={() => go({ screen: 'home' })} />;
+      break;
+    default:
+      body = (
+        <McqSubjectsLanding
+          onOpenSubject={(subject) => go({ screen: 'testList', subject })}
+          onSelectBank={(bankSubject) => go({ screen: 'quizPractice', bankSubject })}
+          onResume={(attemptId) => go({ screen: 'runner', attemptId })}
+          onOpenFlagged={() => go({ screen: 'flagged' })}
+          onOpenHistory={() => go({ screen: 'history' })}
+          onHelp={() => setHelpOpen(true)}
+          onTour={() => setTourOpen(true)}
+        />
+      );
   }
 
   return (
-    <McqSubjectsLanding
-      onSelectSubject={(subject) => { setSelectedSubject(subject); setScreen('testList'); }}
-      onSelectBank={(subject) => { setSelectedBankSubject(subject); setScreen('quizPractice'); }}
-      onViewHistory={() => setScreen('history')}
-    />
+    <>
+      {body}
+      {tourOpen && <WelcomeTour onClose={() => setTourOpen(false)} />}
+      {helpOpen && (
+        <HelpModal
+          onClose={() => setHelpOpen(false)}
+          onReplayTour={() => { setHelpOpen(false); setTourOpen(true); }}
+        />
+      )}
+    </>
+  );
+}
+
+export default function McqFlow({ user }) {
+  return (
+    <ToastProvider>
+      <Flow user={user} />
+    </ToastProvider>
   );
 }

@@ -1,39 +1,13 @@
 import { useState, useEffect } from 'react';
 
-const SUBJECT_NAMES = {
-  'GS-1': 'GS-1: Culture, History, Geography, Society',
-  'GS-2': 'GS-2: Governance, Constitution, Polity, Social Justice',
-  'GS-3': 'GS-3: Science & Tech, Economic Dev, Bio-diversity, Security',
-  'GS-4': 'GS-4: Ethics, Integrity & Aptitude',
-};
-
-const OPTIONAL_NAMES = {
-  OptionalSubjectAgriculture: 'Optional: Agriculture',
-  OptionalSubjectAnimalHusbandryAndVeterinaryScience: 'Optional: Animal Husbandry & Veterinary Science',
-  OptionalSubjectAnthropology: 'Optional: Anthropology',
-  OptionalSubjectBotany: 'Optional: Botany',
-  OptionalSubjectChemistry: 'Optional: Chemistry',
-  OptionalSubjectCivilEngineering: 'Optional: Civil Engineering',
-  OptionalSubjectCommerceAndAccountancy: 'Optional: Commerce & Accountancy',
-  OptionalSubjectEconomics: 'Optional: Economics',
-  OptionalSubjectElectricalEngineering: 'Optional: Electrical Engineering',
-  OptionalSubjectGeography: 'Optional: Geography',
-  OptionalSubjectGeology: 'Optional: Geology',
-  OptionalSubjectHistory: 'Optional: History',
-  OptionalSubjectLaw: 'Optional: Law',
-  OptionalSubjectMangement: 'Optional: Management',
-  OptionalSubjectMathematics: 'Optional: Mathematics',
-  OptionalSubjectMechanicalEngineering: 'Optional: Mechanical Engineering',
-  OptionalSubjectMedicalScience: 'Optional: Medical Science',
-  OptionalSubjectPhilosophy: 'Optional: Philosophy',
-  OptionalSubjectPhysics: 'Optional: Physics',
-  OptionalSubjectPoliticalScienceAndInternationalRelations: 'Optional: Political Science & International Relations',
-  OptionalSubjectPsychology: 'Optional: Psychology',
-  OptionalSubjectPublicAdministration: 'Optional: Public Administration',
-  OptionalSubjectSociology: 'Optional: Sociology',
-  OptionalSubjectStatistics: 'Optional: Statistics',
-  OptionalSubjectZoology: 'Optional: Zoology'
-};
+import { SUBJECT_NAMES, OPTIONAL_NAMES, displaySubjectName } from '../lib/mcqSubjects';
+import { mcq, errorMessage } from '../lib/mcqApi';
+import { ToastProvider, useToast } from '../components/Toast';
+import Icon from '../components/mcq/Icon';
+import { ActionButton, Chip, Modal } from '../components/mcq/ui';
+import QuestionEditor from '../components/mcq/QuestionEditor';
+import AdminMcqReports from './AdminMcqReports';
+import AdminMcqAttempts from './AdminMcqAttempts';
 
 function UploadSummary({ summary }) {
   if (!summary) return null;
@@ -68,6 +42,8 @@ function UploadSummary({ summary }) {
 }
 
 function ManageTestsTab({ tests, loadingTests, refreshTests }) {
+  const toast = useToast();
+  const [maxAttempts, setMaxAttempts] = useState('2');
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
@@ -104,7 +80,8 @@ function ManageTestsTab({ tests, loadingTests, refreshTests }) {
           marksPerQuestion: Number(marksPerQuestion),
           negativeMarkingRatio: Number(negativeMarkingRatio),
           requiresPurchase,
-          price: Number(price)
+          price: Number(price),
+          maxAttempts: Number(maxAttempts)
         })
       });
       const data = await res.json();
@@ -121,46 +98,31 @@ function ManageTestsTab({ tests, loadingTests, refreshTests }) {
     }
   };
 
-  const togglePublish = async (test) => {
+  // These used to ignore the server's answer, so a refused publish (e.g. "add at least one question
+  // first") failed silently. Errors now surface as toasts.
+  const patchTest = async (test, body, okMessage) => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`/api/mcq/admin/tests/${test._id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ isPublished: !test.isPublished })
-      });
+      await mcq(`/admin/tests/${test._id}`, { method: 'PATCH', body });
+      if (okMessage) toast.success(okMessage);
       await refreshTests();
     } catch (err) {
-      console.error(err);
+      toast.error(errorMessage(err));
     }
   };
+  const togglePublish = (test) => patchTest(test, { isPublished: !test.isPublished }, test.isPublished ? 'Test unpublished.' : 'Test published.');
+  const togglePurchaseRequired = (test) => patchTest(test, { requiresPurchase: !test.requiresPurchase, price: test.price || 499 });
+  const updateMaxAttempts = (test, value) => patchTest(test, { maxAttempts: Number(value) }, `Limit set to ${value} attempt(s) per student.`);
 
-  const togglePurchaseRequired = async (test) => {
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`/api/mcq/admin/tests/${test._id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ requiresPurchase: !test.requiresPurchase, price: test.price || 499 })
-      });
-      await refreshTests();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const handleDelete = async (test) => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`/api/mcq/admin/tests/${test._id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to delete test');
+      await mcq(`/admin/tests/${test._id}`, { method: 'DELETE' });
+      toast.success('Test deleted.');
       await refreshTests();
     } catch (err) {
-      alert(err.message || 'Failed to delete test.');
+      toast.error(errorMessage(err, 'Failed to delete test.'));
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -214,7 +176,7 @@ function ManageTestsTab({ tests, loadingTests, refreshTests }) {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2">Duration (minutes)</label>
               <input
@@ -247,6 +209,19 @@ function ManageTestsTab({ tests, loadingTests, refreshTests }) {
                 className="w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-semibold transition-all"
               />
               <p className="text-[10px] text-text-tertiary mt-1">0 disables negative marking. UPSC standard is 0.33.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2" htmlFor="new-test-attempts">Attempts per student</label>
+              <input
+                id="new-test-attempts"
+                type="number"
+                min="1"
+                max="20"
+                value={maxAttempts}
+                onChange={(e) => setMaxAttempts(e.target.value)}
+                className="w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-semibold transition-all"
+              />
+              <p className="text-[10px] text-text-tertiary mt-1">Test + Practice combined. Default 2.</p>
             </div>
           </div>
 
@@ -296,7 +271,17 @@ function ManageTestsTab({ tests, loadingTests, refreshTests }) {
                   <p className="text-xs font-bold text-text-primary truncate">{t.title}</p>
                   <p className="text-[10px] text-text-tertiary mt-0.5">{t.subject} · {t.questionCount} question(s) · {t.totalMarks} marks · {t.durationMinutes} min</p>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
+                  <label className="flex items-center gap-1 text-[10px] font-bold text-text-tertiary" title="How many times one student may start this test (Test + Practice combined)">
+                    <select
+                      value={t.maxAttempts ?? 2}
+                      onChange={(e) => updateMaxAttempts(t, e.target.value)}
+                      className="bg-page border border-border-default rounded-md px-1.5 py-1 text-[10px] font-bold text-text-secondary cursor-pointer"
+                      aria-label={`Attempts per student for ${t.title}`}
+                    >
+                      {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => <option key={n} value={n}>{n} attempt{n > 1 ? 's' : ''}</option>)}
+                    </select>
+                  </label>
                   <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${t.isPublished ? 'bg-status-success-bg text-status-success-text border border-status-success-text/30' : 'bg-surface-raised text-text-tertiary border border-border-default'}`}>
                     {t.isPublished ? 'Published' : 'Unpublished'}
                   </span>
@@ -310,7 +295,7 @@ function ManageTestsTab({ tests, loadingTests, refreshTests }) {
                   <button onClick={() => togglePublish(t)} className="px-2.5 py-1 bg-surface-raised hover:bg-sunken text-text-secondary rounded-lg text-[10px] font-bold cursor-pointer">
                     {t.isPublished ? 'Unpublish' : 'Publish'}
                   </button>
-                  <button onClick={() => handleDelete(t)} className="px-2.5 py-1 bg-status-danger-bg hover:opacity-90 text-status-danger-text border border-status-danger-text/30 rounded-lg text-[10px] font-bold cursor-pointer">
+                  <button onClick={() => setDeleteTarget(t)} className="px-2.5 py-1 bg-status-danger-bg hover:opacity-90 text-status-danger-text border border-status-danger-text/30 rounded-lg text-[10px] font-bold cursor-pointer">
                     Delete
                   </button>
                 </div>
@@ -319,6 +304,23 @@ function ManageTestsTab({ tests, loadingTests, refreshTests }) {
           </div>
         )}
       </div>
+
+      {deleteTarget && (
+        <Modal
+          title="Delete this test?"
+          onClose={() => setDeleteTarget(null)}
+          footer={
+            <>
+              <ActionButton tone="ghost" onClick={() => setDeleteTarget(null)}>Cancel</ActionButton>
+              <ActionButton tone="danger" icon="trash" onClick={() => handleDelete(deleteTarget)}>Delete test</ActionButton>
+            </>
+          }
+        >
+          <p className="text-sm text-text-secondary leading-relaxed pb-4">
+            “{deleteTarget.title}” and all of its questions will be removed. A test that students have already attempted cannot be deleted — unpublish it instead.
+          </p>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -413,135 +415,11 @@ function UploadQuestionsTab({ tests, loadingTests }) {
   );
 }
 
-const FIELD_CLS = 'w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-3 py-2 text-xs font-semibold transition-all';
-
-// One row in the "Questions in this Test" list: collapsed summary, or an inline edit form.
-function EditableQuestionRow({ testId, question, onSaved, onDeleted }) {
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState('');
-
-  const [questionText, setQuestionText] = useState(question.questionText);
-  const [statements, setStatements] = useState((question.statements || []).join('\n'));
-  const [optionTexts, setOptionTexts] = useState(['A', 'B', 'C', 'D'].map(l => question.options.find(o => o.label === l)?.text || ''));
-  const [correctOption, setCorrectOption] = useState(question.correctOption);
-  const [difficulty, setDifficulty] = useState(question.difficulty || 'Medium');
-  const [questionType, setQuestionType] = useState(question.questionType || 'conceptual');
-  const [examSource, setExamSource] = useState(question.examSource || '');
-  const [explanation, setExplanation] = useState(question.explanation || '');
-
-  const resetFromQuestion = () => {
-    setQuestionText(question.questionText);
-    setStatements((question.statements || []).join('\n'));
-    setOptionTexts(['A', 'B', 'C', 'D'].map(l => question.options.find(o => o.label === l)?.text || ''));
-    setCorrectOption(question.correctOption);
-    setDifficulty(question.difficulty || 'Medium');
-    setQuestionType(question.questionType || 'conceptual');
-    setExamSource(question.examSource || '');
-    setExplanation(question.explanation || '');
-    setErr('');
-  };
-
-  const handleSave = async () => {
-    if (!questionText.trim()) { setErr('Question text is required.'); return; }
-    if (optionTexts.some(t => !t.trim())) { setErr('All 4 options are required.'); return; }
-    setSaving(true);
-    setErr('');
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`/api/mcq/admin/tests/${testId}/questions/${question._id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          questionText: questionText.trim(),
-          statements: statements.split('\n').map(s => s.trim()).filter(Boolean),
-          options: ['A', 'B', 'C', 'D'].map((label, i) => ({ label, text: optionTexts[i].trim() })),
-          correctOption,
-          difficulty,
-          questionType,
-          examSource: examSource.trim(),
-          explanation: explanation.trim()
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to save');
-      setEditing(false);
-      onSaved(data.question);
-    } catch (e) {
-      setErr(e.message || 'Failed to save.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (!editing) {
-    return (
-      <div className="flex items-start justify-between gap-3 p-3 bg-sunken border border-border-default rounded-xl">
-        <div className="min-w-0">
-          <p className="text-xs font-bold text-text-primary">Q{question.order}. {question.questionText}</p>
-          <p className="text-[10px] text-text-tertiary mt-1">
-            Correct: {question.correctOption} · {question.difficulty} · {question.questionType}
-            {question.examSource ? ` · ${question.examSource}` : ''}
-            {question.statements?.length ? ` · ${question.statements.length} statement line(s)` : ''}
-            {question.explanation ? '' : ' · no explanation'}
-          </p>
-        </div>
-        <div className="flex flex-shrink-0 gap-1.5">
-          <button onClick={() => { resetFromQuestion(); setEditing(true); }} className="px-2.5 py-1 bg-surface-raised hover:bg-surface text-text-secondary border border-border-default rounded-lg text-[10px] font-bold cursor-pointer">Edit</button>
-          <button onClick={() => onDeleted(question._id)} className="px-2.5 py-1 bg-status-danger-bg hover:opacity-90 text-status-danger-text border border-status-danger-text/30 rounded-lg text-[10px] font-bold cursor-pointer">Delete</button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 bg-sunken border border-brand/40 rounded-xl space-y-3">
-      <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-wide">Editing Q{question.order}</p>
-      <textarea value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={2} placeholder="Question text" className={FIELD_CLS} />
-      <div>
-        <label className="block text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">Statement lines (one per line, optional)</label>
-        <textarea value={statements} onChange={(e) => setStatements(e.target.value)} rows={3} placeholder={"1. ...\n2. ..."} className={FIELD_CLS} />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        {['A', 'B', 'C', 'D'].map((label, i) => (
-          <div key={label} className="flex items-center gap-2">
-            <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer">
-              <input type="radio" name={`correct-${question._id}`} checked={correctOption === label} onChange={() => setCorrectOption(label)} className="w-4 h-4 accent-brand cursor-pointer" />
-              <span className="text-xs font-bold text-text-tertiary w-4">{label}</span>
-            </label>
-            <input type="text" value={optionTexts[i]} onChange={(e) => setOptionTexts(prev => prev.map((v, idx) => idx === i ? e.target.value : v))} placeholder={`Option ${label}`} className={FIELD_CLS} />
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <div>
-          <label className="block text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">Difficulty</label>
-          <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className={FIELD_CLS}><option>Easy</option><option>Medium</option><option>Hard</option></select>
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">Type</label>
-          <select value={questionType} onChange={(e) => setQuestionType(e.target.value)} className={FIELD_CLS}><option value="conceptual">Conceptual</option><option value="factual">Factual</option></select>
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">Exam source</label>
-          <input type="text" value={examSource} onChange={(e) => setExamSource(e.target.value)} placeholder="e.g. UPSC CSE 2019" className={FIELD_CLS} />
-        </div>
-      </div>
-      <div>
-        <label className="block text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">Explanation / Why</label>
-        <textarea value={explanation} onChange={(e) => setExplanation(e.target.value)} rows={3} className={FIELD_CLS} />
-      </div>
-      {err && <div className="p-2 bg-status-danger-bg border border-status-danger-text/30 rounded-lg text-status-danger-text text-[11px] font-semibold">{err}</div>}
-      <div className="flex gap-2">
-        <button onClick={handleSave} disabled={saving} className="px-4 py-1.5 bg-brand hover:bg-brand-hover disabled:opacity-50 text-text-on-accent rounded-lg text-xs font-bold cursor-pointer">{saving ? 'Saving...' : 'Save Changes'}</button>
-        <button onClick={() => setEditing(false)} className="px-4 py-1.5 bg-surface-raised hover:bg-surface text-text-secondary rounded-lg text-xs font-bold cursor-pointer">Cancel</button>
-      </div>
-    </div>
-  );
-}
-
-function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
-  const [testId, setTestId] = useState('');
+function BuildQuestionsTab({ tests, loadingTests, refreshTests, editRequest, onEditHandled }) {
+  const toast = useToast();
+  const [testId, setTestId] = useState(editRequest?.testId || '');
+  const [editing, setEditing] = useState(null);
+  const [deleteQ, setDeleteQ] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -555,8 +433,6 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
   const [explanation, setExplanation] = useState('');
   const [tags, setTags] = useState('');
   const [statements, setStatements] = useState('');
-  const [questionType, setQuestionType] = useState('conceptual');
-  const [examSource, setExamSource] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -582,6 +458,12 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
     setPublishError('');
   }, [testId]);
 
+  // Arrived from "Edit question" on the Reported Questions tab: that question's editor opens as soon as the
+  // test's questions have loaded (derived from the request rather than copied into state by an effect).
+  const requestedQuestion = editRequest ? questions.find((x) => x._id === editRequest.questionId) : null;
+  const activeEditor = editing || requestedQuestion || null;
+  const closeEditor = () => { setEditing(null); if (editRequest) onEditHandled?.(); };
+
   const resetForm = () => {
     setQuestionText('');
     setOptionTexts(['', '', '', '']);
@@ -591,8 +473,6 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
     setExplanation('');
     setTags('');
     setStatements('');
-    setQuestionType('conceptual');
-    setExamSource('');
   };
 
   const handleAddQuestion = async (e) => {
@@ -612,11 +492,9 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
           options: ['A', 'B', 'C', 'D'].map((label, i) => ({ label, text: optionTexts[i].trim() })),
           correctOption,
           difficulty,
-          questionType,
-          examSource: examSource.trim(),
-          statements: statements.split('\n').map((s) => s.trim()).filter(Boolean),
           marks: marks === '' ? null : Number(marks),
           explanation: explanation.trim(),
+          statements: statements.split('\n').map((s) => s.trim()).filter(Boolean),
           tags
         })
       });
@@ -632,18 +510,16 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
     }
   };
 
-  const handleDeleteQuestion = async (questionId) => {
+  const handleDeleteQuestion = async (question) => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`/api/mcq/admin/tests/${testId}/questions/${questionId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error();
+      const res = await mcq(`/admin/tests/${testId}/questions/${question._id}`, { method: 'DELETE' });
+      toast.success(res.retired ? 'Question retired (students already have attempts on it).' : 'Question deleted.');
       await loadQuestions(testId);
       await refreshTests();
     } catch (err) {
-      alert('Failed to delete question.');
+      toast.error(errorMessage(err, 'Failed to delete question.'));
+    } finally {
+      setDeleteQ(null);
     }
   };
 
@@ -667,7 +543,8 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
     }
   };
 
-  const totalMarksSoFar = questions.reduce((sum, q) => sum + (q.marks ?? (selectedTest?.marksPerQuestion || 0)), 0);
+  const activeQuestions = questions.filter((q) => q.isActive !== false);
+  const totalMarksSoFar = activeQuestions.reduce((sum, q) => sum + (q.marks ?? (selectedTest?.marksPerQuestion || 0)), 0);
 
   return (
     <div className="space-y-6">
@@ -694,7 +571,7 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
           <div className="bg-surface border border-border-default rounded-2xl p-6 shadow-sm flex items-center justify-between gap-4 flex-wrap">
             <div>
               <p className="text-xs font-bold text-text-primary">{selectedTest.title}</p>
-              <p className="text-[11px] text-text-tertiary mt-0.5">{questions.length} question(s) added · {totalMarksSoFar} marks</p>
+              <p className="text-[11px] text-text-tertiary mt-0.5">{activeQuestions.length} question(s) added · {totalMarksSoFar} marks</p>
             </div>
             <div className="flex items-center gap-2">
               {publishError && <span className="text-[11px] text-status-danger-text font-semibold">{publishError}</span>}
@@ -783,26 +660,6 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2">Type</label>
-                  <select value={questionType} onChange={(e) => setQuestionType(e.target.value)} className="w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-3 py-2 text-xs font-semibold transition-all">
-                    <option value="conceptual">Conceptual</option>
-                    <option value="factual">Factual</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2">Exam source (optional)</label>
-                  <input
-                    type="text"
-                    value={examSource}
-                    onChange={(e) => setExamSource(e.target.value)}
-                    placeholder="e.g. UPSC CSE 2019"
-                    className="w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-3 py-2 text-xs font-semibold transition-all"
-                  />
-                </div>
-              </div>
-
               <div>
                 <label className="block text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2">Explanation (optional)</label>
                 <textarea
@@ -822,7 +679,7 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
           </div>
 
           <div className="bg-surface border border-border-default rounded-2xl p-6 shadow-sm">
-            <h3 className="text-sm font-extrabold text-text-primary mb-4">Questions in this Test ({questions.length})</h3>
+            <h3 className="text-sm font-extrabold text-text-primary mb-4">Questions in this Test ({activeQuestions.length})</h3>
             {loadingQuestions ? (
               <p className="text-xs text-text-tertiary">Loading...</p>
             ) : questions.length === 0 ? (
@@ -830,28 +687,65 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests }) {
             ) : (
               <div className="space-y-2">
                 {questions.map((q) => (
-                  <EditableQuestionRow
-                    key={q._id}
-                    testId={testId}
-                    question={q}
-                    onSaved={(updated) => setQuestions((prev) => prev.map((x) => x._id === updated._id ? updated : x))}
-                    onDeleted={handleDeleteQuestion}
-                  />
+                  <div key={q._id} className={`flex items-start justify-between gap-3 p-3 bg-sunken border border-border-default rounded-xl ${q.isActive === false ? 'opacity-60' : ''}`}>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-text-primary">Q{q.order}. {q.questionText}</p>
+                      <p className="text-[10px] text-text-tertiary mt-1 flex flex-wrap items-center gap-x-1.5">
+                        <span>Correct: {q.correctOption} · {q.difficulty} · {q.marks ?? selectedTest.marksPerQuestion} marks</span>
+                        {q.isActive === false && <Chip tone="warning">Retired</Chip>}
+                        {q.answerHistory?.length > 0 && <Chip tone="info">Answer edited {q.answerHistory.length}×</Chip>}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button onClick={() => setEditing(q)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-soft-bg hover:opacity-90 text-brand border border-accent-soft-border rounded-lg text-[10px] font-bold cursor-pointer" aria-label={`Edit question ${q.order}`}>
+                        <Icon name="edit" className="w-3 h-3" /> Edit
+                      </button>
+                      {q.isActive !== false && (
+                        <button onClick={() => setDeleteQ(q)} className="px-2.5 py-1 bg-status-danger-bg hover:opacity-90 text-status-danger-text border border-status-danger-text/30 rounded-lg text-[10px] font-bold cursor-pointer">
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
           </div>
+
+          {activeEditor && (
+            <QuestionEditor
+              key={activeEditor._id}
+              testId={testId}
+              question={activeEditor}
+              marksDefault={selectedTest.marksPerQuestion}
+              onClose={closeEditor}
+              onSaved={async () => { await loadQuestions(testId); await refreshTests(); }}
+            />
+          )}
+          {deleteQ && (
+            <Modal
+              title="Delete this question?"
+              onClose={() => setDeleteQ(null)}
+              footer={
+                <>
+                  <ActionButton tone="ghost" onClick={() => setDeleteQ(null)}>Cancel</ActionButton>
+                  <ActionButton tone="danger" icon="trash" onClick={() => handleDeleteQuestion(deleteQ)}>Delete</ActionButton>
+                </>
+              }
+            >
+              <p className="text-sm text-text-secondary leading-relaxed pb-4">
+                Question {deleteQ.order} will be removed. If students have already attempted this test, the question is <b>retired</b> instead: hidden from new attempts but kept so their past results, flags and reports stay intact.
+              </p>
+            </Modal>
+          )}
         </>
       )}
     </div>
   );
 }
 
-function displaySubjectName(subject) {
-  return SUBJECT_NAMES[subject] || OPTIONAL_NAMES[subject] || subject;
-}
-
 function SubjectPricingTab() {
+  const toast = useToast();
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -908,7 +802,7 @@ function SubjectPricingTab() {
       await fetchPricing();
       setTimeout(() => setSavedSubject(null), 2000);
     } catch (err) {
-      alert(err.message || 'Failed to save price.');
+      toast.error(err.message || 'Failed to save price.');
     } finally {
       setSavingSubject(null);
     }
@@ -987,6 +881,7 @@ function SubjectPricingTab() {
 }
 
 function AdminMcqPurchasesTab() {
+  const toast = useToast();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1033,7 +928,7 @@ function AdminMcqPurchasesTab() {
       if (!res.ok) throw new Error(data.error || `Failed to ${action} request`);
       setRequests(prev => prev.map(r => r._id === requestId ? { ...r, status: action === 'approve' ? 'approved' : 'rejected' } : r));
     } catch (err) {
-      alert(err.message || `Error executing action ${action}`);
+      toast.error(err.message || `Error executing action ${action}`);
     } finally {
       setProcessingId(null);
     }
@@ -1168,22 +1063,28 @@ function AdminMcqPurchasesTab() {
   );
 }
 
-export default function AdminMcqData() {
+const SUB_TABS = [
+  ['manage', 'Create / Manage Tests', null],
+  ['upload', 'Upload Questions', null],
+  ['build', 'Build Questions', null],
+  ['reports', 'Reported Questions', 'reports'],
+  ['attempts', 'Student Attempts', null],
+  ['pricing', 'Subject Pricing', null],
+  ['purchases', 'Purchase Requests', null]
+];
+
+function AdminMcqDataInner() {
   const [activeSubTab, setActiveSubTab] = useState('manage');
   const [tests, setTests] = useState([]);
   const [loadingTests, setLoadingTests] = useState(true);
+  const [pendingReports, setPendingReports] = useState(0);
+  const [editRequest, setEditRequest] = useState(null);
 
   const refreshTests = async () => {
     setLoadingTests(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/mcq/admin/tests', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTests(data.tests || []);
-      }
+      const data = await mcq('/admin/tests');
+      setTests(data.tests || []);
     } catch (err) {
       console.error('Error fetching MCQ tests:', err);
     } finally {
@@ -1193,46 +1094,38 @@ export default function AdminMcqData() {
 
   useEffect(() => {
     refreshTests();
+    // The tab shows how many student reports are waiting, so nothing sits unnoticed.
+    mcq('/admin/reports/count').then((c) => setPendingReports(c.pending)).catch(() => {});
   }, []);
 
+  // "Edit question" on a report jumps to the Build tab with that question's editor open.
+  const openEditor = (question) => {
+    setEditRequest({ testId: String(question.testId), questionId: String(question._id) });
+    setActiveSubTab('build');
+  };
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-6 py-10 md:py-14">
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-10 md:py-14">
       <div className="mb-8 border-b border-border-default pb-5">
         <h1 className="text-2xl md:text-3xl font-display font-extrabold text-text-primary tracking-tight">MCQ Test Data</h1>
-        <p className="text-text-tertiary text-sm mt-1.5 font-medium">Create MCQ tests and bulk-upload their questions from JSON or CSV.</p>
+        <p className="text-text-tertiary text-sm mt-1.5 font-medium">Create tests, upload questions, review student reports and manage attempts.</p>
       </div>
 
-      <div className="flex items-center gap-2 mb-6">
-        <button
-          onClick={() => setActiveSubTab('manage')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${activeSubTab === 'manage' ? 'bg-brand text-text-on-accent' : 'bg-sunken text-text-secondary hover:bg-surface-raised'}`}
-        >
-          Create / Manage Tests
-        </button>
-        <button
-          onClick={() => setActiveSubTab('upload')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${activeSubTab === 'upload' ? 'bg-brand text-text-on-accent' : 'bg-sunken text-text-secondary hover:bg-surface-raised'}`}
-        >
-          Upload Questions
-        </button>
-        <button
-          onClick={() => setActiveSubTab('build')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${activeSubTab === 'build' ? 'bg-brand text-text-on-accent' : 'bg-sunken text-text-secondary hover:bg-surface-raised'}`}
-        >
-          Build Questions
-        </button>
-        <button
-          onClick={() => setActiveSubTab('pricing')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${activeSubTab === 'pricing' ? 'bg-brand text-text-on-accent' : 'bg-sunken text-text-secondary hover:bg-surface-raised'}`}
-        >
-          Subject Pricing
-        </button>
-        <button
-          onClick={() => setActiveSubTab('purchases')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${activeSubTab === 'purchases' ? 'bg-brand text-text-on-accent' : 'bg-sunken text-text-secondary hover:bg-surface-raised'}`}
-        >
-          Purchase Requests
-        </button>
+      <div className="flex flex-wrap items-center gap-2 mb-6" role="tablist" aria-label="MCQ admin sections">
+        {SUB_TABS.map(([id, label, badge]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={activeSubTab === id}
+            onClick={() => setActiveSubTab(id)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer inline-flex items-center gap-2 ${activeSubTab === id ? 'bg-brand text-text-on-accent' : 'bg-sunken text-text-secondary hover:bg-surface-raised'}`}
+          >
+            {label}
+            {badge === 'reports' && pendingReports > 0 && (
+              <span className={`min-w-5 h-5 px-1.5 rounded-full text-[10px] font-extrabold flex items-center justify-center ${activeSubTab === id ? 'bg-text-on-accent text-brand' : 'bg-status-danger-text text-white'}`}>{pendingReports}</span>
+            )}
+          </button>
+        ))}
       </div>
 
       {activeSubTab === 'manage' ? (
@@ -1240,12 +1133,24 @@ export default function AdminMcqData() {
       ) : activeSubTab === 'upload' ? (
         <UploadQuestionsTab tests={tests} loadingTests={loadingTests} />
       ) : activeSubTab === 'build' ? (
-        <BuildQuestionsTab tests={tests} loadingTests={loadingTests} refreshTests={refreshTests} />
+        <BuildQuestionsTab tests={tests} loadingTests={loadingTests} refreshTests={refreshTests} editRequest={editRequest} onEditHandled={() => setEditRequest(null)} />
+      ) : activeSubTab === 'reports' ? (
+        <AdminMcqReports onEditQuestion={openEditor} onCountChange={setPendingReports} />
+      ) : activeSubTab === 'attempts' ? (
+        <AdminMcqAttempts tests={tests} />
       ) : activeSubTab === 'pricing' ? (
         <SubjectPricingTab />
       ) : (
         <AdminMcqPurchasesTab />
       )}
     </div>
+  );
+}
+
+export default function AdminMcqData() {
+  return (
+    <ToastProvider>
+      <AdminMcqDataInner />
+    </ToastProvider>
   );
 }
