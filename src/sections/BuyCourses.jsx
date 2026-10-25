@@ -5,9 +5,12 @@ import ComboOffersSection from "../components/courses/ComboOffersSection";
 import CategorizedCourseGrid from "../components/courses/CategorizedCourseGrid";
 import SamplePreviewSection from "../components/courses/SamplePreviewSection";
 import CourseCategoryNav from "../components/courses/CourseCategoryNav";
+import ExamStageToggle from "../components/courses/ExamStageToggle";
 import {
   CAC_FEATURES,
+  PRELIMS_FEATURES,
   categorizeCourses,
+  splitByExamStage,
 } from "../components/courses/courseHelpers";
 
 const GUEST_STATUS = { type: "guest", label: "Sign In to Purchase" };
@@ -16,6 +19,9 @@ export default function BuyCourses({ onRedirectToLogin }) {
   const [courses, setCourses] = useState([]);
   const [comboOffers, setComboOffers] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Which track the toggle is currently showing. Defaults to Mains since that's still
+  // where the large majority of courses (and existing students) are.
+  const [examStageView, setExamStageView] = useState("Mains");
 
   const [activeSampleCourse, setActiveSampleCourse] = useState(null);
   const sampleSectionRef = useRef(null);
@@ -53,14 +59,18 @@ export default function BuyCourses({ onRedirectToLogin }) {
     fetchData();
   }, []);
 
-  // API returns courses newest-first. The OLDEST All GS course is the original Mains Master File;
-  // the second-oldest (if present) is the Current Affairs Compass featured below it.
-  // Any further All GS courses fall through to the regular grid.
-  const allGsCourses = courses.filter((c) => c.subject === "All GS");
-  const mmfCourse = allGsCourses.at(-1);
-  const cacCourse = allGsCourses.length >= 2 ? allGsCourses.at(-2) : null;
+  // Top-level split: Prelims courses get their own section entirely separate from every
+  // Mains course/subject below, so the page never implies "Mains-only" to a new visitor.
+  const { prelims, mains } = splitByExamStage(courses);
+
+  // Mains Master File and Current Affairs Compass are identified by their fixed courseId
+  // rather than by "oldest/second-oldest All GS course" - a position-based guess breaks the
+  // moment another All GS (or Prelims) course is added, which is exactly what happened when
+  // Prelims Master File was introduced.
+  const mmfCourse = mains.find((c) => c.courseId === "MMF") || null;
+  const cacCourse = mains.find((c) => c.courseId === "CAC") || null;
   const featuredIds = [mmfCourse?._id, cacCourse?._id].filter(Boolean);
-  const { optional, gsCore } = categorizeCourses(courses, featuredIds);
+  const { optional, gsCore } = categorizeCourses(mains, featuredIds);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-16 relative">
@@ -107,73 +117,104 @@ export default function BuyCourses({ onRedirectToLogin }) {
         ))}
       </div>
 
-      <CourseCategoryNav
-        hasMmf={!loading && !!mmfCourse}
-        hasCac={!loading && !!cacCourse}
-        hasCombos={!loading && comboOffers.length > 0}
-        optionalCount={optional.length}
-        gsCoreCount={gsCore.length}
-      />
-
-      {!loading && mmfCourse && (
-        <div id="category-mmf" className="scroll-mt-20 md:scroll-mt-24">
-          <MmfHeroBanner
-            course={mmfCourse}
-            status={GUEST_STATUS}
-            pendingRequest={null}
-            onPurchase={onRedirectToLogin}
-            onTelegramNotify={onRedirectToLogin}
-            onSeeSample={handleSeeSample}
-          />
-        </div>
-      )}
-
-      {!loading && cacCourse && (
-        <div id="category-cac" className="scroll-mt-20 md:scroll-mt-24">
-          <MmfHeroBanner
-            course={cacCourse}
-            status={GUEST_STATUS}
-            pendingRequest={null}
-            onPurchase={onRedirectToLogin}
-            onTelegramNotify={onRedirectToLogin}
-            onSeeSample={handleSeeSample}
-            features={CAC_FEATURES}
-            badge="Current Affairs"
-            subtitle="Comprehensive current affairs coverage built for Mains — bridging news to syllabus."
-          />
-        </div>
-      )}
-
-      {!loading && comboOffers.length > 0 && (
-        <div id="category-combos" className="scroll-mt-20 md:scroll-mt-24">
-          <ComboOffersSection
-            comboOffers={comboOffers}
-            getComboStatus={() => GUEST_STATUS}
-            onSelectCombo={onRedirectToLogin}
-          />
-        </div>
+      {!loading && (
+        <ExamStageToggle value={examStageView} onChange={setExamStageView} />
       )}
 
       {loading ? (
         <div className="py-16 text-center bg-surface-raised border border-border-default rounded-2xl">
           <LoadingSpinner text="Loading courses..." />
         </div>
-      ) : courses.length === 0 ? (
-        <div className="py-16 text-center border border-dashed border-border-default rounded-2xl bg-surface-raised">
-          <p className="text-sm text-text-secondary font-semibold">
-            No courses are currently available for purchase.
-          </p>
-        </div>
+      ) : examStageView === "Prelims" ? (
+        prelims.length === 0 ? (
+          <div className="py-16 text-center border border-dashed border-border-default rounded-2xl bg-surface-raised">
+            <p className="text-sm text-text-secondary font-semibold">
+              No Prelims courses are available yet.
+            </p>
+          </div>
+        ) : (
+          prelims.map((course) => (
+            <MmfHeroBanner
+              key={course._id}
+              course={course}
+              status={GUEST_STATUS}
+              pendingRequest={null}
+              onPurchase={onRedirectToLogin}
+              onTelegramNotify={onRedirectToLogin}
+              onSeeSample={handleSeeSample}
+              features={PRELIMS_FEATURES}
+              badge="Prelims"
+              subtitle="Everything you need for Prelims, compiled into one master file."
+            />
+          ))
+        )
       ) : (
-        <CategorizedCourseGrid
-          courses={courses}
-          excludedCourseIds={featuredIds}
-          getCourseStatus={() => GUEST_STATUS}
-          getPendingRequest={() => null}
-          onPurchase={onRedirectToLogin}
-          onTelegramNotify={onRedirectToLogin}
-          onSeeSample={handleSeeSample}
-        />
+        <>
+          <CourseCategoryNav
+            hasMmf={!!mmfCourse}
+            hasCac={!!cacCourse}
+            hasCombos={comboOffers.length > 0}
+            optionalCount={optional.length}
+            gsCoreCount={gsCore.length}
+          />
+
+          {mmfCourse && (
+            <div id="category-mmf" className="scroll-mt-20 md:scroll-mt-24">
+              <MmfHeroBanner
+                course={mmfCourse}
+                status={GUEST_STATUS}
+                pendingRequest={null}
+                onPurchase={onRedirectToLogin}
+                onTelegramNotify={onRedirectToLogin}
+                onSeeSample={handleSeeSample}
+              />
+            </div>
+          )}
+
+          {cacCourse && (
+            <div id="category-cac" className="scroll-mt-20 md:scroll-mt-24">
+              <MmfHeroBanner
+                course={cacCourse}
+                status={GUEST_STATUS}
+                pendingRequest={null}
+                onPurchase={onRedirectToLogin}
+                onTelegramNotify={onRedirectToLogin}
+                onSeeSample={handleSeeSample}
+                features={CAC_FEATURES}
+                badge="Current Affairs"
+                subtitle="Comprehensive current affairs coverage built for Mains — bridging news to syllabus."
+              />
+            </div>
+          )}
+
+          {comboOffers.length > 0 && (
+            <div id="category-combos" className="scroll-mt-20 md:scroll-mt-24">
+              <ComboOffersSection
+                comboOffers={comboOffers}
+                getComboStatus={() => GUEST_STATUS}
+                onSelectCombo={onRedirectToLogin}
+              />
+            </div>
+          )}
+
+          {mains.length === 0 ? (
+            <div className="py-16 text-center border border-dashed border-border-default rounded-2xl bg-surface-raised">
+              <p className="text-sm text-text-secondary font-semibold">
+                No courses are currently available for purchase.
+              </p>
+            </div>
+          ) : (
+            <CategorizedCourseGrid
+              courses={mains}
+              excludedCourseIds={featuredIds}
+              getCourseStatus={() => GUEST_STATUS}
+              getPendingRequest={() => null}
+              onPurchase={onRedirectToLogin}
+              onTelegramNotify={onRedirectToLogin}
+              onSeeSample={handleSeeSample}
+            />
+          )}
+        </>
       )}
 
       <SamplePreviewSection
