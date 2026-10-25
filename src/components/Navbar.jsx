@@ -13,7 +13,7 @@ const mobileButtonClass = (active) =>
     active ? 'bg-brand text-text-on-accent border-brand shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised border-border-default'
   }`;
 
-const getNavLinks = (user) => {
+const getNavLinks = (user, pendingReports = 0) => {
   if (!user) return [];
 
   const links = [
@@ -70,7 +70,16 @@ const getNavLinks = (user) => {
         key: 'manage_mcq',
         target: 'admin_mcq_data',
         match: (t) => t === 'admin_mcq_data',
-        label: <><span className="hidden sm:inline">Manage </span>MCQ</>
+        label: (
+          <>
+            <span className="hidden sm:inline">Manage </span>MCQ
+            {pendingReports > 0 && (
+              <span className="ml-1.5 inline-flex min-w-4 h-4 px-1 items-center justify-center rounded-full bg-status-danger-text text-white text-[9px] font-extrabold" title={`${pendingReports} reported question(s) waiting`}>
+                {pendingReports}
+              </span>
+            )}
+          </>
+        )
       },
       {
         key: 'requests',
@@ -142,8 +151,29 @@ function ThemeToggle() {
 }
 
 export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
-  const links = getNavLinks(user);
+  // Admins see how many student question reports are waiting, as a badge on "Manage MCQ".
+  const [pendingReports, setPendingReports] = useState(0);
+  useEffect(() => {
+    if (!user?.isAdmin) return undefined;
+    let cancelled = false;
+    const load = () => fetch('/api/mcq/admin/reports/count', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d) setPendingReports(d.pending); })
+      .catch(() => {});
+    load();
+    const id = setInterval(load, 120000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [user?.isAdmin, activeTab]);
+
+  const links = getNavLinks(user, pendingReports);
   const activeKey = links.find((l) => l.match(activeTab))?.key;
+
+  // Clicking the section you are already in returns to its start (the MCQ area is several screens deep
+  // and otherwise ignores a click on its own nav link).
+  const goToLink = (link) => {
+    if (link.key === 'mcq' && link.key === activeKey) window.dispatchEvent(new CustomEvent('mcq:home'));
+    setActiveTab(link.target);
+  };
   const navRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const hasAnimated = useRef(false);
@@ -186,7 +216,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
             {links.map((link) => (
               <button
                 key={link.key}
-                onClick={() => setActiveTab(link.target)}
+                onClick={() => goToLink(link)}
                 className={buttonClass(link.key === activeKey)}
               >
                 {link.label}
@@ -247,7 +277,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
                     <button
                       key={link.key}
                       onClick={() => {
-                        setActiveTab(link.target);
+                        goToLink(link);
                         setMobileMenuOpen(false);
                       }}
                       className={mobileButtonClass(link.key === activeKey)}
