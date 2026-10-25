@@ -2,9 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import LoadingSpinner from '../components/LoadingSpinner';
+import AdminDownloadTrace from './AdminDownloadTrace';
 
 export default function AdminView() {
-  // Navigation: 'transactions' or 'users'
+  // Navigation: 'transactions', 'users' or 'traces' (leaked-PDF lookup)
   const [currentView, setCurrentView] = useState('transactions');
   
   // Data States
@@ -90,7 +91,7 @@ export default function AdminView() {
       await fetchCourses();
       if (!signal.aborted) {
         if (currentView === 'transactions') await fetchTransactions();
-        else await fetchUsers();
+        else if (currentView === 'users') await fetchUsers();
       }
       if (!signal.aborted) setLoading(false);
     };
@@ -392,11 +393,24 @@ export default function AdminView() {
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             User Management
           </button>
+          <button
+            onClick={() => setCurrentView('traces')}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              currentView === 'traces'
+                ? 'bg-brand text-text-on-accent shadow'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Leak Trace
+          </button>
         </div>
       </div>
 
       {/* Main View Area */}
-      {loading ? (
+      {currentView === 'traces' ? (
+        <AdminDownloadTrace />
+      ) : loading ? (
         <div className="py-24 text-center bg-surface border border-border-default rounded-2xl shadow-sm">
           <LoadingSpinner text={`Retrieving ${currentView === 'transactions' ? 'purchase transactions' : 'user database'}...`} />
         </div>
