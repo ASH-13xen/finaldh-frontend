@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import LoadingSpinner from "../components/LoadingSpinner";
 import DownloadProgressBar from "../components/DownloadProgressBar";
+import { ownsCourse } from "../lib/courseOwnership";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   getAuth,
@@ -534,20 +535,16 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     }
   };
 
-  // Filter courses that match user's interestedCourses (case-insensitive check)
+  // Enrollment labels on the profile (shown as pills; includes programmes that are not site courses)
   const interestedList = (
     Array.isArray(currentUser?.interestedCourses)
       ? currentUser.interestedCourses
       : []
   ).filter((item) => typeof item === "string" && item.trim() !== "");
+  // Downloadable courses are the ones the student OWNS (same rule as the server's download check),
+  // not every label in interestedList - otherwise a course can be listed here and still be refused.
   const matchedCourses = courses.filter(
-    (course) =>
-      course &&
-      course.courseId &&
-      interestedList.some(
-        (intCourse) =>
-          intCourse.toLowerCase() === course.courseId.toLowerCase(),
-      ),
+    (course) => course && ownsCourse(currentUser, course.courseId),
   );
 
   const fetchRequests = async () => {
