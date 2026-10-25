@@ -758,9 +758,11 @@ export default function ProgressSection({ onRedirectToBuy }) {
                                   {q.questionText}
                                 </p>
                                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                  <span className="text-[10px] text-text-tertiary font-semibold tabular-nums">
-                                    pg. {q.pageNumber}
-                                  </span>
+                                  {q.pageNumber && (
+                                    <span className="text-[10px] text-text-tertiary font-semibold tabular-nums">
+                                      pg. {q.pageNumber}
+                                    </span>
+                                  )}
                                   {splitTagDisplay(q.tag).map((t, idx) => (
                                     <span
                                       key={idx}
