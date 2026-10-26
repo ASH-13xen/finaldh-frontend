@@ -133,3 +133,11 @@ body {
   background-color: var(--bg-page);
   color: var(--text-primary);
 }
+
+/* Horizontal chip / tab rows that scroll on narrow screens without a visible scrollbar */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

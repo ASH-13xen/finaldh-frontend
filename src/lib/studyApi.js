@@ -26,6 +26,7 @@ const qs = (params) => {
 //   { refType: 'tc_answer',   toppersCopyId, questionId, answerIdx }
 //   { refType: 'tc_pyq',      pyqId, toppersCopyId? }
 //   { refType: 'qb_question', quizQuestionId }
+//   { refType: 'em_topic',    economyTopicId }
 // refKeyOf mirrors the server's canonical key so a section can tell what's starred locally.
 export const refKeyOf = (ref) => {
   switch (ref?.refType) {
@@ -33,6 +34,7 @@ export const refKeyOf = (ref) => {
     case 'tc_answer': return `tc_answer:${ref.toppersCopyId}:${ref.questionId}:${ref.answerIdx}`;
     case 'tc_pyq': return `tc_pyq:${ref.pyqId}`;
     case 'qb_question': return `qb_question:${ref.quizQuestionId}`;
+    case 'em_topic': return `em_topic:${ref.economyTopicId}`;
     default: return '';
   }
 };

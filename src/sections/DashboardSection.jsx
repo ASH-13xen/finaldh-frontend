@@ -21,6 +21,10 @@ import AdminQuestionBanks from './AdminQuestionBanks';
 import ToppersCopy from './ToppersCopy';
 import AdminToppersCopy from './AdminToppersCopy';
 import MyNotes from './MyNotes';
+import EconomyMaster from './EconomyMaster';
+import AdminEconomyMaster from './AdminEconomyMaster';
+import ComingSoon from './ComingSoon';
+import { TEST_TAB_LABEL } from '../lib/tabRouting';
 import McqFlow from './McqFlow';
 import AdminView from './AdminView';
 import AdminContactUsers from './AdminContactUsers';
@@ -97,6 +101,18 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'toppers_copy' && (
           <ToppersCopy />
+        )}
+
+        {activeTab === 'economy_master' && (
+          <EconomyMaster />
+        )}
+
+        {activeTab === 'admin_economy_master' && (
+          <AdminEconomyMaster />
+        )}
+
+        {activeTab === 'admin_test' && user?.isAdmin && (
+          <ComingSoon title={TEST_TAB_LABEL} onBack={() => setActiveTab('manage_courses')} />
         )}
 
         {activeTab === 'my_notes' && (

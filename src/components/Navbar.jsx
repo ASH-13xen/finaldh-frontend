@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { gsap, prefersReducedMotion } from '../lib/gsapSetup';
 import { useTheme } from '../contexts/ThemeContext';
 import InboxBell from './InboxBell';
+import { TEST_TAB_LABEL } from '../lib/tabRouting';
 
 const buttonClass = (active) =>
   `text-[9px] sm:text-xs font-sans font-semibold px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-md md:rounded-lg transition-all duration-200 cursor-pointer whitespace-nowrap ${
@@ -42,6 +43,12 @@ const getNavLinks = (user, pendingReports = 0) => {
       label: <><span className="hidden sm:inline">Toppers </span>Copy</>
     },
     {
+      key: 'economy_master',
+      target: 'economy_master',
+      match: (t) => t === 'economy_master',
+      label: <><span className="hidden sm:inline">Economy </span>Master<span className="hidden sm:inline"> File</span></>
+    },
+    {
       key: 'my_notes',
       target: 'my_notes',
       match: (t) => t === 'my_notes',
@@ -61,24 +68,28 @@ const getNavLinks = (user, pendingReports = 0) => {
   if (user.isAdmin) {
     links.push(
       {
+        group: 'admin',
         key: 'manage',
         target: 'manage_courses',
         match: (t) => t === 'manage_courses',
         label: <><span className="hidden sm:inline">Manage </span>Courses</>
       },
       {
+        group: 'admin',
         key: 'progress_data',
         target: 'admin_progress_data',
         match: (t) => t === 'admin_progress_data',
         label: <><span className="hidden sm:inline">Progress </span>Data</>
       },
       {
+        group: 'admin',
         key: 'progress_builder',
         target: 'admin_progress_builder',
         match: (t) => t === 'admin_progress_builder',
         label: <><span className="hidden sm:inline">Progress </span>Builder</>
       },
       {
+        group: 'admin',
         key: 'manage_mcq',
         target: 'admin_mcq_data',
         match: (t) => t === 'admin_mcq_data',
@@ -94,30 +105,48 @@ const getNavLinks = (user, pendingReports = 0) => {
         )
       },
       {
+        group: 'admin',
         key: 'question_banks',
         target: 'admin_question_banks',
         match: (t) => t === 'admin_question_banks',
         label: <><span className="hidden sm:inline">Question </span>Banks</>
       },
       {
+        group: 'admin',
+        key: 'admin_economy_master',
+        target: 'admin_economy_master',
+        match: (t) => t === 'admin_economy_master',
+        label: <><span className="hidden sm:inline">Economy </span>Data</>
+      },
+      {
+        key: 'admin_test',
+        target: 'admin_test',
+        match: (t) => t === 'admin_test',
+        label: TEST_TAB_LABEL
+      },
+      {
+        group: 'admin',
         key: 'admin_toppers_copy',
         target: 'admin_toppers_copy',
         match: (t) => t === 'admin_toppers_copy',
         label: <><span className="hidden sm:inline">Toppers </span>Copy Data</>
       },
       {
+        group: 'admin',
         key: 'requests',
         target: 'admin_purchases',
         match: (t) => t === 'admin_purchases',
         label: <><span className="hidden sm:inline">Purchase </span>Requests</>
       },
       {
+        group: 'admin',
         key: 'admin_view',
         target: 'admin_view',
         match: (t) => t === 'admin_view',
         label: <><span className="hidden sm:inline">Admin </span>View</>
       },
       {
+        group: 'admin',
         key: 'contact_users',
         target: 'admin_contact_users',
         match: (t) => t === 'admin_contact_users',
@@ -202,6 +231,12 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
   const mobileMenuRef = useRef(null);
   const hasAnimated = useRef(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const adminMenuRef = useRef(null);
+  // Desktop: admin tools live in one "Admin" dropdown so the header fits on a laptop screen.
+  const mainLinks = links.filter((l) => l.group !== 'admin');
+  const adminLinks = links.filter((l) => l.group === 'admin');
+  const activeAdmin = adminLinks.find((l) => l.key === activeKey);
 
   useEffect(() => {
     if (hasAnimated.current || !navRef.current) return;
@@ -214,6 +249,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
   useClickOutside(mobileMenuRef, () => {
     setMobileMenuOpen(false);
   });
+  useClickOutside(adminMenuRef, () => setAdminOpen(false));
 
   const handleLogoClick = () => {
     setMobileMenuOpen(false);
@@ -237,7 +273,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
         {/* Navigation Links - Desktop Only */}
         {user && (
           <div className="hidden md:flex items-center gap-2 border-l border-border-default pl-6">
-            {links.map((link) => (
+            {mainLinks.map((link) => (
               <button
                 key={link.key}
                 onClick={() => goToLink(link)}
@@ -246,6 +282,35 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
                 {link.label}
               </button>
             ))}
+            {adminLinks.length > 0 && (
+              <div ref={adminMenuRef} className="relative">
+                <button
+                  onClick={() => setAdminOpen((o) => !o)}
+                  aria-haspopup="menu"
+                  aria-expanded={adminOpen}
+                  className={`${buttonClass(!!activeAdmin)} flex items-center gap-1`}
+                >
+                  {activeAdmin ? activeAdmin.label : 'Admin'}
+                  <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3 h-3 transition-transform ${adminOpen ? 'rotate-180' : ''}`} aria-hidden="true"><path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06z" /></svg>
+                </button>
+                {adminOpen && (
+                  <div role="menu" className="absolute left-0 top-[calc(100%+8px)] w-56 bg-surface border border-border-default rounded-xl shadow-xl p-1.5 flex flex-col z-50">
+                    {adminLinks.map((link) => (
+                      <button
+                        key={link.key}
+                        role="menuitem"
+                        onClick={() => { setActiveTab(link.target); setAdminOpen(false); }}
+                        className={`text-left px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer whitespace-nowrap ${
+                          link.key === activeKey ? 'bg-brand text-text-on-accent' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
+                        }`}
+                      >
+                        {link.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
