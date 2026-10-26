@@ -11,6 +11,7 @@ const labelCls = 'block text-xs font-bold text-text-tertiary uppercase tracking-
 export default function QuestionEditor({ testId, question, marksDefault, onClose, onSaved }) {
   const toast = useToast();
   const [text, setText] = useState(question.questionText);
+  const [statements, setStatements] = useState((question.statements || []).join('\n'));
   const [options, setOptions] = useState(() => ['A', 'B', 'C', 'D'].map((l) => question.options.find((o) => o.label === l)?.text || ''));
   const [correct, setCorrect] = useState(question.correctOption);
   const [explanation, setExplanation] = useState(question.explanation || '');
@@ -36,6 +37,7 @@ export default function QuestionEditor({ testId, question, marksDefault, onClose
         method: 'PATCH',
         body: {
           questionText: text.trim(),
+          statements: statements.split('\n').map((s) => s.trim()).filter(Boolean),
           options: ['A', 'B', 'C', 'D'].map((label, i) => ({ label, text: options[i].trim() })),
           correctOption: correct,
           explanation: explanation.trim(),
@@ -77,6 +79,11 @@ export default function QuestionEditor({ testId, question, marksDefault, onClose
         <div>
           <label className={labelCls} htmlFor="qe-text">Question</label>
           <textarea id="qe-text" value={text} onChange={(e) => setText(e.target.value)} rows={4} className={inputCls} />
+        </div>
+
+        <div>
+          <label className={labelCls} htmlFor="qe-statements">Statement lines (one per line, optional)</label>
+          <textarea id="qe-statements" value={statements} onChange={(e) => setStatements(e.target.value)} rows={3} placeholder={"1. ...\n2. ..."} className={inputCls} />
         </div>
 
         <div>

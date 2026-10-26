@@ -602,6 +602,14 @@ export default function McqTestRunner({ attemptId, onExit, onSubmitted }) {
 
               <p className="text-lg md:text-xl font-semibold text-text-primary leading-relaxed whitespace-pre-wrap">{q.questionText}</p>
 
+              {q.statements?.length > 0 && (
+                <ul className="flex flex-col gap-1.5 pl-1 border-l-2 border-border-default">
+                  {q.statements.map((s, i) => (
+                    <li key={i} className="text-base text-text-secondary leading-relaxed pl-3 whitespace-pre-wrap">{s}</li>
+                  ))}
+                </ul>
+              )}
+
               <div className="flex flex-col gap-3" role="radiogroup" aria-label="Answer options">
                 {q.options.map((opt) => (
                   <OptionButton

@@ -9,6 +9,8 @@ const KNOWN_TABS = [
   'manage_courses',
   'pyqs',
   'upsc_questions',
+  'toppers_copy',
+  'admin_toppers_copy',
   'buy_pdfs',
   'upload_course',
   'pyq_recommender',
@@ -20,6 +22,7 @@ const KNOWN_TABS = [
   'progress',
   'admin_progress_data',
   'admin_mcq_data',
+  'admin_question_banks',
 ];
 
 export const DEFAULT_TAB = 'buy_pdfs';

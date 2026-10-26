@@ -81,6 +81,14 @@ function ReviewCard({ q, flagged, onFlag, onReport }) {
 
       <p className="text-base md:text-lg font-semibold text-text-primary leading-relaxed whitespace-pre-wrap">{q.questionText}</p>
 
+      {q.statements?.length > 0 && (
+        <ul className="flex flex-col gap-1.5 pl-1 border-l-2 border-border-default">
+          {q.statements.map((s, i) => (
+            <li key={i} className="text-sm text-text-secondary leading-relaxed pl-3 whitespace-pre-wrap">{s}</li>
+          ))}
+        </ul>
+      )}
+
       <div className="flex flex-col gap-2">
         {q.options.map((opt) => {
           const isCorrect = opt.label === q.correctOption;

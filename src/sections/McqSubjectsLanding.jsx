@@ -72,7 +72,7 @@ function SubjectCard({ s, onOpen }) {
   );
 }
 
-export default function McqSubjectsLanding({ onOpenSubject, onResume, onOpenFlagged, onOpenHistory, onHelp, onTour }) {
+export default function McqSubjectsLanding({ onOpenSubject, onSelectBank, onResume, onOpenFlagged, onOpenHistory, onHelp, onTour }) {
   const [subjects, setSubjects] = useState([]);
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,6 +81,16 @@ export default function McqSubjectsLanding({ onOpenSubject, onResume, onOpenFlag
   const [filter, setFilter] = useState('all');
 
   const [reloadKey, setReloadKey] = useState(0);
+  const [banks, setBanks] = useState([]); // published Question Banks from /api/question-banks
+
+  // Published Question Banks — optional; the rest of the page still renders if this fails.
+  useEffect(() => {
+    if (!onSelectBank) return;
+    fetch('/api/question-banks', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (data) setBanks(data.banks || []); })
+      .catch(() => { /* ignore */ });
+  }, [onSelectBank]);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +155,30 @@ export default function McqSubjectsLanding({ onOpenSubject, onResume, onOpenFlag
       </div>
 
       {error && <ErrorBanner onRetry={retry}>{error}</ErrorBanner>}
+
+      {onSelectBank && banks.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Question banks · practice, untimed</p>
+          {banks.map((bank) => (
+            <button
+              key={bank.subject}
+              onClick={() => onSelectBank(bank.subject)}
+              className="w-full text-left bg-accent-soft-bg border border-accent-soft-border rounded-2xl p-6 flex items-center justify-between gap-4 hover:border-brand transition-colors cursor-pointer group"
+            >
+              <div>
+                <span className="text-[9px] font-bold text-brand uppercase tracking-wide">Practice · untimed</span>
+                <h3 className="font-bold text-lg text-text-primary mt-1">{bank.title}</h3>
+                <p className="text-xs text-text-secondary mt-1">
+                  {bank.total.toLocaleString()} questions · {bank.topicCount} topics · learn by topic, random test, or all
+                </p>
+              </div>
+              <span className="w-9 h-9 rounded-lg bg-surface border border-accent-soft-border flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-text-on-accent transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* First-time guidance */}
       {isNewStudent && (

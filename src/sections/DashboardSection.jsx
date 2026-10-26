@@ -17,6 +17,9 @@ import AdminProgressData from './AdminProgressData';
 import AdminProgressBuilder from './AdminProgressBuilder';
 import ProgressSection from './ProgressSection';
 import AdminMcqData from './AdminMcqData';
+import AdminQuestionBanks from './AdminQuestionBanks';
+import ToppersCopy from './ToppersCopy';
+import AdminToppersCopy from './AdminToppersCopy';
 import McqFlow from './McqFlow';
 import AdminView from './AdminView';
 import AdminContactUsers from './AdminContactUsers';
@@ -91,6 +94,14 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
           <DisplayUPSCQuestions />
         )}
 
+        {activeTab === 'toppers_copy' && (
+          <ToppersCopy />
+        )}
+
+        {activeTab === 'admin_toppers_copy' && (
+          <AdminToppersCopy />
+        )}
+
         {activeTab === 'buy_pdfs' && (
           <BuyCourses onRedirectToLogin={() => setActiveTab('login')} />
         )}
@@ -144,6 +155,10 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'admin_mcq_data' && (
           <AdminMcqData />
+        )}
+
+        {activeTab === 'admin_question_banks' && (
+          <AdminQuestionBanks />
         )}
       </ErrorBoundary>
       </main>
