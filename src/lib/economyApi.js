@@ -28,6 +28,8 @@ export const listThemes = () => request('/themes');
 export const getTheme = (key) => request(`/themes/${encodeURIComponent(key)}`);
 export const getTopic = (id) => request(`/topics/${id}`);
 export const getThemePyqs = (key) => request(`/themes/${encodeURIComponent(key)}/pyqs`);
+export const getTopicPyqs = (id) => request(`/topics/${id}/pyqs`);
+export const checkPyq = (id, key) => request(`/pyqs/${id}/check`, { method: 'POST', body: { key } });
 export const searchTopics = (q) => request(`/search${qs({ q })}`);
 export const getRevision = () => request('/revision');
 export const setProgress = (topicId, status) => request(`/progress/${topicId}`, { method: 'PUT', body: { status } });
@@ -47,6 +49,11 @@ export const adminImport = (file, { mode, dryRun, overwriteEdited }) => {
   form.append('file', file);
   return request(`/admin/import${qs({ mode, dryRun: dryRun ? 'true' : '', overwriteEdited: overwriteEdited ? 'true' : '' })}`, { method: 'POST', form });
 };
+export const adminListPyqs = (params = {}) => request(`/admin/pyqs${qs(params)}`);
+export const adminPlacePyq = (id, topicIds) => request(`/admin/pyqs/${id}`, { method: 'PATCH', body: { topicIds } });
+export const adminStartPyqTagging = ({ retag = false, limit = 0 } = {}) => request('/admin/pyq-tagging', { method: 'POST', body: { retag, limit } });
+export const adminStopPyqTagging = () => request('/admin/pyq-tagging/stop', { method: 'POST' });
+export const adminPyqTagging = () => request('/admin/pyq-tagging');
 export const adminUploadSourcePdf = (file) => {
   const form = new FormData();
   form.append('file', file);
