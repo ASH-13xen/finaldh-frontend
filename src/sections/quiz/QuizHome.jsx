@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { listTopics } from './quizApi';
+import { listTopics, getReviewSets } from './quizApi';
+import { goToTab } from '../../lib/studyJump';
 
 const RANDOM_SIZES = [10, 25, 50, 100];
 
@@ -13,6 +14,7 @@ export default function QuizHome({ subject, onStart, onOpenHistory, onExitToMcq 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const [reviewSets, setReviewSets] = useState(null); // { bookmarks, mistakes }
   const [selectedTopic, setSelectedTopic] = useState('');
   const [size, setSize] = useState(25);
 
@@ -44,6 +46,9 @@ export default function QuizHome({ subject, onStart, onOpenHistory, onExitToMcq 
       })
       .catch((err) => { if (alive) setError(err.message); })
       .finally(() => { if (alive) setLoading(false); });
+    getReviewSets(subject)
+      .then((data) => { if (alive) setReviewSets(data); })
+      .catch(() => { /* revision card just stays hidden */ });
     return () => { alive = false; };
   }, [subject]);
 
@@ -136,12 +141,20 @@ export default function QuizHome({ subject, onStart, onOpenHistory, onExitToMcq 
             {loading ? 'Loading…' : `${total.toLocaleString()} questions · ${topics.length} topics`}
           </p>
         </div>
-        <button
-          className="text-xs font-bold text-text-secondary border border-border-default hover:bg-surface-raised rounded-lg px-3 py-1.5"
-          onClick={onOpenHistory}
-        >
-          History
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            className="text-xs font-bold text-text-secondary border border-border-default hover:bg-surface-raised rounded-lg px-3 py-1.5"
+            onClick={() => goToTab('my_notes')}
+          >
+            My Notes
+          </button>
+          <button
+            className="text-xs font-bold text-text-secondary border border-border-default hover:bg-surface-raised rounded-lg px-3 py-1.5"
+            onClick={onOpenHistory}
+          >
+            History
+          </button>
+        </div>
       </div>
 
       {error && <p className="mt-8 text-sm text-status-danger-text">{error}</p>}
@@ -154,6 +167,38 @@ export default function QuizHome({ subject, onStart, onOpenHistory, onExitToMcq 
 
       {!loading && !error && total > 0 && (
         <div className="mt-6 grid gap-4">
+          {/* Revise — the student's own sets */}
+          {reviewSets && (
+            <Card>
+              <p className="font-bold text-text-primary">Revise</p>
+              <p className="text-sm text-text-tertiary mt-1">
+                Practise only the questions you starred, or the ones you got wrong last time. Answer a mistake correctly and it drops off the list.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-3 mt-4">
+                {[
+                  { mode: 'bookmarks', label: '★ Bookmarked', n: reviewSets.bookmarks, empty: 'Star questions while practising' },
+                  { mode: 'mistakes', label: '✗ My mistakes', n: reviewSets.mistakes, empty: 'Nothing wrong yet' },
+                ].map((r) => (
+                  <button
+                    key={r.mode}
+                    type="button"
+                    disabled={!r.n}
+                    onClick={() => onStart({ mode: r.mode })}
+                    className="flex items-center justify-between gap-3 border border-border-default rounded-xl px-4 py-3 text-left hover:border-brand disabled:opacity-50 disabled:hover:border-border-default cursor-pointer disabled:cursor-default"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold text-text-primary">{r.label}</span>
+                      <span className="block text-[11px] text-text-tertiary mt-0.5">
+                        {r.n ? `${r.n} question${r.n === 1 ? '' : 's'}${r.n >= reviewSets.max ? ' (latest)' : ''}` : r.empty}
+                      </span>
+                    </span>
+                    {r.n > 0 && <span className="text-xs font-bold text-brand flex-shrink-0">Start →</span>}
+                  </button>
+                ))}
+              </div>
+            </Card>
+          )}
+
           {/* Learn by topic */}
           <Card>
             <p className="font-bold text-text-primary">Learn by topic</p>

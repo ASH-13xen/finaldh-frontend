@@ -81,6 +81,7 @@ const titleFor = (a) =>
 const configFor = (a) =>
   a.mode === 'topic' ? { mode: 'topic', topic: a.topic }
   : a.mode === 'random' ? { mode: 'random', size: a.totalQuestions }
+  : a.mode === 'bookmarks' || a.mode === 'mistakes' ? { mode: a.mode }
   : { mode: 'all' };
 
 const formatDuration = (seconds) => {

@@ -1,9 +1,16 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PdfAnswerViewer from '../components/PdfAnswerViewer';
+import { TopperTakeaways } from '../components/AnswerEnhancementLayer';
 import AnswerDiagram from '../components/AnswerDiagram';
 import PyqAnswerView from '../components/PyqAnswerView';
 import { diagramIsRenderable } from '../lib/answerDiagram';
+import BookmarkButton from '../components/study/BookmarkButton';
+import NoteModal from '../components/study/NoteModal';
+import SelectionToNote from '../components/study/SelectionToNote';
+import useBookmarks from '../lib/useBookmarks';
+import { getSeen, setSeen as saveSeen, importSeen } from '../lib/studyApi';
+import { peekJump, clearJump, goToTab } from '../lib/studyJump';
 
 // ---------------------------------------------------------------------------
 // Student-facing "Toppers Copy" section.
@@ -12,7 +19,10 @@ import { diagramIsRenderable } from '../lib/answerDiagram';
 //        scanned answer (canvas PDF, jumped to that topper's pages), and the
 //        per-question AI analysis.
 //   A slide-in left drawer shows the current topic's related PYQs.
-// "Seen" ticks are kept per-browser in localStorage (no cross-device sync).
+// "Seen" ticks are stored per student on the server (/api/study/tc-seen); localStorage is only
+// a first-paint cache plus the source of a one-time import of old per-browser ticks.
+// Questions, topper answers and PYQs can be bookmarked; selected text from the AI analysis or
+// a PYQ model answer can be saved to My Notes. My Notes reopens a saved item via studyJump.
 // ---------------------------------------------------------------------------
 
 const authedFetch = (url, opts = {}) => {
@@ -32,11 +42,32 @@ const SUBJECT_LABELS = {
 const subjectLabel = (s) =>
   SUBJECT_LABELS[s] || s.replace(/^OptionalSubject/, 'Optional: ').replace(/([a-z])([A-Z])/g, '$1 $2');
 
+// Display rows for one topic: questions without a sub-topic first, then each admin-made
+// sub-topic (in its saved order) under a heading. Q-numbers run on across groups.
+// Headings carry their own seen/total. Unknown subtopicIds fall back to ungrouped.
+const topicRows = (questions, subtopics = [], seen = {}) => {
+  const known = new Set(subtopics.map((st) => st._id));
+  const ungrouped = questions.filter((q) => !q.subtopicId || !known.has(q.subtopicId));
+  const groups = [
+    { sub: null, qs: ungrouped },
+    ...subtopics.map((st) => ({ sub: st, qs: questions.filter((q) => q.subtopicId === st._id) })),
+  ];
+  const rows = [];
+  let n = 0;
+  for (const g of groups) {
+    if (g.sub && g.qs.length === 0) continue;
+    if (g.sub) rows.push({ type: 'heading', sub: g.sub, total: g.qs.length, seen: g.qs.filter((q) => seen[q._id]).length });
+    for (const q of g.qs) rows.push({ type: 'q', q, qi: n++ });
+  }
+  return rows;
+};
+
 const topperLabel = (a) => `${a.name}${a.rank ? ` · AIR ${a.rank}` : ''}`;
 const firstPage = (q) => q.answers?.[0]?.startPage || null;
 
-// --- per-browser "seen" markers -------------------------------------------
+// --- "seen" markers: server is the truth, localStorage is a first-paint cache ---
 const SEEN_KEY = 'tc_seen_v1';
+const SEEN_IMPORTED_KEY = 'tc_seen_imported_v1';
 const loadSeen = () => {
   try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') || {}; } catch { return {}; }
 };
@@ -65,6 +96,14 @@ export default function ToppersCopy() {
   const [pyqOpen, setPyqOpen] = useState(false);
   const [selectedPyqId, setSelectedPyqId] = useState(null);
   const [seen, setSeen] = useState(loadSeen);
+  const bookmarks = useBookmarks('toppers_copy');
+  const [noteDraft, setNoteDraft] = useState(null); // { studyRef, title, quote, quoteFrom }
+  const [noteFlash, setNoteFlash] = useState(false);
+  // Pending "open this" from My Notes: { subject, toppersCopyId, questionId?, answerIdx?, pyqId? }
+  // Read once; `jumpUsed` stops it re-applying when the student later switches subject.
+  const [jump] = useState(() => peekJump('toppers_copy'));
+  const jumpUsed = useRef(false);
+  const closeNote = useCallback(() => setNoteDraft(null), []);
 
   // Width (px) of the model-answer reading panel — drag its left edge to resize.
   const PYQ_ANSWER_W_KEY = 'tc_pyq_answer_w';
@@ -119,14 +158,39 @@ export default function ToppersCopy() {
   // button both call this. Value is the owning topic id (legacy entries are
   // plain `true`, still truthy) so collapsed topics can still report progress.
   const toggleSeen = useCallback((id, topicId) => {
-    setSeen((prev) => {
+    const nowSeen = !seen[id];
+    const apply = (on) => setSeen((prev) => {
       const next = { ...prev };
-      if (next[id]) delete next[id];
-      else next[id] = topicId || true;
+      if (on) next[id] = topicId || true;
+      else delete next[id];
       persistSeen(next);
       return next;
     });
+    apply(nowSeen);
+    saveSeen(id, nowSeen, topicId).catch(() => apply(!nowSeen)); // roll back if the save failed
+  }, [seen]);
+
+  // Load server ticks; the first time on this browser, push any old local-only ticks up first.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const local = loadSeen();
+        const needsImport = !readLS(SEEN_IMPORTED_KEY, '') && Object.keys(local).length > 0;
+        const data = needsImport ? await importSeen(local) : await getSeen();
+        try { localStorage.setItem(SEEN_IMPORTED_KEY, '1'); } catch { /* private mode */ }
+        if (!alive) return;
+        persistSeen(data.seen || {});
+        setSeen(data.seen || {});
+      } catch (err) {
+        console.error('seen sync failed', err); // keep showing the cached ticks
+      }
+    })();
+    return () => { alive = false; };
   }, []);
+
+  const openNote = (studyRef, title, quote = '', quoteFrom = '') =>
+    setNoteDraft({ studyRef, title, quote, quoteFrom });
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(document.fullscreenElement === pdfPanelRef.current);
@@ -149,14 +213,15 @@ export default function ToppersCopy() {
         const data = await res.json();
         const list = data.subjects || [];
         setSubjects(list);
-        if (list.length) setActiveSubject(list[0].subject);
+        const jumpSubject = jump && list.some((x) => x.subject === jump.subject) ? jump.subject : null;
+        if (list.length) setActiveSubject(jumpSubject || list[0].subject);
       } catch (err) {
         console.error('subjects load failed', err);
       } finally {
         setLoadingSubjects(false);
       }
     })();
-  }, []);
+  }, [jump]);
 
   // --- load topics when subject changes ---
   useEffect(() => {
@@ -173,14 +238,28 @@ export default function ToppersCopy() {
         const data = await res.json();
         const list = data.topics || [];
         setTopics(list);
-        if (list.length) { setExpandedTopicIds({ [list[0]._id]: true }); setLastOpenedTopicId(list[0]._id); }
+        // Arriving from My Notes: open the saved item's topic (and question / PYQ) instead.
+        const j = !jumpUsed.current && jump && jump.subject === activeSubject ? jump : null;
+        const jumpTopic = j && list.some((t) => t._id === j.toppersCopyId) ? j.toppersCopyId : null;
+        if (j) { jumpUsed.current = true; clearJump(); }
+        const openId = jumpTopic || list[0]?._id;
+        if (openId) { setExpandedTopicIds({ [openId]: true }); setLastOpenedTopicId(openId); }
+        if (j?.pyqId) { setPyqOpen(true); setSelectedPyqId(j.pyqId); }
+        if (jumpTopic && j.questionId) {
+          const dRes = await authedFetch(`/api/toppers-copy/${jumpTopic}`);
+          const detail = await dRes.json();
+          setDetails((d) => ({ ...d, [jumpTopic]: detail }));
+          setActiveTopicId(jumpTopic);
+          setActiveQuestionId(j.questionId);
+          setActiveAnswerIdx(Number.isInteger(j.answerIdx) ? j.answerIdx : 0);
+        }
       } catch (err) {
         console.error('topics load failed', err);
       } finally {
         setLoadingTopics(false);
       }
     })();
-  }, [activeSubject]);
+  }, [activeSubject, jump]);
 
   const loadDetail = useCallback(
     async (topicId, force = false) => {
@@ -316,6 +395,8 @@ export default function ToppersCopy() {
             pyqs={drawerPyqs}
             selectedId={selectedPyqId}
             onOpen={(q) => setSelectedPyqId((cur) => (cur === q._id ? null : q._id))}
+            isBookmarked={(q) => bookmarks.isBookmarked({ refType: 'tc_pyq', pyqId: q._id })}
+            onBookmark={(q) => bookmarks.toggle({ refType: 'tc_pyq', pyqId: q._id, toppersCopyId: drawerTopicId })}
           />
         </div>
       </div>
@@ -353,6 +434,11 @@ export default function ToppersCopy() {
                 </div>
                 <p className="font-reading text-sm font-semibold text-text-primary leading-snug">{selectedPyq.questionText}</p>
               </div>
+              <BookmarkButton
+                compact
+                active={bookmarks.isBookmarked({ refType: 'tc_pyq', pyqId: selectedPyq._id })}
+                onToggle={() => bookmarks.toggle({ refType: 'tc_pyq', pyqId: selectedPyq._id, toppersCopyId: drawerTopicId })}
+              />
               <button
                 onClick={() => setSelectedPyqId(null)}
                 className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-sunken text-text-secondary cursor-pointer text-lg leading-none flex-shrink-0"
@@ -361,9 +447,15 @@ export default function ToppersCopy() {
                 ✕
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <SelectionToNote
+              className="flex-1 overflow-y-auto px-5 py-4"
+              onAdd={(quote) => openNote(
+                { refType: 'tc_pyq', pyqId: selectedPyq._id, toppersCopyId: drawerTopicId },
+                selectedPyq.questionText, quote, 'PYQ model answer',
+              )}
+            >
               <PyqAnswerView answer={selectedPyq.pyqAnswer} pyqId={selectedPyq._id} />
-            </div>
+            </SelectionToNote>
           </div>
         </>
       )}
@@ -394,10 +486,22 @@ export default function ToppersCopy() {
           isCompleted={!!seen[activeQuestionId]}
           onToggleCompleted={() => toggleSeen(activeQuestionId, activeTopicId)}
           onBack={backToBrowse}
+          bookmarks={bookmarks}
+          activeTopicId={activeTopicId}
+          onNote={openNote}
+          noteFlash={noteFlash}
         />
       ) : (
         <div className="w-full max-w-4xl mx-auto px-4 md:px-6 py-6">
-          <h1 className="text-xl md:text-2xl font-extrabold text-text-primary tracking-tight">Toppers Copy</h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-xl md:text-2xl font-extrabold text-text-primary tracking-tight">Toppers Copy</h1>
+            <button
+              onClick={() => goToTab('my_notes')}
+              className="text-xs font-bold text-text-secondary border border-border-default hover:bg-surface-raised rounded-lg px-3 py-1.5 cursor-pointer flex-shrink-0"
+            >
+              ★ My Notes
+            </button>
+          </div>
           <p className="text-text-secondary text-sm mt-1">
             Pick a paper, open a question — see how every topper answered it, plus an AI breakdown.
           </p>
@@ -493,9 +597,22 @@ export default function ToppersCopy() {
                         ) : questions.length === 0 ? (
                           <p className="px-5 py-6 text-sm text-text-tertiary italic">No questions in this topic yet.</p>
                         ) : (
-                          questions.map((q, qi) => {
+                          topicRows(questions, detail?.toppersCopy?.subtopics, seen).map((row) => {
+                            if (row.type === 'heading') {
+                              const allSeen = row.seen === row.total;
+                              return (
+                                <div key={`st-${row.sub._id}`} className="px-5 py-2 bg-sunken/60 flex items-center justify-between gap-3">
+                                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-text-secondary">{row.sub.name}</span>
+                                  <span className={`text-[11px] font-bold tabular-nums ${allSeen ? 'text-brand' : 'text-text-tertiary'}`}>
+                                    {row.seen}/{row.total}
+                                  </span>
+                                </div>
+                              );
+                            }
+                            const { q, qi } = row;
                             const pg = firstPage(q);
                             const isSeen = !!seen[q._id];
+                            const qRef = { refType: 'tc_question', toppersCopyId: t._id, questionId: q._id };
                             return (
                               <div
                                 key={q._id}
@@ -532,6 +649,12 @@ export default function ToppersCopy() {
                                     {q.aiAnalysis ? <span className="text-brand">AI analysis</span> : null}
                                   </span>
                                 </button>
+                                <BookmarkButton
+                                  compact
+                                  label={`Bookmark Q${qi + 1}`}
+                                  active={bookmarks.isBookmarked(qRef)}
+                                  onToggle={() => bookmarks.toggle(qRef)}
+                                />
                                 <span className="text-text-tertiary text-sm mt-0.5 flex-shrink-0 group-hover:text-brand" aria-hidden="true">→</span>
                               </div>
                             );
@@ -544,6 +667,22 @@ export default function ToppersCopy() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {noteDraft && (
+        <NoteModal
+          studyRef={noteDraft.studyRef}
+          title={noteDraft.title}
+          quote={noteDraft.quote}
+          quoteFrom={noteDraft.quoteFrom}
+          onClose={closeNote}
+          onSaved={() => { setNoteFlash(true); setTimeout(() => setNoteFlash(false), 2500); }}
+        />
+      )}
+      {bookmarks.error && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-status-danger-bg text-status-danger-text border border-status-danger-text/30 text-xs font-bold px-4 py-2 rounded-lg shadow-lg">
+          Bookmark failed: {bookmarks.error}
         </div>
       )}
     </>
@@ -560,8 +699,13 @@ const readLS = (k, fallback) => {
 function AnswerView({
   activeTc, activeQuestion, activeAnswer, activeAnswerIdx, setActiveAnswerIdx,
   loading, pdfUrl, token, pdfPanelRef, isFullscreen, toggleFullscreen, onBack,
-  isCompleted, onToggleCompleted,
+  isCompleted, onToggleCompleted, bookmarks, activeTopicId, onNote, noteFlash,
 }) {
+  const qRef = activeQuestion ? { refType: 'tc_question', toppersCopyId: activeTopicId, questionId: activeQuestion._id } : null;
+  const aRef = activeQuestion && activeAnswer
+    ? { refType: 'tc_answer', toppersCopyId: activeTopicId, questionId: activeQuestion._id, answerIdx: activeAnswerIdx }
+    : null;
+  const qTitle = activeQuestion?.questionText || 'Untitled question';
   const [layout, setLayout] = useState(() => readLS(TC_LAYOUT_KEY, 'split'));
   const [ratio, setRatio] = useState(() => clampRatio(parseFloat(readLS(TC_RATIO_KEY, '0.62')) || 0.62));
   const [isWide, setIsWide] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1024 : true));
@@ -639,7 +783,22 @@ function AnswerView({
         >
           ← Back to questions
         </button>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
+          {noteFlash && <span className="text-[11px] font-bold text-brand">Saved to My Notes</span>}
+          {qRef && (
+            <BookmarkButton label="Bookmark question" activeLabel="Question saved" active={bookmarks.isBookmarked(qRef)} onToggle={() => bookmarks.toggle(qRef)} />
+          )}
+          {qRef && (
+            <button
+              type="button"
+              onClick={() => onNote(aRef || qRef, aRef ? `${qTitle} — ${topperLabel(activeAnswer)}` : qTitle)}
+              title="Add a note (or select text in the AI analysis)"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer transition-colors bg-surface border-border-default text-text-secondary hover:border-brand hover:text-text-primary"
+            >
+              <span aria-hidden="true">✎</span>
+              <span className="hidden sm:inline">Note</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onToggleCompleted}
@@ -677,6 +836,10 @@ function AnswerView({
             </p>
             <p className="text-[11px] text-text-tertiary mt-1">
               {activeTc?.topic}
+              {(() => {
+                const st = (activeTc?.subtopics || []).find((x) => x._id === activeQuestion?.subtopicId);
+                return st ? ` › ${st.name}` : '';
+              })()}
               {activeQuestion?.year ? ` · ${activeQuestion.year}` : ''}
               {activeQuestion?.marks ? ` · ${activeQuestion.marks} marks` : ''}
             </p>
@@ -705,10 +868,19 @@ function AnswerView({
                 </button>
               ))}
             </div>
+            {aRef && (
+              <BookmarkButton
+                label="Save this copy"
+                activeLabel="Copy saved"
+                active={bookmarks.isBookmarked(aRef)}
+                onToggle={() => bookmarks.toggle(aRef)}
+                className="ml-auto"
+              />
+            )}
             {activeAnswer && (
               <button
                 onClick={toggleFullscreen}
-                className="ml-auto flex-shrink-0 px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap bg-surface text-text-secondary border border-border-default hover:bg-surface-raised cursor-pointer"
+                className="flex-shrink-0 px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap bg-surface text-text-secondary border border-border-default hover:bg-surface-raised cursor-pointer"
                 title="Toggle full screen (Esc to exit)"
               >
                 {isFullscreen ? '✕ Exit full screen' : '⛶ Full screen'}
@@ -727,6 +899,7 @@ function AnswerView({
                 token={token}
                 startPage={activeAnswer.startPage}
                 endPage={activeAnswer.endPage}
+                enhancement={activeAnswer.enhancement}
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-text-tertiary text-sm">
@@ -759,9 +932,13 @@ function AnswerView({
             <div className="px-4 py-2.5 border-b border-border-default bg-surface-raised flex-shrink-0">
               <span className="text-xs font-bold text-text-primary uppercase tracking-wide">AI Analysis</span>
             </div>
-            <div className="flex-grow overflow-y-auto p-4">
+            <SelectionToNote
+              className="flex-grow overflow-y-auto p-4"
+              onAdd={(quote) => qRef && onNote(qRef, qTitle, quote, 'AI analysis')}
+            >
+              <TopperTakeaways enhancement={activeAnswer?.enhancement} topper={activeAnswer ? topperLabel(activeAnswer) : ''} />
               <AnalysisView analysis={activeQuestion?.aiAnalysis} />
-            </div>
+            </SelectionToNote>
           </div>
         )}
       </div>
@@ -788,7 +965,7 @@ function ProgressBar({ value, total, className = '' }) {
   );
 }
 
-function PyqCard({ q, selected, onOpen }) {
+function PyqCard({ q, selected, onOpen, bookmarked, onBookmark }) {
   const hasAnswer = !!q.pyqAnswer;
   return (
     <div className={`p-3 border rounded-xl transition-colors ${selected ? 'bg-surface border-brand' : 'bg-sunken border-border-default'}`}>
@@ -802,6 +979,9 @@ function PyqCard({ q, selected, onOpen }) {
         ) : null}
         {q.pyqAnswerStatus === 'draft' ? (
           <span className="text-[11px] font-bold text-status-warning-text bg-status-warning-bg px-1.5 py-0.5 rounded">answer draft</span>
+        ) : null}
+        {q._id && onBookmark ? (
+          <BookmarkButton compact label="Bookmark PYQ" active={bookmarked} onToggle={() => onBookmark(q)} className="ml-auto" />
         ) : null}
       </div>
       <p className="font-reading text-sm text-text-primary leading-relaxed font-medium">{q.questionText}</p>
@@ -820,7 +1000,7 @@ function PyqCard({ q, selected, onOpen }) {
   );
 }
 
-function PyqList({ pyqs, selectedId, onOpen }) {
+function PyqList({ pyqs, selectedId, onOpen, isBookmarked, onBookmark }) {
   if (!pyqs.length) {
     return <p className="text-sm text-text-tertiary italic">No related previous-year questions for this topic.</p>;
   }
@@ -828,7 +1008,14 @@ function PyqList({ pyqs, selectedId, onOpen }) {
   return (
     <div className="space-y-2.5">
       {byYear.map((q, i) => (
-        <PyqCard key={q._id || i} q={q} selected={!!q._id && q._id === selectedId} onOpen={onOpen} />
+        <PyqCard
+          key={q._id || i}
+          q={q}
+          selected={!!q._id && q._id === selectedId}
+          onOpen={onOpen}
+          bookmarked={!!q._id && isBookmarked?.(q)}
+          onBookmark={onBookmark}
+        />
       ))}
     </div>
   );

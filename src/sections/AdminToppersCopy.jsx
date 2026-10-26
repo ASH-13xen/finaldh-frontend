@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
+import EnhancementManager from './AdminToppersEnhancements';
 
 // ---------------------------------------------------------------------------
 // Admin console for the Toppers Copy section. Three sub-tabs:
@@ -1237,6 +1238,7 @@ function ManageTopics() {
   const [busyId, setBusyId] = useState(null);
   const [msg, setMsg] = useState('');
   const [organiseId, setOrganiseId] = useState(null); // topic whose sub-topic editor is open
+  const [enhanceId, setEnhanceId] = useState(null);   // topic whose enhancement manager is open
 
   const loadSubjects = useCallback(async () => {
     setLoading(true);
@@ -1348,12 +1350,23 @@ function ManageTopics() {
                 >
                   {organiseId === t._id ? 'Close sub-topics' : 'Sub-topics'}
                 </button>
+                <button
+                  className={enhanceId === t._id ? btnPrimary : btnGhost}
+                  disabled={!t.answerCount}
+                  onClick={() => setEnhanceId((cur) => (cur === t._id ? null : t._id))}
+                  title="Margin notes on each topper copy: why it works + value adds"
+                >
+                  {enhanceId === t._id ? 'Close enhancements' : '✨ Enhancements'}
+                </button>
                 <button className="px-3 py-1.5 text-[11px] font-bold text-status-danger-text cursor-pointer" disabled={busyId === t._id} onClick={() => remove(t)}>
                   Delete
                 </button>
               </div>
               {organiseId === t._id && (
                 <SubtopicEditor topicId={t._id} topicName={t.topic} onClose={() => setOrganiseId(null)} />
+              )}
+              {enhanceId === t._id && (
+                <EnhancementManager topicId={t._id} topicName={t.topic} onClose={() => setEnhanceId(null)} />
               )}
               </Fragment>
             ))}
