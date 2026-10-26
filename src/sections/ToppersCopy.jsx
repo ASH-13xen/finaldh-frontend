@@ -11,6 +11,9 @@ import SelectionToNote from '../components/study/SelectionToNote';
 import useBookmarks from '../lib/useBookmarks';
 import { getSeen, setSeen as saveSeen, importSeen } from '../lib/studyApi';
 import { peekJump, clearJump, goToTab } from '../lib/studyJump';
+import PurchaseModal from '../components/PurchaseModal';
+import { UnlockBanner, UnlockChooser } from '../components/ToppersCopyUnlock';
+import { useToppersStore, ALL_SUBJECTS, planPrice } from '../lib/toppersStore';
 
 // ---------------------------------------------------------------------------
 // Student-facing "Toppers Copy" section.
@@ -23,6 +26,8 @@ import { peekJump, clearJump, goToTab } from '../lib/studyJump';
 // a first-paint cache plus the source of a one-time import of old per-browser ticks.
 // Questions, topper answers and PYQs can be bookmarked; selected text from the AI analysis or
 // a PYQ model answer can be saved to My Notes. My Notes reopens a saved item via studyJump.
+// Paid: without the subject (or the all-subjects bundle) every question title is listed but
+// only the admin's free-preview questions open; the rest come back `locked` from the API.
 // ---------------------------------------------------------------------------
 
 const authedFetch = (url, opts = {}) => {
@@ -82,6 +87,11 @@ export default function ToppersCopy() {
   const [activeSubject, setActiveSubject] = useState(null);
   const [topics, setTopics] = useState([]);
   const [loadingTopics, setLoadingTopics] = useState(false);
+  const [subjectOwned, setSubjectOwned] = useState(true);
+
+  const store = useToppersStore();
+  const [chooserOpen, setChooserOpen] = useState(false);
+  const [buyPlan, setBuyPlan] = useState(null); // plan key whose checkout is open
 
   // topic detail cache: { [topicId]: { toppersCopy, relatedPyqs } }
   const [details, setDetails] = useState({});
@@ -238,6 +248,7 @@ export default function ToppersCopy() {
         const data = await res.json();
         const list = data.topics || [];
         setTopics(list);
+        setSubjectOwned(data.owned !== false);
         // Arriving from My Notes: open the saved item's topic (and question / PYQ) instead.
         const j = !jumpUsed.current && jump && jump.subject === activeSubject ? jump : null;
         const jumpTopic = j && list.some((t) => t._id === j.toppersCopyId) ? j.toppersCopyId : null;
@@ -249,6 +260,8 @@ export default function ToppersCopy() {
           const dRes = await authedFetch(`/api/toppers-copy/${jumpTopic}`);
           const detail = await dRes.json();
           setDetails((d) => ({ ...d, [jumpTopic]: detail }));
+          const target = detail.toppersCopy?.questions?.find((q) => q._id === j.questionId);
+          if (target?.locked) { setChooserOpen(true); return; }
           setActiveTopicId(jumpTopic);
           setActiveQuestionId(j.questionId);
           setActiveAnswerIdx(Number.isInteger(j.answerIdx) ? j.answerIdx : 0);
@@ -312,7 +325,11 @@ export default function ToppersCopy() {
 
   const openQuestion = async (topicId, questionId) => {
     // force-refresh: analysis may have been (re)generated since this topic was cached
-    await loadDetail(topicId, true);
+    const data = await loadDetail(topicId, true);
+    if (data?.toppersCopy?.questions?.find((q) => q._id === questionId)?.locked) {
+      setChooserOpen(true);
+      return;
+    }
     setActiveTopicId(topicId);
     setActiveQuestionId(questionId);
     setActiveAnswerIdx(0);
@@ -395,6 +412,7 @@ export default function ToppersCopy() {
             pyqs={drawerPyqs}
             selectedId={selectedPyqId}
             onOpen={(q) => setSelectedPyqId((cur) => (cur === q._id ? null : q._id))}
+            onLocked={() => setChooserOpen(true)}
             isBookmarked={(q) => bookmarks.isBookmarked({ refType: 'tc_pyq', pyqId: q._id })}
             onBookmark={(q) => bookmarks.toggle({ refType: 'tc_pyq', pyqId: q._id, toppersCopyId: drawerTopicId })}
           />
@@ -523,6 +541,16 @@ export default function ToppersCopy() {
             ))}
           </div>
 
+          {!subjectOwned && !loadingTopics && store.loaded && !store.isAdmin && activeSubject && (
+            <UnlockBanner
+              subject={activeSubject}
+              label={subjectLabel(activeSubject)}
+              freeCount={topics.reduce((n, t) => n + (t.freeCount || 0), 0)}
+              store={store}
+              onBuy={setBuyPlan}
+            />
+          )}
+
           {topics.length > 0 && overall.total > 0 && (
             <div className="mb-6 bg-surface border border-border-default rounded-2xl px-5 py-4">
               <div className="flex items-baseline justify-between gap-3 mb-2.5">
@@ -577,6 +605,11 @@ export default function ToppersCopy() {
                         </h3>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
+                        {!subjectOwned && t.freeCount > 0 && (
+                          <span className="text-[11px] font-bold text-status-success-text bg-status-success-bg px-1.5 py-0.5 rounded">
+                            {t.freeCount} free
+                          </span>
+                        )}
                         <span className={`text-[11px] font-bold tabular-nums ${done ? 'text-brand' : 'text-text-tertiary'}`}>
                           {seenCount}/{total}
                         </span>
@@ -613,6 +646,7 @@ export default function ToppersCopy() {
                             const pg = firstPage(q);
                             const isSeen = !!seen[q._id];
                             const qRef = { refType: 'tc_question', toppersCopyId: t._id, questionId: q._id };
+                            const topperCount = q.locked ? q.answerCount || 0 : q.answers?.length || 0;
                             return (
                               <div
                                 key={q._id}
@@ -637,16 +671,20 @@ export default function ToppersCopy() {
                                   onClick={() => openQuestion(t._id, q._id)}
                                   className="min-w-0 flex-1 text-left cursor-pointer"
                                 >
-                                  <span className={`block text-sm leading-relaxed font-medium ${isSeen ? 'text-text-tertiary' : 'text-text-primary'}`}>
+                                  <span className={`block text-sm leading-relaxed font-medium ${isSeen || q.locked ? 'text-text-tertiary' : 'text-text-primary'}`}>
                                     <span className="text-text-tertiary font-bold mr-1">Q{qi + 1}.</span>
                                     {q.questionText || <span className="italic text-text-tertiary">Untitled question</span>}
                                   </span>
                                   <span className="flex items-center gap-2 mt-1 flex-wrap text-[11px] font-semibold text-text-tertiary">
                                     {pg && <span className="tabular-nums">pg. {pg}</span>}
-                                    <span>{q.answers?.length || 0} topper{(q.answers?.length || 0) === 1 ? '' : 's'}</span>
+                                    <span>{topperCount} topper{topperCount === 1 ? '' : 's'}</span>
                                     {q.year ? <span>{q.year}</span> : null}
                                     {q.marks ? <span>{q.marks} marks</span> : null}
                                     {q.aiAnalysis ? <span className="text-brand">AI analysis</span> : null}
+                                    {q.freePreview && !subjectOwned ? (
+                                      <span className="text-status-success-text bg-status-success-bg px-1.5 rounded">Free sample</span>
+                                    ) : null}
+                                    {q.locked ? <span>🔒 Locked</span> : null}
                                   </span>
                                 </button>
                                 <BookmarkButton
@@ -655,7 +693,7 @@ export default function ToppersCopy() {
                                   active={bookmarks.isBookmarked(qRef)}
                                   onToggle={() => bookmarks.toggle(qRef)}
                                 />
-                                <span className="text-text-tertiary text-sm mt-0.5 flex-shrink-0 group-hover:text-brand" aria-hidden="true">→</span>
+                                <span className="text-text-tertiary text-sm mt-0.5 flex-shrink-0 group-hover:text-brand" aria-hidden="true">{q.locked ? '🔒' : '→'}</span>
                               </div>
                             );
                           })
@@ -668,6 +706,28 @@ export default function ToppersCopy() {
             </div>
           )}
         </div>
+      )}
+
+      {chooserOpen && activeSubject && (
+        <UnlockChooser
+          subject={activeSubject}
+          label={subjectLabel(activeSubject)}
+          store={store}
+          onBuy={(plan) => { setChooserOpen(false); setBuyPlan(plan); }}
+          onClose={() => setChooserOpen(false)}
+        />
+      )}
+      {buyPlan && (
+        <PurchaseModal
+          title={buyPlan === ALL_SUBJECTS ? 'Toppers Copy — all subjects' : `Toppers Copy — ${subjectLabel(buyPlan)}`}
+          price={planPrice(store.plan(buyPlan))}
+          submitEndpoint="/api/toppers-copy/purchase-requests"
+          formFields={{ plan: buyPlan }}
+          onClose={() => { setBuyPlan(null); store.reload(); }}
+          onSubmitted={() => { setBuyPlan(null); store.reload(); }}
+          telegramMessage={`Requesting confirmation for Toppers Copy access: ${buyPlan === ALL_SUBJECTS ? 'all subjects' : subjectLabel(buyPlan)}`}
+          telegramTrackEndpointBase="/api/toppers-copy/purchase-requests"
+        />
       )}
 
       {noteDraft && (
@@ -965,7 +1025,7 @@ function ProgressBar({ value, total, className = '' }) {
   );
 }
 
-function PyqCard({ q, selected, onOpen, bookmarked, onBookmark }) {
+function PyqCard({ q, selected, onOpen, onLocked, bookmarked, onBookmark }) {
   const hasAnswer = !!q.pyqAnswer;
   return (
     <div className={`p-3 border rounded-xl transition-colors ${selected ? 'bg-surface border-brand' : 'bg-sunken border-border-default'}`}>
@@ -986,6 +1046,14 @@ function PyqCard({ q, selected, onOpen, bookmarked, onBookmark }) {
       </div>
       <p className="font-reading text-sm text-text-primary leading-relaxed font-medium">{q.questionText}</p>
 
+      {q.pyqAnswerStatus === 'locked' && onLocked && (
+        <button
+          className="mt-2 text-xs font-bold text-text-tertiary hover:text-brand flex items-center gap-1 cursor-pointer"
+          onClick={onLocked}
+        >
+          🔒 Unlock to read the model answer
+        </button>
+      )}
       {hasAnswer && (
         <button
           className="mt-2 text-xs font-bold text-brand hover:text-brand-hover flex items-center gap-1 cursor-pointer"
@@ -1000,7 +1068,7 @@ function PyqCard({ q, selected, onOpen, bookmarked, onBookmark }) {
   );
 }
 
-function PyqList({ pyqs, selectedId, onOpen, isBookmarked, onBookmark }) {
+function PyqList({ pyqs, selectedId, onOpen, onLocked, isBookmarked, onBookmark }) {
   if (!pyqs.length) {
     return <p className="text-sm text-text-tertiary italic">No related previous-year questions for this topic.</p>;
   }
@@ -1013,6 +1081,7 @@ function PyqList({ pyqs, selectedId, onOpen, isBookmarked, onBookmark }) {
           q={q}
           selected={!!q._id && q._id === selectedId}
           onOpen={onOpen}
+          onLocked={onLocked}
           bookmarked={!!q._id && isBookmarked?.(q)}
           onBookmark={onBookmark}
         />
