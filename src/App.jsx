@@ -10,6 +10,7 @@ import DisplayUPSCQuestions from "./sections/DisplayUPSCQuestions";
 import BuyCourses from "./sections/BuyCourses";
 import UploadCourse from "./sections/UploadCourse";
 import { readTabFromHash } from "./lib/tabRouting";
+import useCopyGuard from "./lib/useCopyGuard";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -18,6 +19,9 @@ function App() {
   const [googleClientId, setGoogleClientId] = useState(null);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState(() => readTabFromHash());
+
+  // Copy deterrent for everyone — visitors, students and admins alike.
+  useCopyGuard(true);
   const googleButtonRef = useRef(null);
 
   // Wraps setActiveTab with a URL hash sync so refresh and browser back/forward preserve
