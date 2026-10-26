@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 
 // The "enhancement layer" drawn over one page of a topper's answer copy.
-//   works → green, LEFT margin: why these lines earn marks
-//   addon → blue,  RIGHT margin: extra material to take the point further
+//   works → green, LEFT margin: what the topper did well + how to reuse it
+//   addon → blue,  RIGHT margin: how to make it stronger + extra material + a diagram idea
 // Each note is anchored to a vertical span of the page (yFrom..yTo, fractions of
 // page height). Wide screens get Aspirants-Hub style margin notes with a bracket
 // over the span and an arrow to it; narrow screens get numbered pins on the page
@@ -10,31 +10,67 @@ import { useLayoutEffect, useRef, useState } from 'react';
 
 const GAP = 8;
 const TONE = {
-  works: { color: 'var(--color-status-success-text)', bg: 'var(--color-status-success-bg)', icon: '✨', label: 'Why this works' },
-  addon: { color: 'var(--color-status-info-text)', bg: 'var(--color-status-info-bg)', icon: '➕', label: 'Value add' },
+  works: { color: 'var(--color-status-success-text)', bg: 'var(--color-status-success-bg)', icon: '✨', label: 'Done well' },
+  addon: { color: 'var(--color-status-info-text)', bg: 'var(--color-status-info-bg)', icon: '➕', label: 'Make it stronger' },
 };
 
-const ENHANCE_MARGIN_W = 190;
+const ENHANCE_MARGIN_W = 220;
 
-function NoteBody({ note }) {
+function NoteBody({ note, fontSize = 13 }) {
   const t = TONE[note.kind];
   return (
-    <>
-      <p className="text-[11px] font-bold leading-snug" style={{ color: t.color }}>
+    <div style={{ fontSize }}>
+      <p className="text-[1em] font-bold leading-snug" style={{ color: t.color }}>
         {t.icon} {note.title || t.label}
       </p>
-      {note.text ? <p className="text-[11px] leading-snug text-text-secondary mt-0.5">{note.text}</p> : null}
+      {note.text ? <p className="text-[1em] leading-snug text-text-secondary mt-0.5">{note.text}</p> : null}
+      {note.use ? (
+        <p className="text-[1em] leading-snug text-text-secondary mt-1">
+          <b style={{ color: t.color }}>Use it:</b> {note.use}
+        </p>
+      ) : null}
       {note.points?.length ? (
         <ul className="mt-1 space-y-0.5">
           {note.points.map((p, i) => (
-            <li key={i} className="text-[11px] leading-snug text-text-secondary flex gap-1">
+            <li key={i} className="text-[1em] leading-snug text-text-secondary flex gap-1">
               <span style={{ color: t.color }}>•</span>
               <span>{p}</span>
             </li>
           ))}
         </ul>
       ) : null}
-    </>
+      {note.diagram ? (
+        <p className="text-[1em] leading-snug text-text-secondary mt-1">
+          <b style={{ color: t.color }}>✎ Draw:</b> {note.diagram}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+// Bold every keyword inside an alternate intro / conclusion.
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function Highlighted({ text, keywords }) {
+  const ks = (keywords || []).filter((k) => k && k.trim()).sort((a, b) => b.length - a.length);
+  if (!ks.length) return text;
+  const re = new RegExp(`(${ks.map(escapeRe).join('|')})`, 'gi');
+  return text.split(re).map((part, i) => (i % 2 ? <b key={i} className="text-text-primary">{part}</b> : part));
+}
+
+function AltBlock({ label, alt }) {
+  if (!alt?.text) return null;
+  return (
+    <div className="mt-2">
+      <p className="text-[13px] font-bold" style={{ color: TONE.addon.color }}>{label}</p>
+      <p className="mt-0.5 text-sm leading-relaxed text-text-secondary"><Highlighted text={alt.text} keywords={alt.keywords} /></p>
+      {alt.keywords?.length ? (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {alt.keywords.map((k, i) => (
+            <span key={i} className="px-1.5 py-0.5 rounded text-[12px] bg-status-info-bg text-status-info-text">{k}</span>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -58,7 +94,7 @@ const layoutSide = (items, pageH) => {
   return out;
 };
 
-export function EnhancementMargins({ notes, pageW, pageH, marginW = ENHANCE_MARGIN_W }) {
+export function EnhancementMargins({ notes, pageW, pageH, marginW = ENHANCE_MARGIN_W, fontSize = 13 }) {
   const refs = useRef({});
   const [tops, setTops] = useState({});
   const [hot, setHot] = useState(null);
@@ -142,7 +178,7 @@ export function EnhancementMargins({ notes, pageW, pageH, marginW = ENHANCE_MARG
               opacity: hot && hot !== key ? 0.55 : 1,
             }}
           >
-            <NoteBody note={note} />
+            <NoteBody note={note} fontSize={fontSize} />
           </div>
         );
       })}
@@ -170,7 +206,7 @@ export function EnhancementPins({ notes, pageW, pageH }) {
             />
             <button
               onClick={(e) => { e.stopPropagation(); setOpen(open === key ? null : key); }}
-              className="absolute w-6 h-6 -mt-3 rounded-full text-[11px] font-bold text-white shadow cursor-pointer flex items-center justify-center"
+              className="absolute w-6 h-6 -mt-3 rounded-full text-[13px] font-bold text-white shadow cursor-pointer flex items-center justify-center"
               style={{ top: mid, [left ? 'left' : 'right']: 6, background: t.color }}
               aria-label={`${t.label} note ${i + 1}`}
             >
@@ -183,7 +219,7 @@ export function EnhancementPins({ notes, pageW, pageH }) {
                 style={{
                   top: Math.min(mid + 16, Math.max(0, pageH - 140)),
                   [left ? 'left' : 'right']: 6,
-                  width: Math.min(260, pageW - 12),
+                  width: Math.min(300, pageW - 12),
                   background: 'var(--color-surface)',
                   borderColor: t.color,
                 }}
@@ -201,35 +237,45 @@ export function EnhancementPins({ notes, pageW, pageH }) {
 // End-of-answer summary for the analysis panel.
 export function TopperTakeaways({ enhancement, topper }) {
   const t = enhancement?.takeaways;
-  if (!t || (!t.techniques?.length && !t.enrichment?.length && !t.keywords?.length)) return null;
+  if (!t || (!t.techniques?.length && !t.enrichment?.length && !t.keywords?.length && !t.presentation?.length && !t.altIntro?.text && !t.altConclusion?.text)) return null;
   return (
     <div className="rounded-xl border border-border-default bg-surface-raised p-3 mb-4">
-      <p className="text-xs font-bold text-text-primary uppercase tracking-wide">
+      <p className="text-sm font-bold text-text-primary uppercase tracking-wide">
         ✨ Takeaways{topper ? ` · ${topper}` : ''}
         {!enhancement.published && (
-          <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-status-warning-bg text-status-warning-text normal-case">Draft</span>
+          <span className="ml-2 px-1.5 py-0.5 rounded text-[12px] bg-status-warning-bg text-status-warning-text normal-case">Draft</span>
         )}
       </p>
       {t.techniques?.length ? (
         <div className="mt-2">
-          <p className="text-[11px] font-bold" style={{ color: TONE.works.color }}>Techniques to copy</p>
+          <p className="text-[13px] font-bold" style={{ color: TONE.works.color }}>Techniques to copy</p>
           <ul className="mt-0.5 space-y-0.5">
-            {t.techniques.map((s, i) => <li key={i} className="text-xs text-text-secondary">• {s}</li>)}
+            {t.techniques.map((s, i) => <li key={i} className="text-sm text-text-secondary">• {s}</li>)}
+          </ul>
+        </div>
+      ) : null}
+      {t.presentation?.length ? (
+        <div className="mt-2">
+          <p className="text-[13px] font-bold" style={{ color: TONE.works.color }}>Presentation · spacing & diagrams</p>
+          <ul className="mt-0.5 space-y-0.5">
+            {t.presentation.map((s, i) => <li key={i} className="text-sm text-text-secondary">• {s}</li>)}
           </ul>
         </div>
       ) : null}
       {t.enrichment?.length ? (
         <div className="mt-2">
-          <p className="text-[11px] font-bold" style={{ color: TONE.addon.color }}>Enrichment bank</p>
+          <p className="text-[13px] font-bold" style={{ color: TONE.addon.color }}>Enrichment bank</p>
           <ul className="mt-0.5 space-y-0.5">
-            {t.enrichment.map((s, i) => <li key={i} className="text-xs text-text-secondary">• {s}</li>)}
+            {t.enrichment.map((s, i) => <li key={i} className="text-sm text-text-secondary">• {s}</li>)}
           </ul>
         </div>
       ) : null}
+      <AltBlock label="Alternate introduction" alt={t.altIntro} />
+      <AltBlock label="Alternate conclusion" alt={t.altConclusion} />
       {t.keywords?.length ? (
         <div className="mt-2 flex flex-wrap gap-1">
           {t.keywords.map((k, i) => (
-            <span key={i} className="px-1.5 py-0.5 rounded text-[10px] bg-sunken text-text-secondary border border-border-default">{k}</span>
+            <span key={i} className="px-1.5 py-0.5 rounded text-[12px] bg-sunken text-text-secondary border border-border-default">{k}</span>
           ))}
         </div>
       ) : null}
