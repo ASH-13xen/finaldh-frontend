@@ -305,7 +305,7 @@ function TableDiagram({ diagram }) {
 // ===========================================================================
 // chart
 // ===========================================================================
-function ChartDiagram({ diagram }) {
+function ChartDiagram({ diagram, staticRender }) {
   const series = (diagram.series || [])
     .map((s) => ({ label: String(s.label || ''), points: (s.points || []).filter((p) => p.label) }))
     .filter((s) => s.points.length);
@@ -339,7 +339,7 @@ function ChartDiagram({ diagram }) {
     const data = series[0].points.map((p) => ({ name: p.label, value: p.value }));
     chart = (
       <PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={(d) => d.name}>
+        <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={(d) => d.name} isAnimationActive={!staticRender}>
           {data.map((d, i) => <Cell key={d.name} fill={CAT[i % CAT.length]} stroke="var(--color-surface)" strokeWidth={2} />)}
         </Pie>
         {tip}
@@ -354,7 +354,7 @@ function ChartDiagram({ diagram }) {
         {tip}
         {multi && <Legend wrapperStyle={{ fontSize: 11 }} />}
         {series.map((s, i) => (
-          <Line key={s.label || i} type="monotone" dataKey={s.label || `s${i}`} stroke={CAT[i % CAT.length]} strokeWidth={2} dot={{ r: 3 }} />
+          <Line key={s.label || i} type="monotone" dataKey={s.label || `s${i}`} stroke={CAT[i % CAT.length]} strokeWidth={2} dot={{ r: 3 }} isAnimationActive={!staticRender} />
         ))}
       </LineChart>
     );
@@ -367,7 +367,7 @@ function ChartDiagram({ diagram }) {
         {tip}
         {multi && <Legend wrapperStyle={{ fontSize: 11 }} />}
         {series.map((s, i) => (
-          <Bar key={s.label || i} dataKey={s.label || `s${i}`} fill={CAT[i % CAT.length]} radius={[4, 4, 0, 0]} maxBarSize={44}>
+          <Bar key={s.label || i} dataKey={s.label || `s${i}`} fill={CAT[i % CAT.length]} radius={[4, 4, 0, 0]} maxBarSize={44} isAnimationActive={!staticRender}>
             {!multi && merged.map((_, ci) => <Cell key={ci} fill={CAT[ci % CAT.length]} />)}
           </Bar>
         ))}
@@ -478,14 +478,15 @@ function TimelineDiagram({ diagram }) {
 }
 
 // ===========================================================================
-export default function AnswerDiagram({ diagram }) {
+// staticRender: no chart animation — used when the diagram is captured for the PDF export.
+export default function AnswerDiagram({ diagram, staticRender = false }) {
   const uid = useId().replace(/[:]/g, '');
   if (!diagram) return null;
   const kind = diagram.kind || 'flow';
 
   let body;
   if (kind === 'table') body = <TableDiagram diagram={diagram} />;
-  else if (kind === 'chart') body = <ChartDiagram diagram={diagram} />;
+  else if (kind === 'chart') body = <ChartDiagram diagram={diagram} staticRender={staticRender} />;
   else if (kind === 'quadrant') body = <QuadrantDiagram diagram={diagram} />;
   else if (kind === 'pyramid') body = <PyramidDiagram diagram={diagram} />;
   else if (kind === 'timeline') body = <TimelineDiagram diagram={diagram} />;

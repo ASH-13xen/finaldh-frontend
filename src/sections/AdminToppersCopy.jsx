@@ -456,7 +456,7 @@ function PyqIngest() {
   const updateRow = (i, key, val) => setRows((r) => r.map((row, idx) => (idx === i ? { ...row, [key]: val } : row)));
   const removeRow = (i) => setRows((r) => r.filter((_, idx) => idx !== i));
 
-  // Runs the cheap reformat-only pass over every newly-committed/merged book
+  // Runs the cheap reword pass (own words, same facts) over every newly-committed/merged book
   // answer, one at a time (mirrors the admin "Analyze N Q" client-side loop
   // pattern elsewhere in this panel) so a bulk commit's HTTP request doesn't
   // block on dozens of AI calls. Fire-and-forget — admin can navigate away.
@@ -465,8 +465,8 @@ function PyqIngest() {
     setFormatProgress({ done: 0, total: ids.length });
     for (let i = 0; i < ids.length; i++) {
       try {
-        await authedJson(`/api/toppers-copy/admin/pyqs/${ids[i]}/answer/format`, { method: 'POST', body: JSON.stringify({}) });
-      } catch { /* one failure shouldn't stop the batch — re-run manually via the Reformat button */ }
+        await authedJson(`/api/toppers-copy/admin/pyqs/${ids[i]}/answer/format`, { method: 'POST', body: JSON.stringify({ reword: true }) });
+      } catch { /* one failure shouldn't stop the batch — re-run manually via the Reword button */ }
       setFormatProgress({ done: i + 1, total: ids.length });
       await new Promise((r) => setTimeout(r, 1500));
     }
@@ -551,7 +551,7 @@ function PyqIngest() {
         {msg && <p className="text-xs font-semibold text-status-info-text">{msg}</p>}
         {formatProgress && (
           <p className="text-[11px] text-text-tertiary">
-            Formatting book answers for display: {formatProgress.done}/{formatProgress.total}
+            Rewording book answers in our own words: {formatProgress.done}/{formatProgress.total}
             {formatProgress.done === formatProgress.total ? ' — done.' : '… (safe to leave this tab)'}
           </p>
         )}
@@ -637,7 +637,7 @@ function PyqIngest() {
               Publish answers immediately
             </label>
             {publishOnCommit && sourceType === 'json' && (
-              <span className="text-[10px] text-text-tertiary">Answers go live unformatted for a few seconds until the background format pass finishes.</span>
+              <span className="text-[10px] text-text-tertiary">Answers reach students only after the background reword pass finishes (a few seconds each).</span>
             )}
           </div>
         </div>
@@ -690,6 +690,22 @@ function PyqAnswerEditor({ pyqId, initial, initialStatus, onStatusChange }) {
       if (!res.ok) throw new Error(data.error || 'Formatting failed');
       setAnswer(data.pyqAnswer);
       setMsg('Formatted for display.');
+    } catch (e) { setMsg(e.message); } finally { setBusy(''); }
+  };
+
+  // Rewrites the book's text in our own words (facts unchanged). The original stays in rawText.
+  const rewordAnswer = async () => {
+    setBusy('reword'); setMsg('');
+    try {
+      const res = await authedJson(`/api/toppers-copy/admin/pyqs/${pyqId}/answer/format`, {
+        method: 'POST',
+        body: JSON.stringify({ reword: true, force: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Rewording failed');
+      setAnswer(data.pyqAnswer);
+      const missing = data.report?.missingNumbers || [];
+      setMsg(missing.length ? `Reworded — check these figures are still there: ${missing.join(', ')}` : 'Reworded in our own words.');
     } catch (e) { setMsg(e.message); } finally { setBusy(''); }
   };
 
@@ -774,11 +790,20 @@ function PyqAnswerEditor({ pyqId, initial, initialStatus, onStatusChange }) {
         {isFromBook && (
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-status-info-bg text-status-info-text">FROM BOOK</span>
         )}
+        {isFromBook && (
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${answer.reworded ? 'bg-status-success-bg text-status-success-text' : 'bg-status-warning-bg text-status-warning-text'}`}>
+            {answer.reworded ? 'OUR WORDING' : 'BOOK WORDING'}
+          </span>
+        )}
         {isFromBook ? (
           <>
+            <button className={btnGhost} disabled={busy === 'reword'}
+              onClick={() => { if (!dirty || confirm('Reword from the original book text — discards unsaved edits.')) rewordAnswer(); }}>
+              {busy === 'reword' ? 'Rewording…' : answer.reworded ? 'Reword again' : 'Reword in our words'}
+            </button>
             <button className={btnGhost} disabled={busy === 'format'}
-              onClick={() => formatAnswer(!!answer.sections?.length)}>
-              {busy === 'format' ? 'Formatting…' : answer.sections?.length ? 'Reformat' : 'Format for display'}
+              onClick={() => { if (!answer.reworded || confirm('This puts the book\'s own wording back on display. Continue?')) formatAnswer(!!answer.sections?.length); }}>
+              {busy === 'format' ? 'Formatting…' : answer.sections?.length ? 'Restore book wording' : 'Format for display'}
             </button>
             <button className={btnGhost} disabled={busy === 'gen'}
               onClick={() => { if (confirm('This answer is verbatim from the source book. Replace it with an AI-written one instead? This cannot be undone here.')) generate(true); }}>

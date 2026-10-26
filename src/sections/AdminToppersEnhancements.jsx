@@ -8,9 +8,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.m
 // Admin: the topper-copy "enhancement layer" for one topic (Manage / Publish →
 // ✨ Enhancements). Per topper answer: draft it with AI, fix it in the editor
 // (drag a note's bracket on the page, reword, add / remove notes), then publish.
-// Students only ever see published layers. These are toppers' copies — notes
-// explain why a line works or offer value-adds, never critique; lines that read
-// like a critique are flagged and block publishing unless overridden.
+// Students only ever see published layers. These are toppers' copies — green notes
+// say what was done well, blue notes say how to make it stronger, worded as an
+// upgrade; harsh words ("wrong", "mistake"…) are flagged and block publishing
+// unless overridden.
 // ---------------------------------------------------------------------------
 
 const token = () => localStorage.getItem('token');
@@ -31,12 +32,12 @@ const inputClass =
   'w-full bg-sunken border border-border-default focus:border-brand text-text-primary rounded-lg px-2 py-1 text-[11px] focus:outline-none';
 
 // Mirrors CRITIQUE_RE in finaldh/utils/toppersEnhancement.js — live feedback while editing.
-const CRITIQUE_RE = /\b(mistake|mistakes|missing|missed|misses|lacks?|lacking|weak|weakness|vague|should have|could have|failed|fails|error|errors|wrong|incorrect|poor|only mentions|did not|didn't|doesn't|does not|forgot|ignores?|ignored|shallow|generic|superficial)\b/i;
+const CRITIQUE_RE = /\b(mistake|mistakes|missing|missed|misses|lacks?|lacking|weak|weakness|failed|fails|error|errors|wrong|incorrect|poor|poorly|forgot|ignored|shallow|superficial|careless|sloppy|should have)\b/i;
 const critiqueWord = (s) => (String(s || '').match(CRITIQUE_RE) || [])[0] || null;
 
 const KIND = {
-  works: { color: 'var(--color-status-success-text)', bg: 'var(--color-status-success-bg)', label: '✨ Why this works' },
-  addon: { color: 'var(--color-status-info-text)', bg: 'var(--color-status-info-bg)', label: '➕ Value add' },
+  works: { color: 'var(--color-status-success-text)', bg: 'var(--color-status-success-bg)', label: '✨ Done well' },
+  addon: { color: 'var(--color-status-info-text)', bg: 'var(--color-status-info-bg)', label: '➕ Make it stronger' },
 };
 
 const rangeKey = (a) => `${a.startPage}-${a.endPage}`;
@@ -239,6 +240,11 @@ function EnhancementEditor({ topicId, enhancement, onSaved }) {
     techniques: (enhancement.takeaways?.techniques || []).join('\n'),
     enrichment: (enhancement.takeaways?.enrichment || []).join('\n'),
     keywords: (enhancement.takeaways?.keywords || []).join(', '),
+    presentation: (enhancement.takeaways?.presentation || []).join('\n'),
+    altIntro: enhancement.takeaways?.altIntro?.text || '',
+    altIntroKw: (enhancement.takeaways?.altIntro?.keywords || []).join(', '),
+    altConclusion: enhancement.takeaways?.altConclusion?.text || '',
+    altConclusionKw: (enhancement.takeaways?.altConclusion?.keywords || []).join(', '),
   }));
   const [sel, setSel] = useState(null);
   const [dirty, setDirty] = useState(false);
@@ -258,7 +264,7 @@ function EnhancementEditor({ topicId, enhancement, onSaved }) {
   };
   const addNote = (kind) => {
     const key = `tmp-${++tempSeq}`;
-    setNotes((ns) => [...ns, { key, page, kind, yFrom: 0.45, yTo: 0.52, title: '', text: '', points: [] }]);
+    setNotes((ns) => [...ns, { key, page, kind, yFrom: 0.45, yTo: 0.52, title: '', text: '', use: '', points: [], diagram: '' }]);
     setSel(key);
     setDirty(true);
   };
@@ -297,12 +303,15 @@ function EnhancementEditor({ topicId, enhancement, onSaved }) {
         notes: notes.map((n) => ({
           ...(n._id ? { _id: n._id } : {}),
           page: n.page, kind: n.kind, yFrom: n.yFrom, yTo: n.yTo,
-          title: n.title, text: n.text, points: (n.points || []).filter((p) => p.trim()),
+          title: n.title, text: n.text, use: n.use || '', points: (n.points || []).filter((p) => p.trim()), diagram: n.diagram || '',
         })),
         takeaways: {
           techniques: tk.techniques.split('\n').map((s) => s.trim()).filter(Boolean),
           enrichment: tk.enrichment.split('\n').map((s) => s.trim()).filter(Boolean),
           keywords: tk.keywords.split(',').map((s) => s.trim()).filter(Boolean),
+          presentation: tk.presentation.split('\n').map((s) => s.trim()).filter(Boolean),
+          altIntro: { text: tk.altIntro.trim(), keywords: tk.altIntroKw.split(',').map((s) => s.trim()).filter(Boolean) },
+          altConclusion: { text: tk.altConclusion.trim(), keywords: tk.altConclusionKw.split(',').map((s) => s.trim()).filter(Boolean) },
         },
       };
       const { ok, data } = await api(`/api/toppers-copy/admin/enhancements/${enhancement._id}`, {
@@ -379,15 +388,15 @@ function EnhancementEditor({ topicId, enhancement, onSaved }) {
       {/* note fields */}
       <div className="flex-grow min-w-0 space-y-2">
         <div className="flex gap-1.5 flex-wrap">
-          <button className={btnGhost} onClick={() => addNote('works')}>+ ✨ Why this works</button>
-          <button className={btnGhost} onClick={() => addNote('addon')}>+ ➕ Value add</button>
+          <button className={btnGhost} onClick={() => addNote('works')}>+ ✨ Done well</button>
+          <button className={btnGhost} onClick={() => addNote('addon')}>+ ➕ Make it stronger</button>
           <span className="flex-grow" />
           <button className={btnPrimary} disabled={!dirty || saving} onClick={save}>{saving ? 'Saving…' : dirty ? 'Save' : 'Saved'}</button>
         </div>
         {err && <p className="text-[11px] font-semibold text-status-danger-text">{err}</p>}
         {pageNotes.length === 0 && <p className="text-[11px] text-text-tertiary italic">No notes on page {page}.</p>}
         {pageNotes.map((n) => {
-          const bad = critiqueWord(n.title) || critiqueWord(n.text) || (n.points || []).map(critiqueWord).find(Boolean);
+          const bad = [n.title, n.text, n.use, n.diagram, ...(n.points || [])].map(critiqueWord).find(Boolean);
           return (
             <div
               key={n.key}
@@ -402,14 +411,14 @@ function EnhancementEditor({ topicId, enhancement, onSaved }) {
                   className="bg-sunken border border-border-default rounded px-1 py-0.5 text-[11px] font-bold"
                   style={{ color: KIND[n.kind].color }}
                 >
-                  <option value="works">✨ Why this works (left)</option>
-                  <option value="addon">➕ Value add (right)</option>
+                  <option value="works">✨ Done well (green, left)</option>
+                  <option value="addon">➕ Make it stronger (blue, right)</option>
                 </select>
                 <span className="text-[10px] text-text-tertiary tabular-nums">
                   {Math.round(n.yFrom * 100)}–{Math.round(n.yTo * 100)}% down
                 </span>
                 {bad && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-status-danger-bg text-status-danger-text" title="These notes must not critique the topper">
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-status-danger-bg text-status-danger-text" title="Word improvements as upgrades, not faults">
                     ⚠ “{bad}”
                   </span>
                 )}
@@ -424,15 +433,31 @@ function EnhancementEditor({ topicId, enhancement, onSaved }) {
               />
               <input
                 className={inputClass}
-                placeholder="One line (optional)"
+                placeholder={n.kind === 'works' ? 'Why it works (one line)' : 'How it can be made stronger, e.g. “Can be made stronger by quantifying…”'}
                 value={n.text}
                 onChange={(e) => patchNote(n.key, { text: e.target.value })}
               />
+              {n.kind === 'works' && (
+                <input
+                  className={inputClass}
+                  placeholder="Use it: how to replicate this in your own answer"
+                  value={n.use || ''}
+                  onChange={(e) => patchNote(n.key, { use: e.target.value })}
+                />
+              )}
+              {n.kind === 'addon' && (
+                <input
+                  className={inputClass}
+                  placeholder="Diagram that could be drawn (optional), e.g. “Flowchart: A → B → C”"
+                  value={n.diagram || ''}
+                  onChange={(e) => patchNote(n.key, { diagram: e.target.value })}
+                />
+              )}
               {n.kind === 'addon' && (
                 <textarea
                   className={inputClass}
                   rows={3}
-                  placeholder="Add-ons, one per line (max 3): a report, datum, case, example…"
+                  placeholder="Examples / case laws / data / facts, one per line (max 3)"
                   value={(n.points || []).join('\n')}
                   onChange={(e) => patchNote(n.key, { points: e.target.value.split('\n').slice(0, 3) })}
                 />
@@ -445,10 +470,18 @@ function EnhancementEditor({ topicId, enhancement, onSaved }) {
           <p className="text-[11px] font-extrabold text-text-primary">Takeaways card</p>
           <label className="block text-[10px] font-bold text-text-tertiary uppercase">Techniques to copy (one per line)</label>
           <textarea className={inputClass} rows={3} value={tk.techniques} onChange={(e) => { setTk({ ...tk, techniques: e.target.value }); setDirty(true); }} />
+          <label className="block text-[10px] font-bold text-text-tertiary uppercase">Presentation · spacing & diagrams (one per line)</label>
+          <textarea className={inputClass} rows={2} value={tk.presentation} onChange={(e) => { setTk({ ...tk, presentation: e.target.value }); setDirty(true); }} />
           <label className="block text-[10px] font-bold text-text-tertiary uppercase">Enrichment bank (one per line)</label>
           <textarea className={inputClass} rows={3} value={tk.enrichment} onChange={(e) => { setTk({ ...tk, enrichment: e.target.value }); setDirty(true); }} />
           <label className="block text-[10px] font-bold text-text-tertiary uppercase">Keywords (comma separated)</label>
           <input className={inputClass} value={tk.keywords} onChange={(e) => { setTk({ ...tk, keywords: e.target.value }); setDirty(true); }} />
+          <label className="block text-[10px] font-bold text-text-tertiary uppercase">Alternate introduction</label>
+          <textarea className={inputClass} rows={3} value={tk.altIntro} onChange={(e) => { setTk({ ...tk, altIntro: e.target.value }); setDirty(true); }} />
+          <input className={inputClass} placeholder="Its keywords / jargon (comma separated)" value={tk.altIntroKw} onChange={(e) => { setTk({ ...tk, altIntroKw: e.target.value }); setDirty(true); }} />
+          <label className="block text-[10px] font-bold text-text-tertiary uppercase">Alternate conclusion</label>
+          <textarea className={inputClass} rows={3} value={tk.altConclusion} onChange={(e) => { setTk({ ...tk, altConclusion: e.target.value }); setDirty(true); }} />
+          <input className={inputClass} placeholder="Its keywords / jargon (comma separated)" value={tk.altConclusionKw} onChange={(e) => { setTk({ ...tk, altConclusionKw: e.target.value }); setDirty(true); }} />
         </div>
       </div>
     </div>

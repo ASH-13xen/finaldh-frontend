@@ -141,3 +141,22 @@ body {
     display: none;
   }
 }
+
+/* Copy deterrent (see src/lib/useCopyGuard.js) — on for everyone, admins included. */
+.no-copy body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.no-copy input,
+.no-copy textarea,
+.no-copy [contenteditable=""],
+.no-copy [contenteditable="true"],
+.no-copy .allow-select,
+.no-copy .allow-select * {
+  -webkit-user-select: text;
+  user-select: text;
+}
+@media print {
+  .no-copy body { display: none !important; }
+}

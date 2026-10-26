@@ -41,7 +41,7 @@ export default function SelectionToNote({ children, onAdd, className = '' }) {
   }, [readSelection]);
 
   return (
-    <div ref={boxRef} className={className}>
+    <div ref={boxRef} className={`allow-select ${className}`}>
       {children}
       {pop && (
         <button

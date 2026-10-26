@@ -21,7 +21,7 @@ export default function PyqAnswerView({ answer, pyqId }) {
     <div className="font-reading space-y-3 text-sm leading-relaxed">
       {showRawFallback ? (
         <div className="space-y-2">
-          {answer.rawText.split(/\n{2,}/).map((para, i) => (
+          {(answer.rawText || '').split(/\n{2,}/).map((para, i) => (
             <p key={i} className="whitespace-pre-line text-text-secondary">{para}</p>
           ))}
         </div>
