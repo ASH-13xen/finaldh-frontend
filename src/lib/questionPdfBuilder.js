@@ -381,7 +381,7 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
         row(C.green, 'Done well (green, left margin)', 'what the topper did well on those lines, and how to reuse it in your own answer.');
         row(C.blue, 'Make it stronger (blue, right margin)', 'extra data, reports, cases and diagrams that would lift the same point further.');
       }
-      if (anyTakeaways) row(C.brand, 'What we learn from each copy', 'techniques, presentation, an enrichment bank and an alternate introduction and conclusion.');
+      if (anyTakeaways) row(C.brand, 'What we learn from each copy', 'techniques, an enrichment bank and an alternate introduction and conclusion.');
       if (analysis) row(C.secondary, 'AI analysis', 'a fresh model answer, a diagram you can draw, the key learnings and a keyword bank.');
       c.gap(8).text('TOPPERS IN THIS PDF', { size: 8.5, font: F.b, color: C.tertiary }).gap(6);
       answers.forEach((a, i) => {
@@ -520,7 +520,6 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
         flow.gap(10);
       };
       list('Techniques to copy', t.techniques, C.green);
-      list('Presentation · spacing & diagrams', t.presentation, C.green);
       if (t.enrichment?.length || t.altIntro?.text || t.altConclusion?.text) flow.breakCol();
       list('Enrichment bank', t.enrichment, C.blue);
       const alt = (title, a) => {
@@ -708,5 +707,5 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
 }
 
 function hasTakeaways(t) {
-  return !!t && !!(t.techniques?.length || t.enrichment?.length || t.keywords?.length || t.presentation?.length || t.altIntro?.text || t.altConclusion?.text);
+  return !!t && !!(t.techniques?.length || t.enrichment?.length || t.keywords?.length || t.altIntro?.text || t.altConclusion?.text);
 }

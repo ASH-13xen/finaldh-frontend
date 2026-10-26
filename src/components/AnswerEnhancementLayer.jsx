@@ -237,7 +237,7 @@ export function EnhancementPins({ notes, pageW, pageH }) {
 // End-of-answer summary for the analysis panel.
 export function TopperTakeaways({ enhancement, topper }) {
   const t = enhancement?.takeaways;
-  if (!t || (!t.techniques?.length && !t.enrichment?.length && !t.keywords?.length && !t.presentation?.length && !t.altIntro?.text && !t.altConclusion?.text)) return null;
+  if (!t || (!t.techniques?.length && !t.enrichment?.length && !t.keywords?.length && !t.altIntro?.text && !t.altConclusion?.text)) return null;
   return (
     <div className="rounded-xl border border-border-default bg-surface-raised p-3 mb-4">
       <p className="text-sm font-bold text-text-primary uppercase tracking-wide">
@@ -251,14 +251,6 @@ export function TopperTakeaways({ enhancement, topper }) {
           <p className="text-[13px] font-bold" style={{ color: TONE.works.color }}>Techniques to copy</p>
           <ul className="mt-0.5 space-y-0.5">
             {t.techniques.map((s, i) => <li key={i} className="text-sm text-text-secondary">• {s}</li>)}
-          </ul>
-        </div>
-      ) : null}
-      {t.presentation?.length ? (
-        <div className="mt-2">
-          <p className="text-[13px] font-bold" style={{ color: TONE.works.color }}>Presentation · spacing & diagrams</p>
-          <ul className="mt-0.5 space-y-0.5">
-            {t.presentation.map((s, i) => <li key={i} className="text-sm text-text-secondary">• {s}</li>)}
           </ul>
         </div>
       ) : null}

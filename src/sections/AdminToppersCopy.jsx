@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EnhancementManager from './AdminToppersEnhancements';
+import BestPartsManager from './AdminToppersBestParts';
 
 // ---------------------------------------------------------------------------
 // Admin console for the Toppers Copy section. Three sub-tabs:
@@ -1264,6 +1265,7 @@ function ManageTopics() {
   const [msg, setMsg] = useState('');
   const [organiseId, setOrganiseId] = useState(null); // topic whose sub-topic editor is open
   const [enhanceId, setEnhanceId] = useState(null);   // topic whose enhancement manager is open
+  const [bestPartsId, setBestPartsId] = useState(null); // topic whose best-part crops are open
 
   const loadSubjects = useCallback(async () => {
     setLoading(true);
@@ -1383,6 +1385,14 @@ function ManageTopics() {
                 >
                   {enhanceId === t._id ? 'Close enhancements' : '✨ Enhancements'}
                 </button>
+                <button
+                  className={bestPartsId === t._id ? btnPrimary : btnGhost}
+                  disabled={!t.answerCount}
+                  onClick={() => setBestPartsId((cur) => (cur === t._id ? null : t._id))}
+                  title="Crop the best part of a topper's copy for each question"
+                >
+                  {bestPartsId === t._id ? 'Close best parts' : '📸 Best parts'}
+                </button>
                 <button className="px-3 py-1.5 text-[11px] font-bold text-status-danger-text cursor-pointer" disabled={busyId === t._id} onClick={() => remove(t)}>
                   Delete
                 </button>
@@ -1392,6 +1402,9 @@ function ManageTopics() {
               )}
               {enhanceId === t._id && (
                 <EnhancementManager topicId={t._id} topicName={t.topic} onClose={() => setEnhanceId(null)} />
+              )}
+              {bestPartsId === t._id && (
+                <BestPartsManager topicId={t._id} topicName={t.topic} onClose={() => setBestPartsId(null)} />
               )}
               </Fragment>
             ))}

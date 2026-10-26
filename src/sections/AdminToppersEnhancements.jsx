@@ -240,7 +240,6 @@ function EnhancementEditor({ topicId, enhancement, onSaved }) {
     techniques: (enhancement.takeaways?.techniques || []).join('\n'),
     enrichment: (enhancement.takeaways?.enrichment || []).join('\n'),
     keywords: (enhancement.takeaways?.keywords || []).join(', '),
-    presentation: (enhancement.takeaways?.presentation || []).join('\n'),
     altIntro: enhancement.takeaways?.altIntro?.text || '',
     altIntroKw: (enhancement.takeaways?.altIntro?.keywords || []).join(', '),
     altConclusion: enhancement.takeaways?.altConclusion?.text || '',
@@ -309,7 +308,6 @@ function EnhancementEditor({ topicId, enhancement, onSaved }) {
           techniques: tk.techniques.split('\n').map((s) => s.trim()).filter(Boolean),
           enrichment: tk.enrichment.split('\n').map((s) => s.trim()).filter(Boolean),
           keywords: tk.keywords.split(',').map((s) => s.trim()).filter(Boolean),
-          presentation: tk.presentation.split('\n').map((s) => s.trim()).filter(Boolean),
           altIntro: { text: tk.altIntro.trim(), keywords: tk.altIntroKw.split(',').map((s) => s.trim()).filter(Boolean) },
           altConclusion: { text: tk.altConclusion.trim(), keywords: tk.altConclusionKw.split(',').map((s) => s.trim()).filter(Boolean) },
         },
@@ -470,8 +468,6 @@ function EnhancementEditor({ topicId, enhancement, onSaved }) {
           <p className="text-[11px] font-extrabold text-text-primary">Takeaways card</p>
           <label className="block text-[10px] font-bold text-text-tertiary uppercase">Techniques to copy (one per line)</label>
           <textarea className={inputClass} rows={3} value={tk.techniques} onChange={(e) => { setTk({ ...tk, techniques: e.target.value }); setDirty(true); }} />
-          <label className="block text-[10px] font-bold text-text-tertiary uppercase">Presentation · spacing & diagrams (one per line)</label>
-          <textarea className={inputClass} rows={2} value={tk.presentation} onChange={(e) => { setTk({ ...tk, presentation: e.target.value }); setDirty(true); }} />
           <label className="block text-[10px] font-bold text-text-tertiary uppercase">Enrichment bank (one per line)</label>
           <textarea className={inputClass} rows={3} value={tk.enrichment} onChange={(e) => { setTk({ ...tk, enrichment: e.target.value }); setDirty(true); }} />
           <label className="block text-[10px] font-bold text-text-tertiary uppercase">Keywords (comma separated)</label>
