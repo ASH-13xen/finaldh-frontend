@@ -6,6 +6,7 @@ import McqTestRunner from './McqTestRunner';
 import McqAnalyzer from './McqAnalyzer';
 import McqHistory from './McqHistory';
 import McqFlagged from './McqFlagged';
+import QuizFlow from './quiz/QuizFlow';
 import { ToastProvider, useToast } from '../components/Toast';
 import { HelpModal, WelcomeTour } from '../components/mcq/HelpAndTour';
 import { hasSeenTour } from '../lib/mcqTour';
@@ -125,10 +126,15 @@ function Flow({ user }) {
         />
       );
       break;
+    case 'quizPractice':
+      // Geography practice quiz — reached from the "Practice" card on the subjects landing.
+      body = <QuizFlow onExitToMcq={() => go({ screen: 'home' })} />;
+      break;
     default:
       body = (
         <McqSubjectsLanding
           onOpenSubject={(subject) => go({ screen: 'testList', subject })}
+          onSelectPractice={() => go({ screen: 'quizPractice' })}
           onResume={(attemptId) => go({ screen: 'runner', attemptId })}
           onOpenFlagged={() => go({ screen: 'flagged' })}
           onOpenHistory={() => go({ screen: 'history' })}

@@ -72,7 +72,7 @@ function SubjectCard({ s, onOpen }) {
   );
 }
 
-export default function McqSubjectsLanding({ onOpenSubject, onResume, onOpenFlagged, onOpenHistory, onHelp, onTour }) {
+export default function McqSubjectsLanding({ onOpenSubject, onSelectPractice, onResume, onOpenFlagged, onOpenHistory, onHelp, onTour }) {
   const [subjects, setSubjects] = useState([]);
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,6 +81,16 @@ export default function McqSubjectsLanding({ onOpenSubject, onResume, onOpenFlag
   const [filter, setFilter] = useState('all');
 
   const [reloadKey, setReloadKey] = useState(0);
+  const [practiceMeta, setPracticeMeta] = useState(null); // { total, topics } from /api/quiz/topics
+
+  // The Geography practice pool — optional; the card still shows if this fails.
+  useEffect(() => {
+    if (!onSelectPractice) return;
+    fetch('/api/quiz/topics?subject=Geography', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (data?.total > 0) setPracticeMeta({ total: data.total, topics: (data.topics || []).length }); })
+      .catch(() => { /* ignore — card renders without counts */ });
+  }, [onSelectPractice]);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +155,26 @@ export default function McqSubjectsLanding({ onOpenSubject, onResume, onOpenFlag
       </div>
 
       {error && <ErrorBanner onRetry={retry}>{error}</ErrorBanner>}
+
+      {onSelectPractice && (
+        <button
+          onClick={onSelectPractice}
+          className="w-full text-left bg-accent-soft-bg border border-accent-soft-border rounded-2xl p-6 flex items-center justify-between gap-4 hover:border-brand transition-colors cursor-pointer group"
+        >
+          <div>
+            <span className="text-[9px] font-bold text-brand uppercase tracking-wide">Practice · untimed</span>
+            <h3 className="font-bold text-lg text-text-primary mt-1">Geography — Question Bank</h3>
+            <p className="text-xs text-text-secondary mt-1">
+              {practiceMeta
+                ? `${practiceMeta.total.toLocaleString()} questions · ${practiceMeta.topics} topics · learn by topic, random test, or all`
+                : 'Learn by topic, take a random test, or work through every question'}
+            </p>
+          </div>
+          <span className="w-9 h-9 rounded-lg bg-surface border border-accent-soft-border flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-text-on-accent transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+          </span>
+        </button>
+      )}
 
       {/* First-time guidance */}
       {isNewStudent && (
