@@ -5,6 +5,7 @@ import { TopperTakeaways } from '../components/AnswerEnhancementLayer';
 import BestPartsCard from '../components/BestPartsCard';
 import AnswerDiagram from '../components/AnswerDiagram';
 import PyqAnswerView from '../components/PyqAnswerView';
+import ValueAdditionBank from '../components/ValueAdditionBank';
 import { diagramIsRenderable } from '../lib/answerDiagram';
 import BookmarkButton from '../components/study/BookmarkButton';
 import NoteModal from '../components/study/NoteModal';
@@ -462,7 +463,7 @@ export default function ToppersCopy({ isAdmin = false }) {
               </div>
             )}
             {selectedVa ? (
-              <ValueAdditionReader item={selectedVa} topicName={drawerTopicName} onClose={closeReading} />
+              <ValueAdditionReader key={selectedVa._id} item={selectedVa} topicName={drawerTopicName} onClose={closeReading} />
             ) : (
             <>
             <div className="px-5 py-3.5 border-b border-border-default flex-shrink-0 flex items-start gap-3">
@@ -1141,6 +1142,11 @@ function ValueAdditionList({ items, selectedId, onOpen }) {
             }`}
           >
             <div className="flex items-center gap-2 mb-1 flex-wrap">
+              {v.hasBank ? (
+                <span className="text-[11px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">
+                  Searchable notes{v.bankStats?.notes ? ` · ${v.bankStats.notes}` : ''}
+                </span>
+              ) : null}
               {v.hasPdf ? (
                 <span className="text-[11px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">PDF</span>
               ) : null}
@@ -1182,6 +1188,9 @@ function ValueAdditionNotes({ text }) {
 
 function ValueAdditionReader({ item, topicName, onClose }) {
   const hasNotes = !!item.body?.trim();
+  // An entry with a Word-file notes bank opens on the bank; its notes / PDF (if any) sit behind a toggle.
+  const [view, setView] = useState('bank');
+  const showBank = item.hasBank && (view === 'bank' || (!hasNotes && !item.hasPdf));
   return (
     <>
       <div className="px-5 py-3.5 border-b border-border-default flex-shrink-0 flex items-start gap-3">
@@ -1190,6 +1199,19 @@ function ValueAdditionReader({ item, topicName, onClose }) {
             Value addition{topicName ? ` · ${topicName}` : ''}
           </p>
           <p className="font-reading text-sm font-semibold text-text-primary leading-snug">{item.title}</p>
+          {item.hasBank && (hasNotes || item.hasPdf) && (
+            <div className="flex gap-1 mt-2 -ml-1">
+              {[['bank', 'Searchable notes'], ['file', item.hasPdf ? 'PDF' : 'Notes']].map(([k, label]) => (
+                <button
+                  key={k}
+                  onClick={() => setView(k)}
+                  className={`px-2 py-0.5 rounded-lg text-xs font-bold cursor-pointer ${view === k ? 'bg-accent-soft-bg text-brand' : 'text-text-secondary hover:bg-sunken'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <button
           onClick={onClose}
@@ -1199,12 +1221,13 @@ function ValueAdditionReader({ item, topicName, onClose }) {
           ✕
         </button>
       </div>
-      {hasNotes && (
+      {showBank && <ValueAdditionBank key={item._id} entryId={item._id} />}
+      {!showBank && hasNotes && (
         <div className={`px-5 py-4 overflow-y-auto ${item.hasPdf ? 'max-h-[40%] flex-shrink-0 border-b border-border-default' : 'flex-1'}`}>
           <ValueAdditionNotes text={item.body} />
         </div>
       )}
-      {item.hasPdf && (
+      {!showBank && item.hasPdf && (
         <div className="relative flex-1 min-h-[260px]">
           <PdfAnswerViewer
             key={`${item._id}-${item.updatedAt}`}

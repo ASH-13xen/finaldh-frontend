@@ -1,0 +1,205 @@
+import { useEffect, useMemo, useState } from 'react';
+import LoadingSpinner from './LoadingSpinner';
+
+// Searchable "notes bank" of a Toppers Copy value addition — parsed on the server from
+// the admin's Word file (finaldh utils/valueAdditionDocx.js). Students search it, filter
+// by note type (data, facts, examples…) and by section; notes are grouped in the order
+// an answer uses them: intro → quotes → data → facts → examples → case → current → conclusion.
+
+const TYPES = [
+  ['intro', 'Intros', 'Intro'],
+  ['quote', 'Quotes', 'Quote'],
+  ['data', 'Data', 'Data'],
+  ['fact', 'Facts', 'Fact'],
+  ['example', 'Examples', 'Example'],
+  ['case', 'Case studies', 'Case study'],
+  ['now', 'Current affairs', 'Current affairs'],
+  ['conclusion', 'Conclusions', 'Conclusion'],
+  ['diagram', 'Diagrams', 'Diagram'],
+];
+
+const fold = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Search-term highlight; "*text*" from the Word file renders as italics.
+function Hl({ text, terms }) {
+  const parts = String(text ?? '').split(/\*([^*]+)\*/);
+  const re = terms.length ? new RegExp(`(${terms.map(escapeRe).join('|')})`, 'gi') : null;
+  const mark = (s, k) => (re
+    ? s.split(re).map((x, i) => (i % 2 ? <mark key={`${k}-${i}`} className="bg-status-warning-bg text-inherit rounded-sm px-px">{x}</mark> : x))
+    : s);
+  return parts.map((p, i) => (i % 2 ? <em key={i}>{mark(p, i)}</em> : <span key={i}>{mark(p, i)}</span>));
+}
+
+function NoteCard({ note, terms, sectionName }) {
+  const label = TYPES.find(([k]) => k === note.type)?.[2] || 'Note';
+  return (
+    <div className="p-3 bg-surface border border-border-default rounded-xl space-y-1.5">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-tertiary">
+        <span className="font-bold uppercase tracking-wide text-brand">{label}</span>
+        {note.sub ? <span><Hl text={note.sub} terms={terms} /></span> : null}
+        {sectionName ? <span>· {sectionName}</span> : null}
+      </div>
+      {note.title ? (
+        <p className="text-sm font-bold text-text-primary leading-snug"><Hl text={note.title} terms={terms} /></p>
+      ) : null}
+      {note.cols?.length ? (
+        <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 text-[13px]">
+          {note.cols.map(([k, v], i) => (
+            <div key={i} className="contents">
+              <dt className="text-text-tertiary">{k}</dt>
+              <dd className="text-text-secondary"><Hl text={v} terms={terms} /></dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className={`text-sm leading-relaxed ${note.type === 'quote' ? 'font-reading italic text-text-primary' : 'font-reading text-text-secondary'}`}>
+          <Hl text={note.text} terms={terms} />
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default function ValueAdditionBank({ entryId }) {
+  const [bank, setBank] = useState(null);
+  const [error, setError] = useState('');
+  const [q, setQ] = useState('');
+  const [type, setType] = useState('all');
+  const [section, setSection] = useState('all');
+  const [showPyqs, setShowPyqs] = useState(false);
+
+  useEffect(() => {
+    // The parent remounts this component per entry (key), so state starts fresh.
+    let live = true;
+    fetch(`/api/toppers-copy/value-additions/${entryId}/bank`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not load these notes');
+        return data.bank;
+      })
+      .then((b) => live && setBank(b))
+      .catch((e) => live && setError(e.message));
+    return () => { live = false; };
+  }, [entryId]);
+
+  const sectionsById = useMemo(() => Object.fromEntries((bank?.sections || []).map((s) => [s.id, s])), [bank]);
+  const hay = useMemo(() => (bank?.notes || []).map((n) => fold([
+    n.title, n.text, n.sub, (n.cols || []).flat().join(' '), sectionsById[n.section]?.name,
+  ].join(' '))), [bank, sectionsById]);
+
+  const terms = useMemo(() => fold(q).split(/\s+/).filter((t) => t.length > 1), [q]);
+  // Notes matching search + section, before the type filter (for the chip counts).
+  const pool = useMemo(() => (bank?.notes || []).filter((n, i) =>
+    (section === 'all' || n.section === section) && terms.every((t) => hay[i].includes(t))), [bank, hay, section, terms]);
+  const counts = useMemo(() => pool.reduce((c, n) => ({ ...c, [n.type]: (c[n.type] || 0) + 1 }), {}), [pool]);
+  const shown = type === 'all' ? pool : pool.filter((n) => n.type === type);
+
+  if (error) return <p className="px-5 py-4 text-sm text-status-danger-text">{error}</p>;
+  if (!bank) return <div className="px-5 py-6"><LoadingSpinner text="Loading notes…" /></div>;
+
+  const sec = sectionsById[section];
+  const multi = bank.sections.length > 1;
+  const chip = (active) => `px-2.5 py-1 rounded-full border text-xs font-semibold cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-default ${
+    active ? 'bg-text-primary text-surface border-text-primary' : 'bg-surface text-text-secondary border-border-default hover:border-brand/60'
+  }`;
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="sticky top-0 z-10 bg-surface border-b border-border-default px-5 py-3 space-y-2.5">
+        <div className="flex flex-wrap gap-2">
+          <input
+            id="va-bank-search"
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search facts, data, examples… e.g. UNESCO, inscription, 2023"
+            className="flex-1 min-w-[180px] bg-sunken border border-border-default focus:border-brand text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none"
+          />
+          {multi && (
+            <select
+              id="va-bank-section"
+              value={section}
+              onChange={(e) => { setSection(e.target.value); setShowPyqs(false); }}
+              className="max-w-full bg-sunken border border-border-default text-text-primary rounded-lg px-2 py-2 text-sm focus:outline-none focus:border-brand"
+            >
+              <option value="all">All sections ({bank.sections.length})</option>
+              {bank.sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <button className={chip(type === 'all')} onClick={() => setType('all')}>
+            All <span className="opacity-60 tabular-nums">{pool.length}</span>
+          </button>
+          {TYPES.filter(([k]) => bank.notes.some((n) => n.type === k)).map(([k, label]) => (
+            <button key={k} className={chip(type === k)} disabled={!counts[k]} onClick={() => setType(k)}>
+              {label} <span className="opacity-60 tabular-nums">{counts[k] || 0}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="px-5 py-4 space-y-5">
+        {(sec || !multi) && (() => {
+          const s = sec || bank.sections[0];
+          return (s.pyqs.length > 0 || s.keywords.length > 0) && (
+            <div className="space-y-2">
+              {s.pyqs.length > 0 && (
+                <div>
+                  <button className="text-xs font-bold text-brand cursor-pointer" onClick={() => setShowPyqs((v) => !v)}>
+                    {showPyqs ? '▾' : '▸'} PYQs these notes cover ({s.pyqs.length})
+                  </button>
+                  {showPyqs && (
+                    <ul className="mt-2 space-y-1.5">
+                      {s.pyqs.map((p, i) => (
+                        <li key={i} className="flex gap-2 text-[13px] text-text-secondary">
+                          <span className="font-bold text-brand tabular-nums flex-shrink-0">{p.year}</span>
+                          <span className="font-reading">{p.question}{p.map ? <span className="block text-[11px] text-text-tertiary">Notes: {p.map}</span> : null}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+              {s.keywords.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {s.keywords.map((k) => (
+                    <button key={k} onClick={() => setQ(k)} className="text-[11px] px-2 py-0.5 rounded-md bg-sunken text-text-secondary hover:text-brand cursor-pointer">{k}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        <p className="text-xs text-text-tertiary">
+          {shown.length} note{shown.length === 1 ? '' : 's'}
+          {sec ? ` in ${sec.name}` : ''}
+          {q.trim() ? ` matching “${q.trim()}”` : ''}
+        </p>
+
+        {!shown.length && (
+          <p className="text-sm text-text-tertiary italic py-6 text-center">No notes match. Try a shorter word, another section, or clear the type filter.</p>
+        )}
+
+        {TYPES.map(([k, label]) => {
+          const group = shown.filter((n) => n.type === k);
+          if (!group.length) return null;
+          return (
+            <section key={k} className="space-y-2">
+              <h4 className="text-[11px] font-bold uppercase tracking-wide text-text-tertiary">
+                {label} <span className="font-medium">{group.length}</span>
+              </h4>
+              {group.map((n) => (
+                <NoteCard key={n.id} note={n} terms={terms} sectionName={multi && section === 'all' ? sectionsById[n.section]?.name : ''} />
+              ))}
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
