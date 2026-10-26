@@ -34,6 +34,12 @@ const getNavLinks = (user, pendingReports = 0) => {
       target: 'mcq_tests',
       match: (t) => t?.startsWith('mcq_'),
       label: 'MCQ Tests'
+    },
+    {
+      key: 'toppers_copy',
+      target: 'toppers_copy',
+      match: (t) => t === 'toppers_copy',
+      label: <><span className="hidden sm:inline">Toppers </span>Copy</>
     }
   ];
 
@@ -80,6 +86,12 @@ const getNavLinks = (user, pendingReports = 0) => {
             )}
           </>
         )
+      },
+      {
+        key: 'admin_toppers_copy',
+        target: 'admin_toppers_copy',
+        match: (t) => t === 'admin_toppers_copy',
+        label: <><span className="hidden sm:inline">Toppers </span>Copy Data</>
       },
       {
         key: 'requests',
