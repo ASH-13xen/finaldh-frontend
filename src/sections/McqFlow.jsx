@@ -127,14 +127,14 @@ function Flow({ user }) {
       );
       break;
     case 'quizPractice':
-      // Geography practice quiz — reached from the "Practice" card on the subjects landing.
-      body = <QuizFlow onExitToMcq={() => go({ screen: 'home' })} />;
+      // Question Bank practice — reached from a bank card on the subjects landing.
+      body = <QuizFlow subject={view.bankSubject} onExitToMcq={() => go({ screen: 'home' })} />;
       break;
     default:
       body = (
         <McqSubjectsLanding
           onOpenSubject={(subject) => go({ screen: 'testList', subject })}
-          onSelectPractice={() => go({ screen: 'quizPractice' })}
+          onSelectBank={(bankSubject) => go({ screen: 'quizPractice', bankSubject })}
           onResume={(attemptId) => go({ screen: 'runner', attemptId })}
           onOpenFlagged={() => go({ screen: 'flagged' })}
           onOpenHistory={() => go({ screen: 'history' })}

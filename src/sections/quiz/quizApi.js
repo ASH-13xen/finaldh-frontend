@@ -33,10 +33,6 @@ export const getAttemptQuestions = (attemptId, from = 0, limit = 25) =>
 export const answerQuestion = (attemptId, index, selectedKey) =>
   request(`/attempts/${attemptId}/answer`, { method: 'POST', body: { index, selectedKey } });
 
-// NOT named use* — ESLint's rules-of-hooks treats a use-prefixed import as a hook.
-export const fetchHint = (attemptId, index) =>
-  request(`/attempts/${attemptId}/hint`, { method: 'POST', body: { index } });
-
 export const completeAttempt = (attemptId) =>
   request(`/attempts/${attemptId}/complete`, { method: 'POST' });
 

@@ -20,6 +20,7 @@ const KNOWN_TABS = [
   'progress',
   'admin_progress_data',
   'admin_mcq_data',
+  'admin_question_banks',
 ];
 
 export const DEFAULT_TAB = 'buy_pdfs';
