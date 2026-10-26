@@ -20,6 +20,7 @@ import AdminMcqData from './AdminMcqData';
 import AdminQuestionBanks from './AdminQuestionBanks';
 import ToppersCopy from './ToppersCopy';
 import AdminToppersCopy from './AdminToppersCopy';
+import MyNotes from './MyNotes';
 import McqFlow from './McqFlow';
 import AdminView from './AdminView';
 import AdminContactUsers from './AdminContactUsers';
@@ -96,6 +97,10 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'toppers_copy' && (
           <ToppersCopy />
+        )}
+
+        {activeTab === 'my_notes' && (
+          <MyNotes />
         )}
 
         {activeTab === 'admin_toppers_copy' && (

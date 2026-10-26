@@ -7,6 +7,10 @@ import {
 } from './quizApi';
 import ReportQuestionModal from './ReportQuestionModal';
 import MatchListsView from './MatchListsView';
+import BookmarkButton from '../../components/study/BookmarkButton';
+import NoteModal from '../../components/study/NoteModal';
+import SelectionToNote from '../../components/study/SelectionToNote';
+import useBookmarks from '../../lib/useBookmarks';
 
 const PAGE = 10;             // fetch questions 10 at a time
 const PREFETCH_WITHIN = 3;   // prefetch the next page when this close to the end of what's loaded
@@ -24,6 +28,10 @@ export default function QuizRunner({ subject, config, onExit, onFinished }) {
   const [busy, setBusy] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(null);      // { quote } while the note dialog is open
+  const [savedFlash, setSavedFlash] = useState(false);
+  const bookmarks = useBookmarks('question_bank');
+  const closeNote = useCallback(() => setNoteDraft(null), []);
 
   const loadedUpTo = useRef(0);
   const fetching = useRef(false);
@@ -158,7 +166,10 @@ export default function QuizRunner({ subject, config, onExit, onFinished }) {
   const heading =
     attempt.mode === 'topic' ? config.topic
     : attempt.mode === 'random' ? `Random test (${total})`
+    : attempt.mode === 'bookmarks' ? `Bookmarked questions (${total})`
+    : attempt.mode === 'mistakes' ? `My mistakes (${total})`
     : `${subject} — all questions`;
+  const studyRef = { refType: 'qb_question', quizQuestionId: question.id };
 
   const pct = total ? (attemptedCount / total) * 100 : 0;
   const chosen = answered ? answered.selectedKey : pending[current];
@@ -248,14 +259,31 @@ export default function QuizRunner({ subject, config, onExit, onFinished }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-5 items-start">
           {/* Question card */}
-          <div className="bg-surface border border-border-default rounded-2xl p-4 md:p-6">
+          <SelectionToNote
+            className="bg-surface border border-border-default rounded-2xl p-4 md:p-6"
+            onAdd={(quote) => setNoteDraft({ quote })}
+          >
             <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
               <span className="text-[10px] font-bold text-brand bg-accent-soft-bg border border-accent-soft-border rounded px-2 py-0.5 uppercase tracking-wide">
-                {attempt.mode === 'random' ? 'Test' : 'Practice'}
+                {attempt.mode === 'random' ? 'Test' : attempt.mode === 'topic' || attempt.mode === 'all' ? 'Practice' : 'Revision'}
               </span>
-              <button className="text-xs font-bold text-text-tertiary hover:text-status-danger-text" onClick={() => setReportOpen(true)}>
-                ⚑ Report
-              </button>
+              <div className="flex items-center gap-2">
+                {savedFlash && <span className="text-[11px] font-bold text-brand">Saved to My Notes</span>}
+                <BookmarkButton
+                  active={bookmarks.isBookmarked(studyRef)}
+                  onToggle={() => bookmarks.toggle(studyRef)}
+                />
+                <button
+                  className="text-[11px] font-bold border border-border-default text-text-tertiary hover:border-brand hover:text-text-primary rounded-lg px-3 py-1.5 cursor-pointer"
+                  onClick={() => setNoteDraft({ quote: '' })}
+                  title="Add a note to this question (or select any text first)"
+                >
+                  ✎ <span className="hidden sm:inline">Note</span>
+                </button>
+                <button className="text-xs font-bold text-text-tertiary hover:text-status-danger-text" onClick={() => setReportOpen(true)}>
+                  ⚑ Report
+                </button>
+              </div>
             </div>
 
             <div className="flex gap-3 mb-5">
@@ -301,6 +329,7 @@ export default function QuizRunner({ subject, config, onExit, onFinished }) {
             </div>
 
             {error && <p className="text-xs text-status-danger-text mt-3">{error}</p>}
+            {bookmarks.error && <p className="text-xs text-status-danger-text mt-3">Bookmark: {bookmarks.error}</p>}
 
             {answered && (
               <div className="mt-5 pt-5 border-t border-border-default">
@@ -351,7 +380,7 @@ export default function QuizRunner({ subject, config, onExit, onFinished }) {
                 )}
               </div>
             </div>
-          </div>
+          </SelectionToNote>
 
           {/* Side palette (desktop) */}
           <aside className="hidden lg:block bg-surface border border-border-default rounded-2xl p-4 sticky top-[120px]">
@@ -372,6 +401,17 @@ export default function QuizRunner({ subject, config, onExit, onFinished }) {
             <Palette />
           </div>
         </div>
+      )}
+
+      {noteDraft && (
+        <NoteModal
+          studyRef={studyRef}
+          title={`Q${current + 1}. ${question.questionText}`}
+          quote={noteDraft.quote}
+          quoteFrom="Question Bank"
+          onClose={closeNote}
+          onSaved={() => { setSavedFlash(true); setTimeout(() => setSavedFlash(false), 2500); }}
+        />
       )}
 
       {reportOpen && (

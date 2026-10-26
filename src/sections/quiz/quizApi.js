@@ -24,7 +24,11 @@ const request = async (path, { method = 'GET', body } = {}) => {
 export const listTopics = (subject) =>
   request(`/topics${subject ? `?subject=${encodeURIComponent(subject)}` : ''}`);
 
-// { subject, mode: 'topic'|'random'|'all', topic?, size? }
+// { bookmarks, mistakes } question counts for the student's revision sets.
+export const getReviewSets = (subject) =>
+  request(`/review-sets${subject ? `?subject=${encodeURIComponent(subject)}` : ''}`);
+
+// { subject, mode: 'topic'|'random'|'all'|'bookmarks'|'mistakes', topic?, size? }
 export const startAttempt = (opts) => request('/attempts', { method: 'POST', body: opts });
 
 export const getAttemptQuestions = (attemptId, from = 0, limit = 25) =>
