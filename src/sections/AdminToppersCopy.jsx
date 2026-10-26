@@ -1236,6 +1236,7 @@ function ManageTopics() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [msg, setMsg] = useState('');
+  const [organiseId, setOrganiseId] = useState(null); // topic whose sub-topic editor is open
 
   const loadSubjects = useCallback(async () => {
     setLoading(true);
@@ -1316,7 +1317,8 @@ function ManageTopics() {
           </div>
           <div className="divide-y divide-border-default">
             {(bySubject[s.subject] || []).map((t) => (
-              <div key={t._id} className="px-4 py-3 flex flex-wrap items-center gap-3">
+              <Fragment key={t._id}>
+              <div className="px-4 py-3 flex flex-wrap items-center gap-3">
                 <div className="flex-grow min-w-[200px]">
                   <p className="text-xs font-bold text-text-primary">{t.topic}</p>
                   <p className="text-[10px] text-text-tertiary mt-0.5">
@@ -1338,14 +1340,347 @@ function ManageTopics() {
                 <button className={btnGhost} disabled={busyId === t._id || !t.analyzedCount} onClick={() => analyze(t, 'all')}>
                   Re-analyze all
                 </button>
+                <button
+                  className={organiseId === t._id ? btnPrimary : btnGhost}
+                  disabled={!t.questionCount}
+                  onClick={() => setOrganiseId((cur) => (cur === t._id ? null : t._id))}
+                  title="Group this topic's questions under your own sub-topic headings"
+                >
+                  {organiseId === t._id ? 'Close sub-topics' : 'Sub-topics'}
+                </button>
                 <button className="px-3 py-1.5 text-[11px] font-bold text-status-danger-text cursor-pointer" disabled={busyId === t._id} onClick={() => remove(t)}>
                   Delete
                 </button>
               </div>
+              {organiseId === t._id && (
+                <SubtopicEditor topicId={t._id} topicName={t.topic} onClose={() => setOrganiseId(null)} />
+              )}
+              </Fragment>
             ))}
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ============================ Sub-topic editor ============================
+// Manual fine-tuning inside one AI-detected topic: create / rename / reorder / delete
+// sub-topic headings and put questions under them. Edits are local until Save, which
+// sends the whole arrangement to PUT /admin/:id/structure (question content untouched).
+const NONE = '__none__';
+let tempSeq = 0;
+
+function SubtopicEditor({ topicId, topicName, onClose }) {
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState('');
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [qById, setQById] = useState({});
+  const [subs, setSubs] = useState([]);        // [{ key, _id?, name }] display order
+  const [groups, setGroups] = useState({});    // key -> [questionId] (NONE = no sub-topic)
+  const [selected, setSelected] = useState(() => new Set());
+  const [newName, setNewName] = useState('');
+  // Drag and drop (desktop): `dragIds` = questions being dragged (the whole selection when
+  // the grabbed row is selected); `dropAt` = { key, index } where they'd land.
+  const [dragIds, setDragIds] = useState(null);
+  const [dropAt, setDropAt] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true); setErr('');
+    try {
+      const res = await authedJson(`/api/toppers-copy/${topicId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load topic');
+      const qs = data.toppersCopy?.questions || [];
+      const st = data.toppersCopy?.subtopics || [];
+      const known = new Set(st.map((x) => x._id));
+      const g = { [NONE]: [] };
+      st.forEach((x) => { g[x._id] = []; });
+      qs.forEach((q) => { g[q.subtopicId && known.has(q.subtopicId) ? q.subtopicId : NONE].push(q._id); });
+      setQById(Object.fromEntries(qs.map((q) => [q._id, q])));
+      setSubs(st.map((x) => ({ key: x._id, _id: x._id, name: x.name })));
+      setGroups(g);
+      setSelected(new Set());
+      setDirty(false);
+    } catch (e) { setErr(e.message); } finally { setLoading(false); }
+  }, [topicId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const change = (fn) => { fn(); setDirty(true); setNote(''); };
+
+  // Q-numbers as the student will see them: ungrouped first, then each sub-topic.
+  const order = [NONE, ...subs.map((x) => x.key)];
+  const numberOf = {};
+  let n = 0;
+  order.forEach((k) => (groups[k] || []).forEach((id) => { numberOf[id] = ++n; }));
+
+  const addSub = () => {
+    const name = newName.trim();
+    if (!name) return;
+    if (subs.some((x) => x.name.toLowerCase() === name.toLowerCase())) { setErr(`"${name}" already exists`); return; }
+    const key = `new-${++tempSeq}`;
+    change(() => {
+      setSubs((p) => [...p, { key, name }]);
+      setGroups((g) => ({ ...g, [key]: [] }));
+      setNewName(''); setErr('');
+    });
+  };
+
+  const renameSub = (key, name) => change(() => setSubs((p) => p.map((x) => (x.key === key ? { ...x, name } : x))));
+
+  const moveSub = (key, dir) => change(() => setSubs((p) => {
+    const i = p.findIndex((x) => x.key === key);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= p.length) return p;
+    const next = [...p];
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  }));
+
+  const deleteSub = (key) => {
+    const count = (groups[key] || []).length;
+    const name = subs.find((x) => x.key === key)?.name;
+    if (count && !confirm(`Delete sub-topic "${name}"? Its ${count} question(s) move back to "No sub-topic".`)) return;
+    change(() => {
+      setGroups((g) => {
+        const next = { ...g, [NONE]: [...g[NONE], ...(g[key] || [])] };
+        delete next[key];
+        return next;
+      });
+      setSubs((p) => p.filter((x) => x.key !== key));
+    });
+  };
+
+  const moveQ = (key, qid, dir) => change(() => setGroups((g) => {
+    const list = [...g[key]];
+    const i = list.indexOf(qid);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return g;
+    [list[i], list[j]] = [list[j], list[i]];
+    return { ...g, [key]: list };
+  }));
+
+  // Move question ids to the end of `target`, keeping their current relative order.
+  const assign = (qids, target) => change(() => setGroups((g) => {
+    const moving = order.flatMap((k) => (g[k] || []).filter((id) => qids.includes(id)));
+    const next = {};
+    for (const k of Object.keys(g)) next[k] = g[k].filter((id) => !qids.includes(id));
+    next[target] = [...next[target], ...moving];
+    return next;
+  }));
+
+  // Insert `qids` into group `target` before position `index` (index counts the target's
+  // rows as they are now, including any being moved), keeping their display order.
+  const place = (qids, target, index) => change(() => setGroups((g) => {
+    const moving = order.flatMap((k) => (g[k] || []).filter((id) => qids.includes(id)));
+    const before = (g[target] || []).slice(0, index).filter((id) => !qids.includes(id)).length;
+    const next = {};
+    for (const k of Object.keys(g)) next[k] = g[k].filter((id) => !qids.includes(id));
+    next[target] = [...next[target].slice(0, before), ...moving, ...next[target].slice(before)];
+    return next;
+  }));
+
+  const endDrag = () => { setDragIds(null); setDropAt(null); };
+
+  const onRowDragStart = (e, qid) => {
+    const ids = selected.has(qid) ? order.flatMap((k) => (groups[k] || []).filter((id) => selected.has(id))) : [qid];
+    setDragIds(ids);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', ids.join(',')); // Firefox won't start a drag without data
+  };
+
+  // Hovering a row: land above it in its top half, below it in its bottom half.
+  const onRowDragOver = (e, key, i) => {
+    if (!dragIds) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    const index = e.clientY < r.top + r.height / 2 ? i : i + 1;
+    if (dropAt?.key !== key || dropAt?.index !== index) setDropAt({ key, index });
+  };
+
+  // Hovering a group's empty space / header: land at its end.
+  const onGroupDragOver = (e, key) => {
+    if (!dragIds) return;
+    e.preventDefault();
+    const index = (groups[key] || []).length;
+    if (dropAt?.key !== key || dropAt?.index !== index) setDropAt({ key, index });
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    if (dragIds && dropAt) {
+      place(dragIds, dropAt.key, dropAt.index);
+      setSelected(new Set());
+    }
+    endDrag();
+  };
+
+  const toggleSel = (qid) => setSelected((s) => {
+    const next = new Set(s);
+    if (next.has(qid)) next.delete(qid); else next.add(qid);
+    return next;
+  });
+
+  const save = async () => {
+    if (subs.some((x) => !x.name.trim())) { setErr('Every sub-topic needs a name'); return; }
+    setSaving(true); setErr('');
+    try {
+      const res = await authedJson(`/api/toppers-copy/admin/${topicId}/structure`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          subtopics: subs.map((x) => (x._id ? { _id: x._id, name: x.name.trim() } : { tempId: x.key, name: x.name.trim() })),
+          groups: order.map((k) => ({ subtopic: k === NONE ? null : k, questionIds: groups[k] || [] })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+      await load();
+      setNote('Saved — students see the new grouping now.');
+    } catch (e) { setErr(e.message); } finally { setSaving(false); }
+  };
+
+  if (loading) return <div className="px-4 py-4 bg-sunken/40"><LoadingSpinner text="Loading questions…" /></div>;
+
+  const selIds = [...selected];
+  const targetOptions = [{ key: NONE, name: 'No sub-topic' }, ...subs];
+  const smallBtn = 'w-6 h-6 grid place-items-center rounded border border-border-default text-[11px] text-text-secondary hover:border-brand disabled:opacity-30 cursor-pointer disabled:cursor-default';
+
+  const renderGroup = (key) => {
+    const isNone = key === NONE;
+    const sub = subs.find((x) => x.key === key);
+    const list = groups[key] || [];
+    const si = subs.findIndex((x) => x.key === key);
+    const isDropGroup = !!dragIds && dropAt?.key === key;
+    const line = <div className="h-1 bg-brand rounded-full mx-3" aria-hidden="true" />;
+    return (
+      <div
+        key={key}
+        onDragOver={(e) => onGroupDragOver(e, key)}
+        onDrop={onDrop}
+        className={`border rounded-xl overflow-hidden transition-shadow ${isNone ? 'border-dashed border-border-default' : 'border-border-default'} ${
+          isDropGroup ? 'ring-2 ring-brand/60' : ''
+        }`}
+      >
+        <div className="px-3 py-2 bg-surface-raised border-b border-border-default flex items-center gap-2 flex-wrap">
+          {isNone ? (
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-text-tertiary flex-grow">No sub-topic</span>
+          ) : (
+            <>
+              <input
+                value={sub.name}
+                onChange={(e) => renameSub(key, e.target.value)}
+                maxLength={120}
+                aria-label="Sub-topic name"
+                className="flex-grow min-w-[160px] bg-surface border border-border-default rounded-md px-2 py-1 text-xs font-bold text-text-primary focus:outline-none focus:border-brand"
+              />
+              <button className={smallBtn} disabled={si === 0} onClick={() => moveSub(key, -1)} title="Move sub-topic up">↑</button>
+              <button className={smallBtn} disabled={si === subs.length - 1} onClick={() => moveSub(key, 1)} title="Move sub-topic down">↓</button>
+              <button className="text-[11px] font-bold text-status-danger-text px-1.5 cursor-pointer" onClick={() => deleteSub(key)}>Delete</button>
+            </>
+          )}
+          <span className="text-[10px] font-bold text-text-tertiary tabular-nums">{list.length} Q</span>
+        </div>
+        {list.length === 0 ? (
+          <p className={`px-3 py-3 text-[11px] italic ${isDropGroup ? 'text-brand font-bold' : 'text-text-tertiary'}`}>
+            {isDropGroup
+              ? 'Drop here'
+              : isNone ? 'Every question is in a sub-topic.' : 'Empty — drag questions here, or tick them and use "Move selected to…".'}
+          </p>
+        ) : (
+          <ul className="divide-y divide-border-default">
+            {list.map((qid, i) => {
+              const q = qById[qid];
+              const dragging = !!dragIds?.includes(qid);
+              return (
+                <li
+                  key={qid}
+                  draggable
+                  onDragStart={(e) => onRowDragStart(e, qid)}
+                  onDragEnd={endDrag}
+                  onDragOver={(e) => onRowDragOver(e, key, i)}
+                  onDrop={onDrop}
+                  className={`relative px-3 py-2 flex items-center gap-2 bg-surface ${dragging ? 'opacity-40' : ''}`}
+                >
+                  {isDropGroup && dropAt.index === i && <div className="absolute left-0 right-0 -top-px">{line}</div>}
+                  <span className="text-text-tertiary cursor-grab active:cursor-grabbing select-none text-sm leading-none" title="Drag to move" aria-hidden="true">⠿</span>
+                  <input type="checkbox" checked={selected.has(qid)} onChange={() => toggleSel(qid)} aria-label={`Select Q${numberOf[qid]}`} className="accent-brand cursor-pointer" />
+                  <span className="text-[11px] font-bold text-text-tertiary w-8 flex-shrink-0">Q{numberOf[qid]}</span>
+                  <span className="text-xs text-text-primary flex-grow min-w-0 truncate" title={q?.questionText}>{q?.questionText || 'Untitled question'}</span>
+                  <button className={smallBtn} disabled={i === 0} onClick={() => moveQ(key, qid, -1)} title="Move up">↑</button>
+                  <button className={smallBtn} disabled={i === list.length - 1} onClick={() => moveQ(key, qid, 1)} title="Move down">↓</button>
+                  <select
+                    value={key}
+                    onChange={(e) => assign([qid], e.target.value)}
+                    aria-label="Move to sub-topic"
+                    className="bg-surface border border-border-default rounded-md px-1.5 py-1 text-[11px] text-text-secondary max-w-[150px] cursor-pointer"
+                  >
+                    {targetOptions.map((o) => <option key={o.key} value={o.key}>{o.name || '(unnamed)'}</option>)}
+                  </select>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {list.length > 0 && isDropGroup && dropAt.index === list.length && (
+          <div className="py-1.5">{line}</div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="px-4 py-4 bg-sunken/40 border-t border-border-default space-y-3">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-xs font-extrabold text-text-primary">Sub-topics — {topicName}</p>
+          <p className="text-[11px] text-text-tertiary mt-0.5">
+            Group this topic's questions under your own headings — drag a question (⠿) into any sub-topic, or tick several and drag them together.
+            Students see questions without a sub-topic first, then each sub-topic in this order.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {dirty && <span className="text-[11px] font-bold text-status-warning-text">Unsaved changes</span>}
+          <button className={btnGhost} disabled={saving || !dirty} onClick={load}>Discard</button>
+          <button className={btnPrimary} disabled={saving || !dirty} onClick={save}>{saving ? 'Saving…' : 'Save'}</button>
+          <button className={btnGhost} onClick={() => { if (!dirty || confirm('Discard unsaved sub-topic changes?')) onClose(); }}>Close</button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') addSub(); }}
+          placeholder="New sub-topic, e.g. Rare Earth Minerals"
+          maxLength={120}
+          className={`${inputClass} max-w-xs`}
+        />
+        <button className={btnGhost} onClick={addSub} disabled={!newName.trim()}>＋ Add sub-topic</button>
+        {selIds.length > 0 && (
+          <span className="flex items-center gap-2 ml-auto">
+            <span className="text-[11px] font-bold text-text-secondary">{selIds.length} selected → move to</span>
+            <select
+              value=""
+              onChange={(e) => { if (e.target.value) { assign(selIds, e.target.value); setSelected(new Set()); } }}
+              aria-label="Move selected questions to"
+              className="bg-surface border border-border-default rounded-md px-2 py-1 text-[11px] text-text-secondary cursor-pointer"
+            >
+              <option value="">Choose…</option>
+              {targetOptions.map((o) => <option key={o.key} value={o.key}>{o.name || '(unnamed)'}</option>)}
+            </select>
+            <button className="text-[11px] font-bold text-text-tertiary cursor-pointer" onClick={() => setSelected(new Set())}>Clear</button>
+          </span>
+        )}
+      </div>
+
+      {err && <p className="text-xs font-semibold text-status-danger-text">{err}</p>}
+      {note && <p className="text-xs font-semibold text-status-success-text">{note}</p>}
+
+      <div className="space-y-3">{order.map(renderGroup)}</div>
     </div>
   );
 }
