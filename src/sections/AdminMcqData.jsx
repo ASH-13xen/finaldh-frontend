@@ -369,7 +369,7 @@ function UploadQuestionsTab({ tests, loadingTests }) {
     <div className="bg-surface border border-border-default rounded-2xl p-6 shadow-sm">
       <h2 className="text-sm font-extrabold text-text-primary mb-1">Upload Questions (CSV)</h2>
       <p className="text-xs text-text-tertiary mb-1">
-        CSV columns required: <span className="font-bold text-text-secondary">order</span>, <span className="font-bold text-text-secondary">question text</span>, <span className="font-bold text-text-secondary">option a-d</span>, <span className="font-bold text-text-secondary">correct option</span> (A-D). Optional: <span className="font-bold text-text-secondary">explanation</span>, <span className="font-bold text-text-secondary">difficulty</span> (Easy/Medium/Hard), <span className="font-bold text-text-secondary">marks</span>, <span className="font-bold text-text-secondary">tags</span> (syllabus section/topic names, semicolon-separated).
+        CSV columns required: <span className="font-bold text-text-secondary">order</span>, <span className="font-bold text-text-secondary">question text</span>, <span className="font-bold text-text-secondary">option a-d</span>, <span className="font-bold text-text-secondary">correct option</span> (A-D). Optional: <span className="font-bold text-text-secondary">explanation</span>, <span className="font-bold text-text-secondary">statements</span> (pipe <code>|</code> separated), <span className="font-bold text-text-secondary">difficulty</span> (Easy/Medium/Hard), <span className="font-bold text-text-secondary">marks</span>, <span className="font-bold text-text-secondary">tags</span> (syllabus section/topic names, semicolon-separated).
       </p>
       <p className="text-[11px] text-status-warning-text font-semibold mb-5">Uploading replaces all existing questions for the selected test.</p>
 
@@ -432,6 +432,7 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests, editRequest, onE
   const [marks, setMarks] = useState('');
   const [explanation, setExplanation] = useState('');
   const [tags, setTags] = useState('');
+  const [statements, setStatements] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -471,6 +472,7 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests, editRequest, onE
     setMarks('');
     setExplanation('');
     setTags('');
+    setStatements('');
   };
 
   const handleAddQuestion = async (e) => {
@@ -492,6 +494,7 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests, editRequest, onE
           difficulty,
           marks: marks === '' ? null : Number(marks),
           explanation: explanation.trim(),
+          statements: statements.split('\n').map((s) => s.trim()).filter(Boolean),
           tags
         })
       });
@@ -591,6 +594,17 @@ function BuildQuestionsTab({ tests, loadingTests, refreshTests, editRequest, onE
                   onChange={(e) => setQuestionText(e.target.value)}
                   rows={2}
                   placeholder="Type the question..."
+                  className="w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-semibold transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-text-tertiary uppercase tracking-wider mb-2">Statement lines (one per line, optional)</label>
+                <textarea
+                  value={statements}
+                  onChange={(e) => setStatements(e.target.value)}
+                  rows={2}
+                  placeholder={"1. ...\n2. ..."}
                   className="w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-semibold transition-all"
                 />
               </div>
