@@ -56,6 +56,37 @@ function NoteCard({ note, terms }) {
   );
 }
 
+// Rows from one Word table, redrawn as that table (header row from the file). Rows hidden by
+// the search / filters simply drop out. A row's cells are matched to the header by label.
+function NoteTable({ table, rows, terms }) {
+  const [first, ...rest] = table.head;
+  return (
+    <div className="overflow-x-auto border border-border-default rounded-xl bg-surface">
+      <table className="w-full text-[13px] border-collapse">
+        <thead>
+          <tr className="bg-sunken text-left">
+            {[first, ...rest].map((h, i) => (
+              <th key={i} className="px-3 py-2 font-bold text-text-primary border-b border-border-default align-bottom">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((n) => (
+            <tr key={n.id} className="border-t border-border-default first:border-t-0 align-top">
+              <td className="px-3 py-2 font-semibold text-text-primary"><Hl text={n.title} terms={terms} /></td>
+              {rest.map((h, i) => (
+                <td key={i} className="px-3 py-2 font-reading text-text-secondary">
+                  <Hl text={n.cols?.find(([k]) => k === h)?.[1] || ''} terms={terms} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function ValueAdditionBank({ entryId }) {
   const [bank, setBank] = useState(null);
   const [error, setError] = useState('');
@@ -81,6 +112,7 @@ export default function ValueAdditionBank({ entryId }) {
   }, [entryId]);
 
   const sectionsById = useMemo(() => Object.fromEntries((bank?.sections || []).map((s) => [s.id, s])), [bank]);
+  const tablesById = useMemo(() => Object.fromEntries((bank?.tables || []).map((t) => [t.id, t])), [bank]);
   const sectionNo = useMemo(() => Object.fromEntries((bank?.sections || []).map((s, i) => [s.id, i + 1])), [bank]);
   const hay = useMemo(() => (bank?.notes || []).map((n) => fold([
     n.title, n.text, n.sub, (n.cols || []).flat().join(' '), sectionsById[n.section]?.name,
@@ -99,8 +131,10 @@ export default function ValueAdditionBank({ entryId }) {
     let sr = sectionRuns[sectionRuns.length - 1];
     if (sr?.id !== n.section) sectionRuns.push(sr = { id: n.section, runs: [] });
     const run = sr.runs[sr.runs.length - 1];
-    if (run && run.type === n.type && run.sub === n.sub) run.notes.push(n);
-    else sr.runs.push({ type: n.type, sub: n.sub, notes: [n] });
+    const sameHead = run && run.type === n.type && run.sub === n.sub;
+    // Rows of one Word table stay together as a table run.
+    if (sameHead && run.tbl === n.tbl) run.notes.push(n);
+    else sr.runs.push({ type: n.type, sub: n.sub, tbl: n.tbl, head: !sameHead, notes: [n] });
   });
 
   if (error) return <p className="px-5 py-4 text-sm text-status-danger-text">{error}</p>;
@@ -200,11 +234,15 @@ export default function ValueAdditionBank({ entryId }) {
             )}
             {sr.runs.map((run) => (
               <div key={run.notes[0].id} className="space-y-2">
-                <h4 className="text-[11px] font-bold uppercase tracking-wide text-text-tertiary">
-                  {TYPES.find(([k]) => k === run.type)?.[1] || 'Notes'}
-                  {run.sub ? <span className="normal-case font-semibold"> · <Hl text={run.sub} terms={terms} /></span> : null}
-                </h4>
-                {run.notes.map((n) => <NoteCard key={n.id} note={n} terms={terms} />)}
+                {run.head && (
+                  <h4 className="text-[11px] font-bold uppercase tracking-wide text-text-tertiary">
+                    {TYPES.find(([k]) => k === run.type)?.[1] || 'Notes'}
+                    {run.sub ? <span className="normal-case font-semibold"> · <Hl text={run.sub} terms={terms} /></span> : null}
+                  </h4>
+                )}
+                {tablesById[run.tbl]
+                  ? <NoteTable table={tablesById[run.tbl]} rows={run.notes} terms={terms} />
+                  : run.notes.map((n) => <NoteCard key={n.id} note={n} terms={terms} />)}
               </div>
             ))}
           </section>
