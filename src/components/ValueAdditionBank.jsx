@@ -37,10 +37,10 @@ function NoteBox({ notes, terms }) {
   return (
     <ul className="p-3 pl-7 bg-surface border border-border-default rounded-xl list-disc marker:text-brand space-y-2">
       {notes.map((note) => (
-        <li key={note.id} className={`text-sm leading-relaxed font-reading ${note.type === 'quote' ? 'text-text-primary' : 'text-text-secondary'}`}>
+        <li key={note.id} className={`text-[15px] leading-relaxed font-reading ${note.type === 'quote' ? 'text-text-primary' : 'text-text-secondary'}`}>
           {note.title ? <b className="font-bold text-text-primary not-italic"><Hl text={note.title} terms={terms} />{note.text ? ': ' : ''}</b> : null}
           {note.cols?.length ? (
-            <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 mt-1 text-[13px]">
+            <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 mt-1 text-sm">
               {note.cols.map(([k, v], i) => (
                 <div key={i} className="contents">
                   <dt className="text-text-tertiary">{k}</dt>
@@ -63,7 +63,7 @@ function NoteTable({ table, rows, terms }) {
   const [first, ...rest] = table.head;
   return (
     <div className="overflow-x-auto border border-border-default rounded-xl bg-surface">
-      <table className="w-full text-[13px] border-collapse">
+      <table className="w-full text-sm border-collapse">
         <thead>
           <tr className="bg-sunken text-left">
             {[first, ...rest].map((h, i) => (
@@ -229,14 +229,14 @@ export default function ValueAdditionBank({ entryId }) {
         {sectionRuns.map((sr) => (
           <section key={sr.id} className="space-y-3">
             {multi && (
-              <h3 className="text-sm font-bold text-text-primary border-b border-border-default pb-1.5">
+              <h3 className="text-base font-bold text-text-primary border-b border-border-default pb-1.5">
                 {sectionNo[sr.id]}. {sectionsById[sr.id]?.name}
               </h3>
             )}
             {sr.runs.map((run) => (
               <div key={run.notes[0].id} className="space-y-2">
                 {run.head && (
-                  <h4 className="text-[11px] font-bold uppercase tracking-wide text-text-tertiary">
+                  <h4 className="text-xs font-bold uppercase tracking-wide text-text-tertiary">
                     {TYPES.find(([k]) => k === run.type)?.[1] || 'Notes'}
                     {run.sub ? <span className="normal-case font-semibold"> · <Hl text={run.sub} terms={terms} /></span> : null}
                   </h4>
