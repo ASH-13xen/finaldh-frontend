@@ -3,8 +3,8 @@ import LoadingSpinner from './LoadingSpinner';
 
 // Searchable "notes bank" of a Toppers Copy value addition — parsed on the server from
 // the admin's Word file (finaldh utils/valueAdditionDocx.js). Students search it, filter
-// by note type (data, facts, examples…) and by section; notes are grouped in the order
-// an answer uses them: intro → quotes → data → facts → examples → case → current → conclusion.
+// by note type (data, facts, examples…) and by section; notes are listed in the Word
+// file's own order (section → Introduction, Quotes, Data, Facts…), like the document.
 
 const TYPES = [
   ['intro', 'Intros', 'Intro'],
@@ -31,15 +31,10 @@ function Hl({ text, terms }) {
   return parts.map((p, i) => (i % 2 ? <em key={i}>{mark(p, i)}</em> : <span key={i}>{mark(p, i)}</span>));
 }
 
-function NoteCard({ note, terms, sectionName }) {
-  const label = TYPES.find(([k]) => k === note.type)?.[2] || 'Note';
+// Section, type and sub-heading are shown as headings above the card (see sectionRuns).
+function NoteCard({ note, terms }) {
   return (
     <div className="p-3 bg-surface border border-border-default rounded-xl space-y-1.5">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-tertiary">
-        <span className="font-bold uppercase tracking-wide text-brand">{label}</span>
-        {note.sub ? <span><Hl text={note.sub} terms={terms} /></span> : null}
-        {sectionName ? <span>· {sectionName}</span> : null}
-      </div>
       {note.title ? (
         <p className="text-sm font-bold text-text-primary leading-snug"><Hl text={note.title} terms={terms} /></p>
       ) : null}
@@ -86,6 +81,7 @@ export default function ValueAdditionBank({ entryId }) {
   }, [entryId]);
 
   const sectionsById = useMemo(() => Object.fromEntries((bank?.sections || []).map((s) => [s.id, s])), [bank]);
+  const sectionNo = useMemo(() => Object.fromEntries((bank?.sections || []).map((s, i) => [s.id, i + 1])), [bank]);
   const hay = useMemo(() => (bank?.notes || []).map((n) => fold([
     n.title, n.text, n.sub, (n.cols || []).flat().join(' '), sectionsById[n.section]?.name,
   ].join(' '))), [bank, sectionsById]);
@@ -96,6 +92,16 @@ export default function ValueAdditionBank({ entryId }) {
     (section === 'all' || n.section === section) && terms.every((t) => hay[i].includes(t))), [bank, hay, section, terms]);
   const counts = useMemo(() => pool.reduce((c, n) => ({ ...c, [n.type]: (c[n.type] || 0) + 1 }), {}), [pool]);
   const shown = type === 'all' ? pool : pool.filter((n) => n.type === type);
+  // Notes keep the Word file's order: section → Introduction, Quotes, Data… → sub-heading,
+  // so a section reads top to bottom like the document.
+  const sectionRuns = [];
+  shown.forEach((n) => {
+    let sr = sectionRuns[sectionRuns.length - 1];
+    if (sr?.id !== n.section) sectionRuns.push(sr = { id: n.section, runs: [] });
+    const run = sr.runs[sr.runs.length - 1];
+    if (run && run.type === n.type && run.sub === n.sub) run.notes.push(n);
+    else sr.runs.push({ type: n.type, sub: n.sub, notes: [n] });
+  });
 
   if (error) return <p className="px-5 py-4 text-sm text-status-danger-text">{error}</p>;
   if (!bank) return <div className="px-5 py-6"><LoadingSpinner text="Loading notes…" /></div>;
@@ -185,20 +191,24 @@ export default function ValueAdditionBank({ entryId }) {
           <p className="text-sm text-text-tertiary italic py-6 text-center">No notes match. Try a shorter word, another section, or clear the type filter.</p>
         )}
 
-        {TYPES.map(([k, label]) => {
-          const group = shown.filter((n) => n.type === k);
-          if (!group.length) return null;
-          return (
-            <section key={k} className="space-y-2">
-              <h4 className="text-[11px] font-bold uppercase tracking-wide text-text-tertiary">
-                {label} <span className="font-medium">{group.length}</span>
-              </h4>
-              {group.map((n) => (
-                <NoteCard key={n.id} note={n} terms={terms} sectionName={multi && section === 'all' ? sectionsById[n.section]?.name : ''} />
-              ))}
-            </section>
-          );
-        })}
+        {sectionRuns.map((sr) => (
+          <section key={sr.id} className="space-y-3">
+            {multi && (
+              <h3 className="text-sm font-bold text-text-primary border-b border-border-default pb-1.5">
+                {sectionNo[sr.id]}. {sectionsById[sr.id]?.name}
+              </h3>
+            )}
+            {sr.runs.map((run) => (
+              <div key={run.notes[0].id} className="space-y-2">
+                <h4 className="text-[11px] font-bold uppercase tracking-wide text-text-tertiary">
+                  {TYPES.find(([k]) => k === run.type)?.[1] || 'Notes'}
+                  {run.sub ? <span className="normal-case font-semibold"> · <Hl text={run.sub} terms={terms} /></span> : null}
+                </h4>
+                {run.notes.map((n) => <NoteCard key={n.id} note={n} terms={terms} />)}
+              </div>
+            ))}
+          </section>
+        ))}
       </div>
     </div>
   );
