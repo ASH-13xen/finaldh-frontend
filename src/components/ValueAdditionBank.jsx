@@ -31,28 +31,29 @@ function Hl({ text, terms }) {
   return parts.map((p, i) => (i % 2 ? <em key={i}>{mark(p, i)}</em> : <span key={i}>{mark(p, i)}</span>));
 }
 
-// Section, type and sub-heading are shown as headings above the card (see sectionRuns).
-function NoteCard({ note, terms }) {
+// One box per run of notes (e.g. all three intros of a section), each note a bullet:
+// "Label: text". Section, type and sub-heading are the headings above the box (see sectionRuns).
+function NoteBox({ notes, terms }) {
   return (
-    <div className="p-3 bg-surface border border-border-default rounded-xl space-y-1.5">
-      {note.title ? (
-        <p className="text-sm font-bold text-text-primary leading-snug"><Hl text={note.title} terms={terms} /></p>
-      ) : null}
-      {note.cols?.length ? (
-        <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 text-[13px]">
-          {note.cols.map(([k, v], i) => (
-            <div key={i} className="contents">
-              <dt className="text-text-tertiary">{k}</dt>
-              <dd className="text-text-secondary"><Hl text={v} terms={terms} /></dd>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <p className={`text-sm leading-relaxed ${note.type === 'quote' ? 'font-reading italic text-text-primary' : 'font-reading text-text-secondary'}`}>
-          <Hl text={note.text} terms={terms} />
-        </p>
-      )}
-    </div>
+    <ul className="p-3 pl-7 bg-surface border border-border-default rounded-xl list-disc marker:text-brand space-y-2">
+      {notes.map((note) => (
+        <li key={note.id} className={`text-sm leading-relaxed font-reading ${note.type === 'quote' ? 'text-text-primary' : 'text-text-secondary'}`}>
+          {note.title ? <b className="font-bold text-text-primary not-italic"><Hl text={note.title} terms={terms} />{note.text ? ': ' : ''}</b> : null}
+          {note.cols?.length ? (
+            <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 mt-1 text-[13px]">
+              {note.cols.map(([k, v], i) => (
+                <div key={i} className="contents">
+                  <dt className="text-text-tertiary">{k}</dt>
+                  <dd><Hl text={v} terms={terms} /></dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <span className={note.type === 'quote' ? 'italic' : ''}><Hl text={note.text} terms={terms} /></span>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -242,7 +243,7 @@ export default function ValueAdditionBank({ entryId }) {
                 )}
                 {tablesById[run.tbl]
                   ? <NoteTable table={tablesById[run.tbl]} rows={run.notes} terms={terms} />
-                  : run.notes.map((n) => <NoteCard key={n.id} note={n} terms={terms} />)}
+                  : <NoteBox notes={run.notes} terms={terms} />}
               </div>
             ))}
           </section>
