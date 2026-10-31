@@ -90,7 +90,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
         </h1>
         <p className="text-text-secondary text-sm md:text-base mt-3 font-medium max-w-xl">
           Unlock standard study packages and syllabus guides directly. Sign in
-          to make a UPI payment and upload your receipt for immediate access.
+          and pay securely with UPI, card or netbanking — access unlocks instantly.
         </p>
       </div>
 
@@ -100,7 +100,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
         {[
           { step: "1", label: "Sign in with Google" },
           { step: "2", label: "Pick your paper(s)" },
-          { step: "3", label: "Pay via UPI" },
+          { step: "3", label: "Pay securely online" },
           { step: "4", label: "Get instant access" },
         ].map(({ step, label }) => (
           <div

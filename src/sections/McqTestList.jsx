@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
-import PurchaseModal from '../components/PurchaseModal';
+import RazorpayCheckout from '../components/RazorpayCheckout';
 import Icon from '../components/mcq/Icon';
 import { ActionButton, AttemptDots, Chip, EmptyState, ErrorBanner, ModeBadge } from '../components/mcq/ui';
 import { mcq, errorMessage, formatDate } from '../lib/mcqApi';
@@ -116,7 +116,7 @@ function TestCard({ test, onStart, onResume, onReview, onUnlock }) {
   );
 }
 
-export default function McqTestList({ subject, user, onBack, onStart, onResume, onReview, onOpenFlagged, onHelp }) {
+export default function McqTestList({ subject, onBack, onStart, onResume, onReview, onOpenFlagged, onHelp }) {
   const [tests, setTests] = useState([]);
   const [subjectAccess, setSubjectAccess] = useState(null);
   const [purchaseRequests, setPurchaseRequests] = useState([]);
@@ -153,7 +153,6 @@ export default function McqTestList({ subject, user, onBack, onStart, onResume, 
 
   const name = displaySubjectName(subject);
   const subjectPending = purchaseRequests.find((r) => r.purchaseType === 'subject' && r.subject === subject && r.status === 'pending');
-  const subjectRejected = purchaseRequests.find((r) => r.purchaseType === 'subject' && r.subject === subject && r.status === 'rejected');
   const subjectPrice = subjectAccess?.useDiscount ? subjectAccess.discountedPrice : subjectAccess?.price;
   const pricingConfigured = subjectAccess?.price !== null && subjectAccess?.price !== undefined;
 
@@ -216,12 +215,10 @@ export default function McqTestList({ subject, user, onBack, onStart, onResume, 
               <p className="text-xs font-bold uppercase tracking-wider text-brand mb-1">Unlock everything in this subject</p>
               <p className="text-base text-text-primary font-semibold leading-snug">
                 {subjectPending
-                  ? 'Your purchase request is waiting for admin approval — usually within a few hours.'
-                  : subjectRejected
-                    ? 'Your last request was rejected — you can submit a new one.'
-                    : pricingConfigured
-                      ? 'One purchase unlocks every test in this subject, including tests added in future.'
-                      : 'Pricing for this subject is being set up — check back soon.'}
+                  ? 'Your earlier UPI payment is waiting for admin approval — usually within a few hours.'
+                  : pricingConfigured
+                    ? 'One purchase unlocks every test in this subject, including tests added in future. Access is instant.'
+                    : 'Pricing for this subject is being set up — check back soon.'}
               </p>
             </div>
             {subjectPending ? (
@@ -276,16 +273,13 @@ export default function McqTestList({ subject, user, onBack, onStart, onResume, 
         </div>
       )}
 
+      {/* onPaid refreshes the list quietly (no loading screen) - a full reload would unmount the checkout's success screen */}
       {showSubjectPurchase && (
-        <PurchaseModal
-          title={`Unlock: ${name} (all tests)`}
-          price={subjectPrice}
-          submitEndpoint="/api/mcq/purchase-requests"
-          formFields={{ subject }}
+        <RazorpayCheckout
+          title={`${name} — all tests`}
+          item={{ kind: 'mcq_subject', subject }}
+          onPaid={() => setReloadKey((k) => k + 1)}
           onClose={() => setShowSubjectPurchase(false)}
-          onSubmitted={() => { setShowSubjectPurchase(false); reload(); }}
-          telegramMessage={`I am ${user?.fullName || user?.name || 'Student'}, requesting confirmation for full subject access: ${name}`}
-          telegramTrackEndpointBase="/api/mcq/purchase-requests"
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import LoadingSpinner from "../components/LoadingSpinner";
-import PurchaseModal from "../components/PurchaseModal";
+import RazorpayCheckout from "../components/RazorpayCheckout";
 import MmfHeroBanner from "../components/courses/MmfHeroBanner";
 import ComboOffersSection from "../components/courses/ComboOffersSection";
 import CategorizedCourseGrid from "../components/courses/CategorizedCourseGrid";
@@ -25,8 +25,8 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
   const [examStageView, setExamStageView] = useState("Mains");
   const [error, setError] = useState("");
 
-  // Modal State - selectedCourse/comboPurchaseDraft choose WHAT to buy; the actual payment
-  // form/QR/screenshot-upload UI lives in the shared PurchaseModal component.
+  // Checkout State - selectedCourse/comboPurchaseDraft choose WHAT to buy; paying for it happens in the
+  // shared RazorpayCheckout component.
   const [selectedCourse, setSelectedCourse] = useState(null);
 
   // Combo purchase flow state
@@ -100,12 +100,12 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
     };
   }, []);
 
-  const handleOpenPurchaseModal = (course) => {
+  const handleStartCheckout = (course) => {
     setSelectedCourse(course);
     setComboPurchaseDraft(null);
   };
 
-  const handleClosePurchaseModal = () => {
+  const handleCloseCheckout = () => {
     setSelectedCourse(null);
     setComboPurchaseDraft(null);
   };
@@ -156,25 +156,20 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
     return { type: "available", label: "Available" };
   };
 
-  // Called when the shared PurchaseModal's success screen is dismissed - refresh the
-  // pending-requests list in the background and close whichever modal was open.
-  const handlePurchaseSubmitted = async () => {
-    setSelectedCourse(null);
-    setComboPurchaseDraft(null);
+  // Called by RazorpayCheckout the moment access is granted (while its success screen is still up): pull the
+  // fresh profile so the just-bought course(s) flip to "Purchased" - ownership comes from user.ownedCourseIds.
+  const handlePurchasePaid = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const reqRes = await fetch("/api/courses/purchase-requests", {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch("/api/user/profile", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      if (reqRes.ok) {
-        setPurchaseRequests(await reqRes.json());
-      }
+      if (res.ok) onUserUpdate?.(await res.json());
     } catch (err) {
-      console.error("Error refreshing purchase requests:", err);
+      console.error("Error refreshing profile after payment:", err);
     }
   };
 
-  // Handle opening Telegram with pre-filled message to tdhadmin
+  // Handle opening Telegram with pre-filled message to tdhadmin (only offered on legacy UPI requests still pending)
   const handleTelegramNotify = (request, course, e) => {
     if (e) e.stopPropagation();
 
@@ -253,19 +248,13 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
     // 1. Check if the user already owns the course
     if (isOwned(course.courseId)) return { type: "purchased", label: "Purchased" };
 
-    // 2. Check if user has a pending request
+    // 2. Check if user has a legacy UPI request still waiting for admin verification. Razorpay payments
+    // never pass through this state - they unlock the course the moment they're confirmed.
     const pendingRequest = purchaseRequests.find(
       (r) => r.courseId === course.courseId && r.status === "pending",
     );
     if (pendingRequest)
       return { type: "pending", label: "Pending Verification" };
-
-    // 3. Check if user has a rejected request
-    const rejectedRequest = purchaseRequests.find(
-      (r) => r.courseId === course.courseId && r.status === "rejected",
-    );
-    if (rejectedRequest)
-      return { type: "rejected", label: "Rejected (Try Again)" };
 
     return { type: "available", label: "Available" };
   };
@@ -274,13 +263,6 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
   const checkoutName = comboPurchaseDraft
     ? comboPurchaseDraft.comboOffer.label
     : selectedCourse?.name;
-  const checkoutPrice = comboPurchaseDraft
-    ? comboPurchaseDraft.comboOffer.price
-    : selectedCourse
-      ? selectedCourse.useDiscount
-        ? selectedCourse.discountedPrice
-        : selectedCourse.price
-      : 0;
 
   // Top-level split: Prelims courses get their own section entirely separate from every
   // Mains course/subject below, so the page never implies "Mains-only" to a new visitor.
@@ -312,8 +294,8 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
           Purchase Courses
         </h1>
         <p className="text-text-secondary text-xs md:text-sm mt-1.5 md:mt-2 font-medium">
-          Unlock standard study packages and syllabus guides directly. Simply
-          make a UPI payment and upload your receipt for immediate access.
+          Unlock standard study packages and syllabus guides directly. Pay
+          securely with UPI, card or netbanking — access unlocks instantly.
         </p>
       </div>
 
@@ -356,7 +338,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
               course={course}
               status={getCourseStatus(course)}
               pendingRequest={getPendingRequest(course)}
-              onPurchase={handleOpenPurchaseModal}
+              onPurchase={handleStartCheckout}
               onTelegramNotify={handleTelegramNotify}
               onSeeSample={handleSeeSample}
               features={PRELIMS_FEATURES}
@@ -381,7 +363,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                 course={mmfCourse}
                 status={mmfStatus}
                 pendingRequest={mmfPendingRequest}
-                onPurchase={handleOpenPurchaseModal}
+                onPurchase={handleStartCheckout}
                 onTelegramNotify={handleTelegramNotify}
                 onSeeSample={handleSeeSample}
               />
@@ -394,7 +376,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
                 course={cacCourse}
                 status={cacStatus}
                 pendingRequest={cacPendingRequest}
-                onPurchase={handleOpenPurchaseModal}
+                onPurchase={handleStartCheckout}
                 onTelegramNotify={handleTelegramNotify}
                 onSeeSample={handleSeeSample}
                 features={CAC_FEATURES}
@@ -426,7 +408,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
               excludedCourseIds={featuredIds}
               getCourseStatus={getCourseStatus}
               getPendingRequest={getPendingRequest}
-              onPurchase={handleOpenPurchaseModal}
+              onPurchase={handleStartCheckout}
               onTelegramNotify={handleTelegramNotify}
               onSeeSample={handleSeeSample}
             />
@@ -439,7 +421,7 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
         sectionRef={sampleSectionRef}
         status={sampleStatus}
         pendingRequest={sampleStatusPendingRequest}
-        onPurchase={handleOpenPurchaseModal}
+        onPurchase={handleStartCheckout}
         onTelegramNotify={handleTelegramNotify}
       />      {/* Combo Course Picker Modal */}
       {pickerCombo && (
@@ -583,24 +565,21 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
         </div>
       )}
 
-      {/* Checkout Modal - shared with the MCQ purchase flow */}
+      {/* Razorpay checkout - shared with the MCQ purchase flow */}
       {(selectedCourse || comboPurchaseDraft) && (
-        <PurchaseModal
-          title={`Unlock: ${checkoutName}`}
-          price={checkoutPrice}
-          submitEndpoint="/api/courses/purchase-request"
-          formFields={
+        <RazorpayCheckout
+          title={checkoutName}
+          item={
             comboPurchaseDraft
               ? {
+                  kind: "combo",
                   comboOfferId: comboPurchaseDraft.comboOffer._id,
-                  selectedCourseIds: JSON.stringify(comboPurchaseDraft.selectedCourseIds),
+                  selectedCourseIds: comboPurchaseDraft.selectedCourseIds,
                 }
-              : { courseId: selectedCourse.courseId }
+              : { kind: "course", courseId: selectedCourse.courseId }
           }
-          onClose={handleClosePurchaseModal}
-          onSubmitted={handlePurchaseSubmitted}
-          telegramMessage={`I am ${user?.fullName || user?.name || "Student"} enrolled in ${checkoutName}, requesting for confirmation and group link`}
-          telegramTrackEndpointBase="/api/courses/purchase-requests"
+          onPaid={handlePurchasePaid}
+          onClose={handleCloseCheckout}
         />
       )}
     </div>

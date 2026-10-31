@@ -12,7 +12,7 @@ import UploadCourse from './UploadCourse';
 import PYQRecommender from './PYQRecommender';
 import PDFEditor from './PDFEditor';
 import PurchaseCourses from './PurchaseCourses';
-import AdminPurchases from './AdminPurchases';
+import AdminPayments from './AdminPayments';
 import AdminProgressData from './AdminProgressData';
 import AdminProgressBuilder from './AdminProgressBuilder';
 import ProgressSection from './ProgressSection';
@@ -115,7 +115,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
         )}
 
         {activeTab === 'admin_purchases' && (
-          <AdminPurchases />
+          <AdminPayments />
         )}
 
         {activeTab === 'admin_view' && (
@@ -139,7 +139,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
         )}
 
         {activeTab?.startsWith('mcq_') && (
-          <McqFlow user={user} />
+          <McqFlow />
         )}
 
         {activeTab === 'admin_mcq_data' && (

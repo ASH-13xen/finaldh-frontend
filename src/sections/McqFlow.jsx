@@ -15,7 +15,7 @@ import { mcq, errorMessage } from '../lib/mcqApi';
 // in this app). Each screen change is also pushed onto the browser history, so the Back button walks
 // back through the MCQ screens instead of jumping out to whatever tab the student came from.
 // Attempts are resumable server-side, so losing this state on a refresh never loses work.
-function Flow({ user }) {
+function Flow() {
   const toast = useToast();
   const [view, setView] = useState({ screen: 'home' });
   const [helpOpen, setHelpOpen] = useState(false);
@@ -67,7 +67,6 @@ function Flow({ user }) {
       body = (
         <McqTestList
           subject={view.subject}
-          user={user}
           onBack={() => go({ screen: 'home' })}
           onStart={(test, mode) => go({ screen: 'start', subject: view.subject, test, mode })}
           onResume={(attemptId) => go({ screen: 'runner', attemptId, subject: view.subject })}
@@ -152,10 +151,10 @@ function Flow({ user }) {
   );
 }
 
-export default function McqFlow({ user }) {
+export default function McqFlow() {
   return (
     <ToastProvider>
-      <Flow user={user} />
+      <Flow />
     </ToastProvider>
   );
 }

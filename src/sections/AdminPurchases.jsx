@@ -94,13 +94,13 @@ export default function AdminPurchases() {
       <div className="mb-8 md:mb-12 border-b border-border-default pb-4 md:pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl md:text-4xl font-display font-semibold text-text-primary tracking-tight flex flex-wrap items-center gap-2">
-            Course Purchase Requests
+            Legacy UPI Requests
             <span className="inline-block px-2.5 py-0.5 bg-accent-soft-bg border border-accent-soft-border text-brand text-[10px] font-bold rounded-full uppercase tracking-wider">
-              Verification Desk
+              Courses
             </span>
           </h1>
           <p className="text-text-secondary text-xs md:text-sm mt-1.5 md:mt-2 font-medium">
-            Review manual UPI payments, verify transaction IDs, inspect screenshots, and unlock resources for students.
+            Manual UPI payments submitted before Razorpay. Students can no longer submit these — approve or reject the ones still pending.
           </p>
         </div>
         

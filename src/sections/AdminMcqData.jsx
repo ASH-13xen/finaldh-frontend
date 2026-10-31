@@ -925,7 +925,7 @@ function AdminMcqPurchasesTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <p className="text-xs text-text-tertiary">Review manual UPI payments for MCQ tests and unlock access for students.</p>
+        <p className="text-xs text-text-tertiary">Manual UPI payments submitted before Razorpay. New subject purchases are paid online and unlock instantly (see Payments).</p>
         <button onClick={fetchRequests} className="px-3 py-1.5 bg-accent-soft-bg border border-accent-soft-border hover:bg-accent-soft-border/50 text-brand rounded-xl text-xs font-bold transition cursor-pointer">
           Refresh
         </button>
@@ -1056,7 +1056,7 @@ const SUB_TABS = [
   ['reports', 'Reported Questions', 'reports'],
   ['attempts', 'Student Attempts', null],
   ['pricing', 'Subject Pricing', null],
-  ['purchases', 'Purchase Requests', null]
+  ['purchases', 'Legacy UPI Requests', null]
 ];
 
 function AdminMcqDataInner() {

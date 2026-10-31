@@ -85,7 +85,7 @@ const getNavLinks = (user, pendingReports = 0) => {
         key: 'requests',
         target: 'admin_purchases',
         match: (t) => t === 'admin_purchases',
-        label: <><span className="hidden sm:inline">Purchase </span>Requests</>
+        label: 'Payments'
       },
       {
         key: 'admin_view',
