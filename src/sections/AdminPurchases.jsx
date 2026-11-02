@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
+import RazorpayPaymentDetails from '../components/RazorpayPaymentDetails';
 
 export default function AdminPurchases() {
   const [requests, setRequests] = useState([]);
@@ -94,13 +95,13 @@ export default function AdminPurchases() {
       <div className="mb-8 md:mb-12 border-b border-border-default pb-4 md:pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl md:text-4xl font-display font-semibold text-text-primary tracking-tight flex flex-wrap items-center gap-2">
-            Legacy UPI Requests
+            Course Purchase Requests
             <span className="inline-block px-2.5 py-0.5 bg-accent-soft-bg border border-accent-soft-border text-brand text-[10px] font-bold rounded-full uppercase tracking-wider">
-              Courses
+              Verification Desk
             </span>
           </h1>
           <p className="text-text-secondary text-xs md:text-sm mt-1.5 md:mt-2 font-medium">
-            Manual UPI payments submitted before Razorpay. Students can no longer submit these — approve or reject the ones still pending.
+            Check the buyer's name, email and phone, then verify to unlock the course. A rejected buyer sees a refund notice — refund them directly.
           </p>
         </div>
         
@@ -204,43 +205,49 @@ export default function AdminPurchases() {
                   </div>
                 </div>
 
-                {/* UPI Transaction Block */}
-                <div className="flex items-center justify-between p-3.5 bg-sunken border border-border-subtle rounded-xl text-xs gap-3">
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[9px] text-text-tertiary block uppercase font-bold tracking-wider">UPI Transaction Ref (UTR)</span>
-                    <span className="font-mono text-text-primary font-bold select-all tracking-wide break-all">{req.upiTxnId}</span>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(req.upiTxnId)}
-                    className="p-2 bg-surface border border-border-default hover:bg-sunken text-text-secondary hover:text-text-primary rounded-lg transition active:scale-95 cursor-pointer shrink-0"
-                    title="Copy to clipboard"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  </button>
-                </div>
-
-                {/* Screenshot Attachment view */}
-                <div className="space-y-1.5">
-                  <span className="text-[10px] text-text-secondary font-bold uppercase tracking-wider block">Receipt Screenshot</span>
-                  <div 
-                    onClick={() => setLightboxImage(req.screenshotUrl)}
-                    className="relative group overflow-hidden border border-border-default hover:border-brand/40 rounded-xl aspect-[16/9] bg-page flex items-center justify-center cursor-zoom-in"
-                  >
-                    <img 
-                      src={getImageUrl(req.screenshotUrl)} 
-                      alt="Payment Screenshot Receipt" 
-                      className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = 'https://placehold.co/600x400/18181b/a1a1aa?text=Image+Unavailable';
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-ink-950/40 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center text-xs text-white font-bold gap-1.5 backdrop-blur-[1px]">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" className="w-4 h-4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-                      Click to Zoom Image
+                {req.paymentMethod === 'razorpay' ? (
+                  <RazorpayPaymentDetails request={req} />
+                ) : (
+                  <>
+                    {/* UPI Transaction Block */}
+                    <div className="flex items-center justify-between p-3.5 bg-sunken border border-border-subtle rounded-xl text-xs gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[9px] text-text-tertiary block uppercase font-bold tracking-wider">UPI Transaction Ref (UTR)</span>
+                        <span className="font-mono text-text-primary font-bold select-all tracking-wide break-all">{req.upiTxnId}</span>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(req.upiTxnId)}
+                        className="p-2 bg-surface border border-border-default hover:bg-sunken text-text-secondary hover:text-text-primary rounded-lg transition active:scale-95 cursor-pointer shrink-0"
+                        title="Copy to clipboard"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      </button>
                     </div>
-                  </div>
-                </div>
+
+                    {/* Screenshot Attachment view */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] text-text-secondary font-bold uppercase tracking-wider block">Receipt Screenshot</span>
+                      <div 
+                        onClick={() => setLightboxImage(req.screenshotUrl)}
+                        className="relative group overflow-hidden border border-border-default hover:border-brand/40 rounded-xl aspect-[16/9] bg-page flex items-center justify-center cursor-zoom-in"
+                      >
+                        <img 
+                          src={getImageUrl(req.screenshotUrl)} 
+                          alt="Payment Screenshot Receipt" 
+                          className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://placehold.co/600x400/18181b/a1a1aa?text=Image+Unavailable';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-ink-950/40 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center text-xs text-white font-bold gap-1.5 backdrop-blur-[1px]">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" className="w-4 h-4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                          Click to Zoom Image
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Status and Action Buttons */}
@@ -264,14 +271,14 @@ export default function AdminPurchases() {
                       {processingId === req._id ? 'Processing...' : (
                         <>
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>
-                          Approve
+                          Verify
                         </>
                       )}
                     </button>
                   </div>
                 ) : req.status === 'approved' ? (
                   <span className="px-3.5 py-1 bg-status-success-bg border border-status-success-text/25 text-status-success-text rounded-xl text-xs font-extrabold uppercase tracking-wide">
-                    Approved
+                    Verified
                   </span>
                 ) : (
                   <span className="px-3.5 py-1 bg-status-danger-bg border border-status-danger-text/20 text-status-danger-text rounded-xl text-xs font-extrabold uppercase tracking-wide">

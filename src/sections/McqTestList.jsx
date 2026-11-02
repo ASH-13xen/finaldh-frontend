@@ -116,7 +116,7 @@ function TestCard({ test, onStart, onResume, onReview, onUnlock }) {
   );
 }
 
-export default function McqTestList({ subject, onBack, onStart, onResume, onReview, onOpenFlagged, onHelp }) {
+export default function McqTestList({ subject, user, onBack, onStart, onResume, onReview, onOpenFlagged, onHelp }) {
   const [tests, setTests] = useState([]);
   const [subjectAccess, setSubjectAccess] = useState(null);
   const [purchaseRequests, setPurchaseRequests] = useState([]);
@@ -153,6 +153,7 @@ export default function McqTestList({ subject, onBack, onStart, onResume, onRevi
 
   const name = displaySubjectName(subject);
   const subjectPending = purchaseRequests.find((r) => r.purchaseType === 'subject' && r.subject === subject && r.status === 'pending');
+  const subjectRejected = purchaseRequests.find((r) => r.purchaseType === 'subject' && r.subject === subject && r.status === 'rejected');
   const subjectPrice = subjectAccess?.useDiscount ? subjectAccess.discountedPrice : subjectAccess?.price;
   const pricingConfigured = subjectAccess?.price !== null && subjectAccess?.price !== undefined;
 
@@ -215,14 +216,16 @@ export default function McqTestList({ subject, onBack, onStart, onResume, onRevi
               <p className="text-xs font-bold uppercase tracking-wider text-brand mb-1">Unlock everything in this subject</p>
               <p className="text-base text-text-primary font-semibold leading-snug">
                 {subjectPending
-                  ? 'Your earlier UPI payment is waiting for admin approval — usually within a few hours.'
-                  : pricingConfigured
-                    ? 'One purchase unlocks every test in this subject, including tests added in future. Access is instant.'
-                    : 'Pricing for this subject is being set up — check back soon.'}
+                  ? 'Your payment is received and waiting for admin verification — usually within a few hours.'
+                  : subjectRejected
+                    ? 'Your last payment was rejected — you can purchase again with a valid email ID and name.'
+                    : pricingConfigured
+                      ? 'One purchase unlocks every test in this subject, including tests added in future.'
+                      : 'Pricing for this subject is being set up — check back soon.'}
               </p>
             </div>
             {subjectPending ? (
-              <Chip tone="warning" className="whitespace-nowrap text-sm px-4 py-2">Pending approval</Chip>
+              <Chip tone="warning" className="whitespace-nowrap text-sm px-4 py-2">Pending verification</Chip>
             ) : pricingConfigured ? (
               <ActionButton tone="primary" size="lg" icon="lock" onClick={() => setShowSubjectPurchase(true)} className="whitespace-nowrap">Unlock all — ₹{subjectPrice}</ActionButton>
             ) : null}
@@ -280,6 +283,8 @@ export default function McqTestList({ subject, onBack, onStart, onResume, onRevi
           item={{ kind: 'mcq_subject', subject }}
           onPaid={() => setReloadKey((k) => k + 1)}
           onClose={() => setShowSubjectPurchase(false)}
+          telegramMessage={`I am ${user?.fullName || user?.name || 'Student'}, requesting confirmation for full subject access: ${name}`}
+          telegramTrackEndpointBase="/api/mcq/purchase-requests"
         />
       )}
     </div>

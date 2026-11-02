@@ -62,7 +62,8 @@ const brandColor = () => {
 //   { kind: 'course', courseId } | { kind: 'combo', comboOfferId, selectedCourseIds } | { kind: 'mcq_subject', subject }
 // onStage reports progress: 'starting' -> 'paying' (Razorpay's own window is open) -> 'confirming'.
 // Resolves with one of:
-//   { status: 'paid', payment }      access is granted
+//   { status: 'paid', payment, request }  payment confirmed; `request` is the pending purchase request the
+//                                         admin will verify (access comes with the admin's Verify)
 //   { status: 'cancelled' }          the student closed Checkout without paying
 //   { status: 'failed', reason }     the last attempt failed and the student closed Checkout
 //   { status: 'processing' }         paid, but the server couldn't confirm it yet (webhook will finish it)

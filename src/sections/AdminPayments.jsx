@@ -3,9 +3,10 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import StatusBadge from '../components/StatusBadge';
 import AdminPurchases from './AdminPurchases';
 
-// Admin "Payments" tab. Razorpay payments are read-only here: access unlocks automatically once a payment
-// is confirmed, and refunds are issued from the Razorpay dashboard. The legacy manual-UPI course requests
-// (still approvable until the queue is empty) sit behind the toggle; MCQ legacy requests live under Manage MCQ.
+// Admin "Purchase Requests" tab. The default view is the verification desk (AdminPurchases): every paid
+// course order becomes a pending request there, and access follows the admin's Verify. The second view is
+// the raw Razorpay ledger - every order, paid or not, with the verification status of its request. MCQ
+// subject requests are verified under Manage MCQ -> Purchase Requests.
 
 const STATUS_TABS = [
   ['paid', 'Paid'],
@@ -21,6 +22,14 @@ const STATUS_BADGE = {
 };
 
 const KIND_LABEL = { course: 'Course', combo: 'Combo', mcq_subject: 'MCQ subject' };
+
+// Where a paid order stands with the admin. Orders paid before admin verification was introduced
+// (2026-11-02) unlocked directly and have no request.
+const VERIFICATION_BADGE = {
+  pending: { type: 'warning', text: 'Awaiting verification' },
+  approved: { type: 'success', text: 'Verified' },
+  rejected: { type: 'danger', text: 'Rejected · refund' }
+};
 
 const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
@@ -73,9 +82,9 @@ function RazorpayPayments() {
     <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-10 md:pb-14 text-text-primary">
       <div className="mb-6 md:mb-8 border-b border-border-default pb-4 md:pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-4xl font-display font-semibold text-text-primary tracking-tight">Payments</h1>
+          <h1 className="text-xl md:text-4xl font-display font-semibold text-text-primary tracking-tight">Razorpay Payments</h1>
           <p className="text-text-secondary text-xs md:text-sm mt-1.5 md:mt-2 font-medium">
-            Every Razorpay payment. Access unlocks automatically the moment a payment is confirmed — nothing to approve. Refunds are issued from the Razorpay dashboard.
+            Every Razorpay order. Paid orders wait for your Verify under Purchase requests (courses) or Manage MCQ → Purchase Requests (MCQ subjects).
           </p>
         </div>
         <button
@@ -144,6 +153,9 @@ function RazorpayPayments() {
         <ul className="bg-surface border border-border-default rounded-2xl divide-y divide-border-default overflow-hidden">
           {shown.map((p) => {
             const badge = STATUS_BADGE[p.status] || STATUS_BADGE.created;
+            const verification = p.status === 'paid'
+              ? VERIFICATION_BADGE[p.verificationStatus] || { type: 'neutral', text: 'Auto-unlocked' }
+              : null;
             return (
               <li key={p._id} className="p-4 md:px-5 flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
                 <div className="min-w-0 md:w-56 shrink-0">
@@ -179,7 +191,10 @@ function RazorpayPayments() {
                       <p className="text-[10px] font-mono text-text-tertiary break-all">{p.razorpayOrderId}</p>
                     )}
                   </div>
-                  <StatusBadge type={badge.type} text={badge.text} className="shrink-0" />
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <StatusBadge type={badge.type} text={badge.text} />
+                    {verification && <StatusBadge type={verification.type} text={verification.text} className="whitespace-nowrap" />}
+                  </div>
                 </div>
               </li>
             );
@@ -191,13 +206,13 @@ function RazorpayPayments() {
 }
 
 export default function AdminPayments() {
-  const [view, setView] = useState('razorpay');
+  const [view, setView] = useState('requests');
 
   return (
     <>
       <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pt-6 md:pt-10 pb-6">
         <div className="inline-flex p-1 bg-sunken border border-border-default rounded-xl gap-1" role="tablist" aria-label="Payment records">
-          {[['razorpay', 'Razorpay payments'], ['legacy', 'Legacy UPI requests']].map(([id, label]) => (
+          {[['requests', 'Purchase requests'], ['razorpay', 'Razorpay payments']].map(([id, label]) => (
             <button
               key={id}
               role="tab"
@@ -210,7 +225,7 @@ export default function AdminPayments() {
           ))}
         </div>
       </div>
-      {view === 'razorpay' ? <RazorpayPayments /> : <AdminPurchases />}
+      {view === 'requests' ? <AdminPurchases /> : <RazorpayPayments />}
     </>
   );
 }

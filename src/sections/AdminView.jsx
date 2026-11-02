@@ -228,6 +228,8 @@ export default function AdminView() {
       (t.userName || '').toLowerCase().includes(txnSearch.toLowerCase()) ||
       (t.userEmail || '').toLowerCase().includes(txnSearch.toLowerCase()) ||
       (t.upiTxnId || '').toLowerCase().includes(txnSearch.toLowerCase()) ||
+      (t.razorpayPaymentId || '').toLowerCase().includes(txnSearch.toLowerCase()) ||
+      (t.payerContact || '').toLowerCase().includes(txnSearch.toLowerCase()) ||
       (t.courseName || '').toLowerCase().includes(txnSearch.toLowerCase());
     
     const matchesStatus = txnStatusFilter === 'all' || t.status === txnStatusFilter;
@@ -478,7 +480,7 @@ export default function AdminView() {
             
             <input
               type="text"
-              placeholder="Search UTR, student, email, course..."
+              placeholder="Search payment ID, UTR, student, email, phone, course..."
               value={txnSearch}
               onChange={(e) => setTxnSearch(e.target.value)}
               className="w-full md:w-80 px-4 py-2 bg-sunken border border-border-default hover:border-border-default/80 focus:border-brand text-text-primary placeholder:text-text-tertiary rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-brand font-medium transition"
@@ -495,8 +497,8 @@ export default function AdminView() {
                     <th className="px-4 py-3.5">Student Details</th>
                     <th className="px-4 py-3.5">Purchased Item</th>
                     <th className="px-4 py-3.5 text-right">Amount</th>
-                    <th className="px-4 py-3.5">UPI Ref (UTR)</th>
-                    <th className="px-4 py-3.5 text-center">Receipt</th>
+                    <th className="px-4 py-3.5">Payment Ref</th>
+                    <th className="px-4 py-3.5 text-center">Proof</th>
                     <th className="px-4 py-3.5 text-center">Status</th>
                     <th className="px-4 py-3.5 text-center">Action</th>
                     <th className="px-4 py-3.5 text-center">Marker Highlight</th>
@@ -536,6 +538,9 @@ export default function AdminView() {
                           <td className="px-4 py-4 min-w-[180px]">
                             <div className="font-bold text-text-primary">{txn.userName}</div>
                             <div className="text-[10px] text-text-secondary font-medium font-mono">{txn.userEmail}</div>
+                            {txn.payerContact && (
+                              <div className="text-[10px] text-text-secondary font-medium font-mono select-all">{txn.payerContact}</div>
+                            )}
                           </td>
 
                           {/* Purchased Item */}
@@ -562,9 +567,22 @@ export default function AdminView() {
                             ₹{txn.price}
                           </td>
 
-                          {/* UPI Txn ID */}
+                          {/* Payment reference: Razorpay payment id, or the UTR of a legacy UPI payment */}
                           <td className="px-4 py-4 font-mono font-bold tracking-wider text-text-secondary">
-                            {txn.upiTxnId ? (
+                            {txn.paymentMethod === 'razorpay' ? (
+                              <div>
+                                <span className="font-sans text-[9px] text-text-tertiary uppercase tracking-wider block">Razorpay{txn.payerMethod ? ` · ${txn.payerMethod.toUpperCase()}` : ''}</span>
+                                <a
+                                  href={`https://dashboard.razorpay.com/app/payments/${txn.razorpayPaymentId}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-brand hover:underline break-all"
+                                  title="Open in Razorpay dashboard"
+                                >
+                                  {txn.razorpayPaymentId}
+                                </a>
+                              </div>
+                            ) : txn.upiTxnId ? (
                               <div className="flex items-center gap-1.5">
                                 <span className="select-all break-all">{txn.upiTxnId}</span>
                                 <button
@@ -580,8 +598,13 @@ export default function AdminView() {
                             )}
                           </td>
 
-                          {/* Screenshot */}
+                          {/* Screenshot (legacy UPI) - a Razorpay payment is confirmed by Razorpay itself */}
                           <td className="px-4 py-4 text-center">
+                            {txn.paymentMethod === 'razorpay' ? (
+                              <span className="px-2 py-0.5 bg-status-success-bg text-status-success-text rounded-lg text-[9px] font-black uppercase tracking-wider whitespace-nowrap">
+                                Paid online
+                              </span>
+                            ) : (
                             <button
                               onClick={() => setLightboxImage(txn.screenshotUrl)}
                               className="p-1 border border-border-default hover:border-brand/40 bg-page rounded-lg overflow-hidden w-12 h-8 inline-flex items-center justify-center cursor-zoom-in transition"
@@ -596,6 +619,7 @@ export default function AdminView() {
                                 }}
                               />
                             </button>
+                            )}
                           </td>
 
                           {/* Status Badge */}
@@ -606,7 +630,7 @@ export default function AdminView() {
                               </span>
                             ) : txn.status === 'approved' ? (
                               <span className="px-2.5 py-0.5 bg-status-success-bg border border-status-success-text/25 text-status-success-text rounded-lg text-[10px] font-black uppercase tracking-wider">
-                                Approved
+                                Verified
                               </span>
                             ) : (
                               <span className="px-2.5 py-0.5 bg-status-danger-bg border border-status-danger-text/25 text-status-danger-text rounded-lg text-[10px] font-black uppercase tracking-wider">
@@ -631,7 +655,7 @@ export default function AdminView() {
                                   disabled={processingTxnId === txn._id}
                                   className="px-2.5 py-1.5 bg-brand hover:bg-brand-hover text-text-on-accent rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                                 >
-                                  Approve
+                                  Verify
                                 </button>
                               </div>
                             ) : (

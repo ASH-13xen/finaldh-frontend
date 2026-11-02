@@ -15,7 +15,7 @@ import {
   splitByExamStage,
 } from "../components/courses/courseHelpers";
 
-export default function PurchaseCourses({ user, onUserUpdate }) {
+export default function PurchaseCourses({ user }) {
   const [courses, setCourses] = useState([]);
   const [purchaseRequests, setPurchaseRequests] = useState([]);
   const [comboOffers, setComboOffers] = useState([]);
@@ -156,20 +156,22 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
     return { type: "available", label: "Available" };
   };
 
-  // Called by RazorpayCheckout the moment access is granted (while its success screen is still up): pull the
-  // fresh profile so the just-bought course(s) flip to "Purchased" - ownership comes from user.ownedCourseIds.
+  // Called by RazorpayCheckout as soon as the payment is confirmed: reload the requests so the course shows
+  // "Pending Verification" (with the Telegram button) behind the checkout's success screen.
   const handlePurchasePaid = async () => {
     try {
-      const res = await fetch("/api/user/profile", {
+      const reqRes = await fetch("/api/courses/purchase-requests", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      if (res.ok) onUserUpdate?.(await res.json());
+      if (reqRes.ok) {
+        setPurchaseRequests(await reqRes.json());
+      }
     } catch (err) {
-      console.error("Error refreshing profile after payment:", err);
+      console.error("Error refreshing purchase requests:", err);
     }
   };
 
-  // Handle opening Telegram with pre-filled message to tdhadmin (only offered on legacy UPI requests still pending)
+  // Handle opening Telegram with pre-filled message to tdhadmin (offered while a purchase request is pending)
   const handleTelegramNotify = (request, course, e) => {
     if (e) e.stopPropagation();
 
@@ -248,13 +250,19 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
     // 1. Check if the user already owns the course
     if (isOwned(course.courseId)) return { type: "purchased", label: "Purchased" };
 
-    // 2. Check if user has a legacy UPI request still waiting for admin verification. Razorpay payments
-    // never pass through this state - they unlock the course the moment they're confirmed.
+    // 2. Check if user has a paid purchase waiting for admin verification
     const pendingRequest = purchaseRequests.find(
       (r) => r.courseId === course.courseId && r.status === "pending",
     );
     if (pendingRequest)
       return { type: "pending", label: "Pending Verification" };
+
+    // 3. Check if user has a rejected request
+    const rejectedRequest = purchaseRequests.find(
+      (r) => r.courseId === course.courseId && r.status === "rejected",
+    );
+    if (rejectedRequest)
+      return { type: "rejected", label: "Rejected (Try Again)" };
 
     return { type: "available", label: "Available" };
   };
@@ -295,7 +303,8 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
         </h1>
         <p className="text-text-secondary text-xs md:text-sm mt-1.5 md:mt-2 font-medium">
           Unlock standard study packages and syllabus guides directly. Pay
-          securely with UPI, card or netbanking — access unlocks instantly.
+          securely with UPI, card or netbanking — access is activated once
+          your payment is verified.
         </p>
       </div>
 
@@ -580,6 +589,8 @@ export default function PurchaseCourses({ user, onUserUpdate }) {
           }
           onPaid={handlePurchasePaid}
           onClose={handleCloseCheckout}
+          telegramMessage={`I am ${user?.fullName || user?.name || "Student"} enrolled in ${checkoutName}, requesting for confirmation and group link`}
+          telegramTrackEndpointBase="/api/courses/purchase-requests"
         />
       )}
     </div>

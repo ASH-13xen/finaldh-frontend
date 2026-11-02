@@ -8,6 +8,7 @@ import { ActionButton, Chip, Modal } from '../components/mcq/ui';
 import QuestionEditor from '../components/mcq/QuestionEditor';
 import AdminMcqReports from './AdminMcqReports';
 import AdminMcqAttempts from './AdminMcqAttempts';
+import RazorpayPaymentDetails from '../components/RazorpayPaymentDetails';
 
 function UploadSummary({ summary }) {
   if (!summary) return null;
@@ -925,7 +926,7 @@ function AdminMcqPurchasesTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <p className="text-xs text-text-tertiary">Manual UPI payments submitted before Razorpay. New subject purchases are paid online and unlock instantly (see Payments).</p>
+        <p className="text-xs text-text-tertiary">Check the buyer's name, email and phone, then verify to unlock the subject. A rejected buyer sees a refund notice — refund them directly.</p>
         <button onClick={fetchRequests} className="px-3 py-1.5 bg-accent-soft-bg border border-accent-soft-border hover:bg-accent-soft-border/50 text-brand rounded-xl text-xs font-bold transition cursor-pointer">
           Refresh
         </button>
@@ -988,17 +989,21 @@ function AdminMcqPurchasesTab() {
                   )}
                 </div>
 
-                <div
-                  onClick={() => setLightboxImage(req.screenshotUrl)}
-                  className="relative group overflow-hidden border border-border-default hover:border-brand/40 rounded-xl aspect-[16/9] bg-page flex items-center justify-center cursor-zoom-in"
-                >
-                  <img
-                    src={getImageUrl(req.screenshotUrl)}
-                    alt="Payment Screenshot Receipt"
-                    className="w-full h-full object-cover"
-                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/18181b/a1a1aa?text=Image+Unavailable'; }}
-                  />
-                </div>
+                {req.paymentMethod === 'razorpay' ? (
+                  <RazorpayPaymentDetails request={req} compact />
+                ) : (
+                  <div
+                    onClick={() => setLightboxImage(req.screenshotUrl)}
+                    className="relative group overflow-hidden border border-border-default hover:border-brand/40 rounded-xl aspect-[16/9] bg-page flex items-center justify-center cursor-zoom-in"
+                  >
+                    <img
+                      src={getImageUrl(req.screenshotUrl)}
+                      alt="Payment Screenshot Receipt"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/18181b/a1a1aa?text=Image+Unavailable'; }}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-border-default pt-4 mt-4 flex items-center justify-between gap-4">
@@ -1017,11 +1022,11 @@ function AdminMcqPurchasesTab() {
                       disabled={processingId === req._id}
                       className="px-4 py-1.5 bg-brand hover:bg-brand-hover disabled:opacity-50 text-text-on-accent rounded-xl text-xs font-bold transition cursor-pointer"
                     >
-                      {processingId === req._id ? 'Processing...' : 'Approve'}
+                      {processingId === req._id ? 'Processing...' : 'Verify'}
                     </button>
                   </div>
                 ) : req.status === 'approved' ? (
-                  <span className="px-3 py-1 bg-status-success-bg border border-status-success-text/25 text-status-success-text rounded-xl text-xs font-extrabold uppercase">Approved</span>
+                  <span className="px-3 py-1 bg-status-success-bg border border-status-success-text/25 text-status-success-text rounded-xl text-xs font-extrabold uppercase">Verified</span>
                 ) : (
                   <span className="px-3 py-1 bg-status-danger-bg border border-status-danger-text/20 text-status-danger-text rounded-xl text-xs font-extrabold uppercase">Rejected</span>
                 )}
@@ -1056,7 +1061,7 @@ const SUB_TABS = [
   ['reports', 'Reported Questions', 'reports'],
   ['attempts', 'Student Attempts', null],
   ['pricing', 'Subject Pricing', null],
-  ['purchases', 'Legacy UPI Requests', null]
+  ['purchases', 'Purchase Requests', null]
 ];
 
 function AdminMcqDataInner() {

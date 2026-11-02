@@ -20,6 +20,7 @@ import AdminMcqData from './AdminMcqData';
 import McqFlow from './McqFlow';
 import AdminView from './AdminView';
 import AdminContactUsers from './AdminContactUsers';
+import PaymentRejectionNotice from '../components/PaymentRejectionNotice';
 
 export default function DashboardSection({ user, onLogout, activeTab, setActiveTab, onUserUpdate }) {
   const [syllabusData, setSyllabusData] = useState(null);
@@ -68,6 +69,9 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
       {/* Navbar Header */}
       <Navbar user={user} onLogout={onLogout} activeTab={activeTab} setActiveTab={setActiveTab} />
 
+      {/* Refund notice for any Razorpay payment the admin rejected, shown on whichever page the student lands */}
+      {!user.isAdmin && <PaymentRejectionNotice />}
+
       {/* Main Page Workspace Content */}
       <main className="flex-grow">
       {/* key={activeTab} remounts the boundary on tab switch, so navigating away from a
@@ -111,7 +115,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
         )}
 
         {activeTab === 'purchase_courses' && (
-          <PurchaseCourses user={user} onUserUpdate={onUserUpdate} />
+          <PurchaseCourses user={user} />
         )}
 
         {activeTab === 'admin_purchases' && (
@@ -139,7 +143,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
         )}
 
         {activeTab?.startsWith('mcq_') && (
-          <McqFlow />
+          <McqFlow user={user} />
         )}
 
         {activeTab === 'admin_mcq_data' && (
