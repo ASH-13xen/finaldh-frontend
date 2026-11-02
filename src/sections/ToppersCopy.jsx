@@ -405,11 +405,11 @@ export default function ToppersCopy({ isAdmin = false }) {
                   }`}
                 >
                   {label}
-                  {n ? <span className="ml-1 text-[11px] font-bold opacity-70">{n}</span> : null}
+                  {n ? <span className="ml-1 text-[13px] font-bold opacity-70">{n}</span> : null}
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-text-tertiary font-medium mt-0.5 truncate">
+            <p className="text-[13px] text-text-tertiary font-medium mt-0.5 truncate">
               {drawerTopicName || 'Pick a topic'}
             </p>
           </div>
@@ -469,13 +469,13 @@ export default function ToppersCopy({ isAdmin = false }) {
             <div className="px-5 py-3.5 border-b border-border-default flex-shrink-0 flex items-start gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="text-[11px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">{selectedPyq.year}</span>
+                  <span className="text-[13px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">{selectedPyq.year}</span>
                   {selectedPyq.marks ? (
-                    <span className="text-[11px] font-bold text-text-secondary bg-sunken px-1.5 py-0.5 rounded">{selectedPyq.marks} marks</span>
+                    <span className="text-[13px] font-bold text-text-secondary bg-sunken px-1.5 py-0.5 rounded">{selectedPyq.marks} marks</span>
                   ) : null}
-                  <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wide">Model answer</span>
+                  <span className="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide">Model answer</span>
                 </div>
-                <p className="font-reading text-sm font-semibold text-text-primary leading-snug">{selectedPyq.questionText}</p>
+                <p className="font-reading text-[17px] font-semibold text-text-primary leading-snug">{selectedPyq.questionText}</p>
               </div>
               <BookmarkButton
                 compact
@@ -1074,25 +1074,25 @@ function PyqCard({ q, selected, onOpen, bookmarked, onBookmark }) {
   return (
     <div className={`p-3 border rounded-xl transition-colors ${selected ? 'bg-surface border-brand' : 'bg-sunken border-border-default'}`}>
       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-        <span className="text-[11px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">{q.year}</span>
+        <span className="text-[13px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">{q.year}</span>
         {q.marks ? (
-          <span className="text-[11px] font-bold text-text-secondary bg-surface px-1.5 py-0.5 rounded">{q.marks} marks</span>
+          <span className="text-[13px] font-bold text-text-secondary bg-surface px-1.5 py-0.5 rounded">{q.marks} marks</span>
         ) : null}
         {q.topic || q.microtheme ? (
-          <span className="text-[11px] font-semibold text-text-tertiary uppercase truncate">{q.topic || q.microtheme}</span>
+          <span className="text-[13px] font-semibold text-text-tertiary uppercase truncate">{q.topic || q.microtheme}</span>
         ) : null}
         {q.pyqAnswerStatus === 'draft' ? (
-          <span className="text-[11px] font-bold text-status-warning-text bg-status-warning-bg px-1.5 py-0.5 rounded">answer draft</span>
+          <span className="text-[13px] font-bold text-status-warning-text bg-status-warning-bg px-1.5 py-0.5 rounded">answer draft</span>
         ) : null}
         {q._id && onBookmark ? (
           <BookmarkButton compact label="Bookmark PYQ" active={bookmarked} onToggle={() => onBookmark(q)} className="ml-auto" />
         ) : null}
       </div>
-      <p className="font-reading text-sm text-text-primary leading-relaxed font-medium">{q.questionText}</p>
+      <p className="font-reading text-base text-text-primary leading-relaxed font-medium">{q.questionText}</p>
 
       {hasAnswer && (
         <button
-          className="mt-2 text-xs font-bold text-brand hover:text-brand-hover flex items-center gap-1 cursor-pointer"
+          className="mt-2 text-sm font-bold text-brand hover:text-brand-hover flex items-center gap-1 cursor-pointer"
           onClick={() => onOpen(q)}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
@@ -1143,22 +1143,22 @@ function ValueAdditionList({ items, selectedId, onOpen }) {
           >
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               {v.hasBank ? (
-                <span className="text-[11px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">
+                <span className="text-[13px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">
                   Searchable notes{v.bankStats?.notes ? ` · ${v.bankStats.notes}` : ''}
                 </span>
               ) : null}
               {v.hasPdf ? (
-                <span className="text-[11px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">PDF</span>
+                <span className="text-[13px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">PDF</span>
               ) : null}
               {v.body?.trim() ? (
-                <span className="text-[11px] font-bold text-text-secondary bg-surface px-1.5 py-0.5 rounded">Notes</span>
+                <span className="text-[13px] font-bold text-text-secondary bg-surface px-1.5 py-0.5 rounded">Notes</span>
               ) : null}
               {!v.published ? (
-                <span className="text-[11px] font-bold text-status-warning-text bg-status-warning-bg px-1.5 py-0.5 rounded">draft</span>
+                <span className="text-[13px] font-bold text-status-warning-text bg-status-warning-bg px-1.5 py-0.5 rounded">draft</span>
               ) : null}
             </div>
-            <p className="font-reading text-sm text-text-primary leading-relaxed font-semibold">{v.title}</p>
-            <p className="mt-1.5 text-xs font-bold text-brand">{selected ? 'Open' : 'Open →'}</p>
+            <p className="font-reading text-base text-text-primary leading-relaxed font-semibold">{v.title}</p>
+            <p className="mt-1.5 text-sm font-bold text-brand">{selected ? 'Open' : 'Open →'}</p>
           </button>
         );
       })}

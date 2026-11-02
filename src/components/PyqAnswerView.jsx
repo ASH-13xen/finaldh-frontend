@@ -18,29 +18,29 @@ export default function PyqAnswerView({ answer, pyqId }) {
   const showRawFallback = isFromBook && sections.length === 0;
 
   return (
-    <div className="font-reading space-y-3 text-sm leading-relaxed">
+    <div className="font-reading space-y-4 text-[17px] leading-relaxed">
       {showRawFallback ? (
         <div className="space-y-2">
           {(answer.rawText || '').split(/\n{2,}/).map((para, i) => (
-            <p key={i} className="whitespace-pre-line text-text-secondary">{para}</p>
+            <p key={i} className="whitespace-pre-line text-text-primary">{para}</p>
           ))}
         </div>
       ) : (
         <>
           {answer.openingLine && (
-            <p className="text-text-primary font-medium border-l-2 border-brand/50 pl-2.5">{answer.openingLine}</p>
+            <p className="va-tone-intro p-3 bg-[var(--va-tint)] border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl text-text-primary font-medium">{answer.openingLine}</p>
           )}
 
           {sections.map((s, i) => (
-            <div key={i} className="space-y-1">
-              <p className="font-bold text-text-primary">{i + 1}. {s.heading}</p>
-              <ul className="space-y-1 pl-1">
+            <div key={i} className="space-y-1.5">
+              <p className="font-bold text-brand">{i + 1}. {s.heading}</p>
+              <ul className="space-y-1.5 pl-1">
                 {(s.points || []).map((p, j) => (
                   <li key={j} className="flex gap-1.5 text-text-secondary">
                     <span className="text-brand font-bold flex-shrink-0">•</span>
                     <span>
                       <span className="text-text-primary">{p.claim}</span>
-                      {p.example ? <span className="text-text-tertiary"> — Eg: {p.example}</span> : null}
+                      {p.example ? <span className="va-tone-example font-hand text-[20px] text-[var(--va-ink)]"> — Eg: {p.example}</span> : null}
                     </span>
                   </li>
                 ))}
@@ -49,11 +49,11 @@ export default function PyqAnswerView({ answer, pyqId }) {
           ))}
 
           {answer.closingLine && (
-            <p className="text-text-primary font-medium">{answer.closingLine}</p>
+            <p className="va-tone-conclusion p-3 bg-[var(--va-tint)] border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl text-text-primary font-medium">{answer.closingLine}</p>
           )}
 
           {answer.quote && (
-            <p className="text-xs text-brand italic border-l-2 border-brand/40 pl-2">“{answer.quote}”</p>
+            <p className="va-tone-quote p-3 bg-[var(--va-tint)] border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl font-hand text-[20px] text-[var(--va-ink)]">“{answer.quote}”</p>
           )}
         </>
       )}
@@ -68,16 +68,16 @@ export default function PyqAnswerView({ answer, pyqId }) {
                 loading="lazy"
                 className="w-full rounded-lg border border-border-default bg-surface"
               />
-              {im.caption ? <figcaption className="text-[11px] text-text-tertiary">{im.caption}</figcaption> : null}
+              {im.caption ? <figcaption className="text-[13px] text-text-tertiary">{im.caption}</figcaption> : null}
             </figure>
           ))}
         </div>
       )}
 
       {diagramIsRenderable(answer.diagram) && (
-        <div className="pt-1">
+        <div className="va-tone-diagram pt-1">
           {answer.diagram.title ? (
-            <p className="text-[11px] font-bold text-text-tertiary uppercase tracking-wider mb-1">
+            <p className="text-sm font-bold text-[var(--va-ink)] uppercase tracking-wider mb-1.5">
               Diagram — {answer.diagram.title}
             </p>
           ) : null}
@@ -85,17 +85,17 @@ export default function PyqAnswerView({ answer, pyqId }) {
             <AnswerDiagram diagram={answer.diagram} />
           </div>
           {answer.diagram.howToDraw ? (
-            <p className="text-[11px] text-text-tertiary mt-1">{answer.diagram.howToDraw}</p>
+            <p className="text-base text-text-secondary mt-1.5">{answer.diagram.howToDraw}</p>
           ) : null}
         </div>
       )}
 
       {isFromBook ? (
-        <p className="text-[11px] text-text-tertiary pt-1.5 border-t border-border-default">
+        <p className="text-[13px] text-text-tertiary pt-1.5 border-t border-border-default">
           From the official model-answer book{answer.editedAt ? ', admin-edited' : ''}
         </p>
       ) : sections.length > 0 && answer.aiModel && (
-        <p className="text-[11px] text-text-tertiary pt-1.5 border-t border-border-default">
+        <p className="text-[13px] text-text-tertiary pt-1.5 border-t border-border-default">
           AI-generated model answer{answer.editedAt ? ', admin-edited' : ''} · {answer.aiModel}
         </p>
       )}
