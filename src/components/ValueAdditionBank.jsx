@@ -40,7 +40,7 @@ function NoteBox({ notes, terms }) {
   return (
     <ul className="p-4 pl-8 bg-[var(--va-tint)] border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl list-disc marker:text-[var(--va-ink)] space-y-2.5">
       {notes.map((note) => (
-        <li key={note.id} className={`leading-relaxed ${HANDWRITTEN.has(note.type) ? 'font-hand text-[20px] text-[var(--va-ink)]' : 'font-reading text-[18px] text-text-primary'}`}>
+        <li key={note.id} className={`leading-relaxed ${HANDWRITTEN.has(note.type) ? 'font-hand text-[21px] text-[var(--va-ink)]' : 'font-reading text-[18px] text-text-primary'}`}>
           {note.title ? <b className="font-bold text-[var(--va-ink)] not-italic"><Hl text={note.title} terms={terms} />{note.text ? ': ' : ''}</b> : null}
           {note.cols?.length ? (
             <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 mt-1 text-[0.9em]">
@@ -64,7 +64,7 @@ function NoteBox({ notes, terms }) {
 // the search / filters simply drop out. A row's cells are matched to the header by label.
 function NoteTable({ table, rows, terms }) {
   const [first, ...rest] = table.head;
-  const body = HANDWRITTEN.has(rows[0]?.type) ? 'font-hand text-[18px] text-[var(--va-ink)]' : 'font-reading text-text-primary';
+  const body = HANDWRITTEN.has(rows[0]?.type) ? 'font-hand text-[19px] text-[var(--va-ink)]' : 'font-reading text-text-primary';
   return (
     <div className="overflow-x-auto border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl bg-surface">
       <table className="w-full text-base border-collapse">
@@ -92,10 +92,10 @@ function NoteTable({ table, rows, terms }) {
   );
 }
 
-export default function ValueAdditionBank({ entryId }) {
+// The search box lives in the reader's slim top bar, so `q` comes from the parent.
+export default function ValueAdditionBank({ entryId, title, q, onSearch }) {
   const [bank, setBank] = useState(null);
   const [error, setError] = useState('');
-  const [q, setQ] = useState('');
   const [type, setType] = useState('all');
   const [section, setSection] = useState('all');
   const [showPyqs, setShowPyqs] = useState(false);
@@ -157,17 +157,9 @@ export default function ValueAdditionBank({ entryId }) {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="sticky top-0 z-10 bg-surface border-b border-border-default px-5 py-3">
-        <div className="max-w-4xl mx-auto space-y-2.5">
-        <div className="flex flex-wrap gap-2">
-          <input
-            id="va-bank-search"
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search facts, data, examples… e.g. UNESCO, inscription, 2023"
-            className="flex-1 min-w-[180px] bg-sunken border border-border-default focus:border-brand text-text-primary rounded-lg px-3 py-2 text-base focus:outline-none"
-          />
+      <div className="max-w-4xl mx-auto px-5 py-5 space-y-6">
+        <div className="space-y-2.5">
+          <p className="sm:hidden font-reading text-lg font-semibold text-text-primary leading-snug">{title}</p>
           {multi && (
             <select
               id="va-bank-section"
@@ -179,21 +171,18 @@ export default function ValueAdditionBank({ entryId }) {
               {bank.sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           )}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <button className={chip(type === 'all')} onClick={() => setType('all')}>
-            All <span className="opacity-60 tabular-nums">{pool.length}</span>
-          </button>
-          {TYPES.filter(([k]) => bank.notes.some((n) => n.type === k)).map(([k, label]) => (
-            <button key={k} className={typeChip(k, type === k)} disabled={!counts[k]} onClick={() => setType(k)}>
-              {label} <span className="opacity-60 tabular-nums">{counts[k] || 0}</span>
+          <div className="flex flex-wrap gap-1.5">
+            <button className={chip(type === 'all')} onClick={() => setType('all')}>
+              All <span className="opacity-60 tabular-nums">{pool.length}</span>
             </button>
-          ))}
+            {TYPES.filter(([k]) => bank.notes.some((n) => n.type === k)).map(([k, label]) => (
+              <button key={k} className={typeChip(k, type === k)} disabled={!counts[k]} onClick={() => setType(k)}>
+                {label} <span className="opacity-60 tabular-nums">{counts[k] || 0}</span>
+              </button>
+            ))}
+          </div>
         </div>
-        </div>
-      </div>
 
-      <div className="max-w-4xl mx-auto px-5 py-6 space-y-6">
         {(sec || !multi) && (() => {
           const s = sec || bank.sections[0];
           return (s.pyqs.length > 0 || s.keywords.length > 0) && (
@@ -218,7 +207,7 @@ export default function ValueAdditionBank({ entryId }) {
               {s.keywords.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {s.keywords.map((k) => (
-                    <button key={k} onClick={() => setQ(k)} className="text-sm px-2 py-0.5 rounded-md bg-sunken text-text-secondary hover:text-brand cursor-pointer">{k}</button>
+                    <button key={k} onClick={() => onSearch(k)} className="text-sm px-2 py-0.5 rounded-md bg-sunken text-text-secondary hover:text-brand cursor-pointer">{k}</button>
                   ))}
                 </div>
               )}

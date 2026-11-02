@@ -1190,37 +1190,45 @@ function ValueAdditionReader({ item, topicName, onClose }) {
   const hasNotes = !!item.body?.trim();
   // An entry with a Word-file notes bank opens on the bank; its notes / PDF (if any) sit behind a toggle.
   const [view, setView] = useState('bank');
+  const [q, setQ] = useState('');
   const showBank = item.hasBank && (view === 'bank' || (!hasNotes && !item.hasPdf));
   return (
     <>
-      <div className="px-5 py-3.5 border-b border-border-default flex-shrink-0">
-        <div className="max-w-4xl mx-auto">
+      <div className="px-5 border-b border-border-default flex-shrink-0">
+        <div className="max-w-4xl mx-auto min-h-[52px] py-2 flex items-center gap-3">
           <button
             onClick={onClose}
-            className="-ml-2 mb-2 px-2 py-1 rounded-lg hover:bg-sunken text-sm font-bold text-brand cursor-pointer"
+            className="-ml-2 px-2 py-1 rounded-lg hover:bg-sunken text-sm font-bold text-brand cursor-pointer flex-shrink-0"
           >
             ← Back
           </button>
-          <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-1 truncate">
-            Value addition{topicName ? ` · ${topicName}` : ''}
-          </p>
-          <p className="font-reading text-xl font-semibold text-text-primary leading-snug">{item.title}</p>
-          {item.hasBank && (hasNotes || item.hasPdf) && (
-            <div className="flex gap-1 mt-2 -ml-1">
-              {[['bank', 'Searchable notes'], ['file', item.hasPdf ? 'PDF' : 'Notes']].map(([k, label]) => (
-                <button
-                  key={k}
-                  onClick={() => setView(k)}
-                  className={`px-2 py-0.5 rounded-lg text-sm font-bold cursor-pointer ${view === k ? 'bg-accent-soft-bg text-brand' : 'text-text-secondary hover:bg-sunken'}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          <p className={`font-reading text-base font-semibold text-text-primary truncate min-w-0 flex-1 ${showBank ? 'hidden sm:block' : ''}`} title={topicName}>{item.title}</p>
+          {showBank && (
+            <input
+              id="va-bank-search"
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search facts, data, examples…"
+              className="min-w-0 flex-1 sm:flex-none sm:w-72 bg-sunken border border-border-default focus:border-brand text-text-primary rounded-lg px-3 py-1.5 text-base focus:outline-none"
+            />
           )}
         </div>
+        {item.hasBank && (hasNotes || item.hasPdf) && (
+          <div className="max-w-4xl mx-auto flex gap-1 pb-2 -ml-1">
+            {[['bank', 'Searchable notes'], ['file', item.hasPdf ? 'PDF' : 'Notes']].map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setView(k)}
+                className={`px-2 py-0.5 rounded-lg text-sm font-bold cursor-pointer ${view === k ? 'bg-accent-soft-bg text-brand' : 'text-text-secondary hover:bg-sunken'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {showBank && <ValueAdditionBank key={item._id} entryId={item._id} />}
+      {showBank && <ValueAdditionBank key={item._id} entryId={item._id} title={item.title} q={q} onSearch={setQ} />}
       {!showBank && hasNotes && (
         <div className={`px-5 py-5 overflow-y-auto ${item.hasPdf ? 'max-h-[40%] flex-shrink-0 border-b border-border-default' : 'flex-1'}`}>
           <div className="max-w-4xl mx-auto">
