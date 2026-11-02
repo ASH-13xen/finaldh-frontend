@@ -466,16 +466,16 @@ export default function ToppersCopy({ isAdmin = false }) {
               <ValueAdditionReader key={selectedVa._id} item={selectedVa} topicName={drawerTopicName} onClose={closeReading} />
             ) : (
             <>
-            <div className="px-5 py-3.5 border-b border-border-default flex-shrink-0 flex items-start gap-3">
+            <div className="px-5 py-3.5 border-b border-border-default bg-accent-soft-bg flex-shrink-0 flex items-start gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="text-[13px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">{selectedPyq.year}</span>
                   {selectedPyq.marks ? (
-                    <span className="text-[13px] font-bold text-text-secondary bg-sunken px-1.5 py-0.5 rounded">{selectedPyq.marks} marks</span>
+                    <span className="text-[13px] font-bold text-status-info-text bg-status-info-bg px-1.5 py-0.5 rounded">{selectedPyq.marks} marks</span>
                   ) : null}
-                  <span className="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide">Model answer</span>
+                  <span className="text-[13px] font-bold text-brand uppercase tracking-wide">Model answer</span>
                 </div>
-                <p className="font-reading text-[17px] font-semibold text-text-primary leading-snug">{selectedPyq.questionText}</p>
+                <p className="font-reading text-[18px] font-semibold text-text-primary leading-snug">{selectedPyq.questionText}</p>
               </div>
               <BookmarkButton
                 compact
@@ -1072,14 +1072,14 @@ function ProgressBar({ value, total, className = '' }) {
 function PyqCard({ q, selected, onOpen, bookmarked, onBookmark }) {
   const hasAnswer = !!q.pyqAnswer;
   return (
-    <div className={`p-3 border rounded-xl transition-colors ${selected ? 'bg-surface border-brand' : 'bg-sunken border-border-default'}`}>
+    <div className={`p-3 border border-l-4 border-l-brand rounded-xl transition-colors ${selected ? 'bg-accent-soft-bg border-brand' : 'bg-surface border-border-default'}`}>
       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
         <span className="text-[13px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">{q.year}</span>
         {q.marks ? (
-          <span className="text-[13px] font-bold text-text-secondary bg-surface px-1.5 py-0.5 rounded">{q.marks} marks</span>
+          <span className="text-[13px] font-bold text-status-info-text bg-status-info-bg px-1.5 py-0.5 rounded">{q.marks} marks</span>
         ) : null}
         {q.topic || q.microtheme ? (
-          <span className="text-[13px] font-semibold text-text-tertiary uppercase truncate">{q.topic || q.microtheme}</span>
+          <span className="text-[13px] font-semibold text-brand uppercase truncate">{q.topic || q.microtheme}</span>
         ) : null}
         {q.pyqAnswerStatus === 'draft' ? (
           <span className="text-[13px] font-bold text-status-warning-text bg-status-warning-bg px-1.5 py-0.5 rounded">answer draft</span>
@@ -1088,7 +1088,7 @@ function PyqCard({ q, selected, onOpen, bookmarked, onBookmark }) {
           <BookmarkButton compact label="Bookmark PYQ" active={bookmarked} onToggle={() => onBookmark(q)} className="ml-auto" />
         ) : null}
       </div>
-      <p className="font-reading text-base text-text-primary leading-relaxed font-medium">{q.questionText}</p>
+      <p className="font-reading text-[17px] text-text-primary leading-relaxed font-medium">{q.questionText}</p>
 
       {hasAnswer && (
         <button
