@@ -1194,8 +1194,8 @@ function ValueAdditionReader({ item, topicName, onClose }) {
   const showBank = item.hasBank && (view === 'bank' || (!hasNotes && !item.hasPdf));
   return (
     <>
-      <div className="px-5 border-b border-border-default flex-shrink-0">
-        <div className="max-w-4xl mx-auto min-h-[52px] py-2 flex items-center gap-3">
+      <div className="border-b border-border-default flex-shrink-0">
+        <div className="max-w-4xl mx-auto px-5 min-h-[52px] py-2 flex items-center gap-3">
           <button
             onClick={onClose}
             className="-ml-2 px-2 py-1 rounded-lg hover:bg-sunken text-sm font-bold text-brand cursor-pointer flex-shrink-0"
@@ -1215,7 +1215,7 @@ function ValueAdditionReader({ item, topicName, onClose }) {
           )}
         </div>
         {item.hasBank && (hasNotes || item.hasPdf) && (
-          <div className="max-w-4xl mx-auto flex gap-1 pb-2 -ml-1">
+          <div className="max-w-4xl mx-auto px-4 flex gap-1 pb-2">
             {[['bank', 'Searchable notes'], ['file', item.hasPdf ? 'PDF' : 'Notes']].map(([k, label]) => (
               <button
                 key={k}
@@ -1230,8 +1230,8 @@ function ValueAdditionReader({ item, topicName, onClose }) {
       </div>
       {showBank && <ValueAdditionBank key={item._id} entryId={item._id} title={item.title} q={q} onSearch={setQ} />}
       {!showBank && hasNotes && (
-        <div className={`px-5 py-5 overflow-y-auto ${item.hasPdf ? 'max-h-[40%] flex-shrink-0 border-b border-border-default' : 'flex-1'}`}>
-          <div className="max-w-4xl mx-auto">
+        <div className={`py-5 overflow-y-auto ${item.hasPdf ? 'max-h-[40%] flex-shrink-0 border-b border-border-default' : 'flex-1'}`}>
+          <div className="max-w-4xl mx-auto px-5">
             <ValueAdditionNotes text={item.body} />
           </div>
         </div>
