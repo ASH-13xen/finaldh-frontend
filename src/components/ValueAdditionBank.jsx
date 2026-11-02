@@ -38,10 +38,10 @@ function Hl({ text, terms }) {
 // "Label: text". Section, type and sub-heading are the headings above the box (see sectionRuns).
 function NoteBox({ notes, terms }) {
   return (
-    <ul className="p-4 pl-8 bg-surface border border-border-default rounded-xl list-disc marker:text-brand space-y-2.5">
+    <ul className="p-4 pl-8 bg-[var(--va-tint)] border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl list-disc marker:text-[var(--va-ink)] space-y-2.5">
       {notes.map((note) => (
-        <li key={note.id} className={`leading-relaxed ${HANDWRITTEN.has(note.type) ? 'font-hand text-[20px] text-text-primary' : 'font-reading text-[18px] text-text-secondary'}`}>
-          {note.title ? <b className="font-bold text-text-primary not-italic"><Hl text={note.title} terms={terms} />{note.text ? ': ' : ''}</b> : null}
+        <li key={note.id} className={`leading-relaxed ${HANDWRITTEN.has(note.type) ? 'font-hand text-[20px] text-[var(--va-ink)]' : 'font-reading text-[18px] text-text-primary'}`}>
+          {note.title ? <b className="font-bold text-[var(--va-ink)] not-italic"><Hl text={note.title} terms={terms} />{note.text ? ': ' : ''}</b> : null}
           {note.cols?.length ? (
             <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 mt-1 text-[0.9em]">
               {note.cols.map(([k, v], i) => (
@@ -64,21 +64,21 @@ function NoteBox({ notes, terms }) {
 // the search / filters simply drop out. A row's cells are matched to the header by label.
 function NoteTable({ table, rows, terms }) {
   const [first, ...rest] = table.head;
-  const body = HANDWRITTEN.has(rows[0]?.type) ? 'font-hand text-[18px] text-text-primary' : 'font-reading text-text-secondary';
+  const body = HANDWRITTEN.has(rows[0]?.type) ? 'font-hand text-[18px] text-[var(--va-ink)]' : 'font-reading text-text-primary';
   return (
-    <div className="overflow-x-auto border border-border-default rounded-xl bg-surface">
+    <div className="overflow-x-auto border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl bg-surface">
       <table className="w-full text-base border-collapse">
         <thead>
-          <tr className="bg-sunken text-left">
+          <tr className="bg-[var(--va-tint)] text-left">
             {[first, ...rest].map((h, i) => (
-              <th key={i} className="px-3 py-2 font-bold text-text-primary border-b border-border-default align-bottom">{h}</th>
+              <th key={i} className="px-3 py-2 font-bold text-[var(--va-ink)] border-b border-border-default align-bottom">{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((n) => (
             <tr key={n.id} className="border-t border-border-default first:border-t-0 align-top">
-              <td className="px-3 py-2 font-semibold text-text-primary"><Hl text={n.title} terms={terms} /></td>
+              <td className="px-3 py-2 font-semibold text-[var(--va-ink)]"><Hl text={n.title} terms={terms} /></td>
               {rest.map((h, i) => (
                 <td key={i} className={`px-3 py-2 ${body}`}>
                   <Hl text={n.cols?.find(([k]) => k === h)?.[1] || ''} terms={terms} />
@@ -147,8 +147,12 @@ export default function ValueAdditionBank({ entryId }) {
 
   const sec = sectionsById[section];
   const multi = bank.sections.length > 1;
-  const chip = (active) => `px-3 py-1 rounded-full border text-sm font-semibold cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-default ${
+  const chipBase = 'px-3 py-1 rounded-full border text-sm font-semibold cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-default';
+  const chip = (active) => `${chipBase} ${
     active ? 'bg-text-primary text-surface border-text-primary' : 'bg-surface text-text-secondary border-border-default hover:border-brand/60'
+  }`;
+  const typeChip = (k, active) => `${chipBase} va-tone-${k} border-[var(--va-ink)] ${
+    active ? 'bg-[var(--va-ink)] text-surface' : 'bg-[var(--va-tint)] text-[var(--va-ink)]'
   }`;
 
   return (
@@ -181,7 +185,7 @@ export default function ValueAdditionBank({ entryId }) {
             All <span className="opacity-60 tabular-nums">{pool.length}</span>
           </button>
           {TYPES.filter(([k]) => bank.notes.some((n) => n.type === k)).map(([k, label]) => (
-            <button key={k} className={chip(type === k)} disabled={!counts[k]} onClick={() => setType(k)}>
+            <button key={k} className={typeChip(k, type === k)} disabled={!counts[k]} onClick={() => setType(k)}>
               {label} <span className="opacity-60 tabular-nums">{counts[k] || 0}</span>
             </button>
           ))}
@@ -235,16 +239,16 @@ export default function ValueAdditionBank({ entryId }) {
         {sectionRuns.map((sr) => (
           <section key={sr.id} className="space-y-3">
             {multi && (
-              <h3 className="text-xl font-bold text-text-primary border-b border-border-default pb-1.5">
-                {sectionNo[sr.id]}. {sectionsById[sr.id]?.name}
+              <h3 className="text-xl font-bold text-text-primary border-b-2 border-brand pb-1.5">
+                <span className="text-brand">{sectionNo[sr.id]}.</span> {sectionsById[sr.id]?.name}
               </h3>
             )}
             {sr.runs.map((run) => (
-              <div key={run.notes[0].id} className="space-y-2">
+              <div key={run.notes[0].id} className={`space-y-2 va-tone-${run.type}`}>
                 {run.head && (
-                  <h4 className="text-sm font-bold uppercase tracking-wide text-text-tertiary">
-                    {TYPES.find(([k]) => k === run.type)?.[1] || 'Notes'}
-                    {run.sub ? <span className="normal-case font-semibold"> · <Hl text={run.sub} terms={terms} /></span> : null}
+                  <h4 className="text-sm font-bold tracking-wide text-[var(--va-ink)]">
+                    <span className="inline-block uppercase px-2.5 py-0.5 rounded-md bg-[var(--va-tint)] border border-[var(--va-ink)]">{TYPES.find(([k]) => k === run.type)?.[1] || 'Notes'}</span>
+                    {run.sub ? <span className="font-semibold"> · <Hl text={run.sub} terms={terms} /></span> : null}
                   </h4>
                 )}
                 {tablesById[run.tbl]

@@ -161,3 +161,23 @@ body {
 @media print {
   .no-copy body { display: none !important; }
 }
+
+/* Value addition notes: one ink + soft tint per note type. */
+.va-tone-intro { --va-ink: #1d4ed8; --va-tint: #eff6ff; }
+.va-tone-quote { --va-ink: #7e22ce; --va-tint: #faf5ff; }
+.va-tone-data { --va-ink: #0e7490; --va-tint: #ecfeff; }
+.va-tone-fact { --va-ink: #047857; --va-tint: #ecfdf5; }
+.va-tone-example { --va-ink: #b45309; --va-tint: #fffbeb; }
+.va-tone-case { --va-ink: #be123c; --va-tint: #fff1f2; }
+.va-tone-now { --va-ink: #c2410c; --va-tint: #fff7ed; }
+.va-tone-conclusion { --va-ink: #4d7c0f; --va-tint: #f7fee7; }
+.va-tone-diagram { --va-ink: #475569; --va-tint: #f1f5f9; }
+.dark .va-tone-intro { --va-ink: #93c5fd; --va-tint: rgba(147, 197, 253, 0.1); }
+.dark .va-tone-quote { --va-ink: #d8b4fe; --va-tint: rgba(216, 180, 254, 0.1); }
+.dark .va-tone-data { --va-ink: #67e8f9; --va-tint: rgba(103, 232, 249, 0.1); }
+.dark .va-tone-fact { --va-ink: #6ee7b7; --va-tint: rgba(110, 231, 183, 0.1); }
+.dark .va-tone-example { --va-ink: #fcd34d; --va-tint: rgba(252, 211, 77, 0.1); }
+.dark .va-tone-case { --va-ink: #fda4af; --va-tint: rgba(253, 164, 175, 0.1); }
+.dark .va-tone-now { --va-ink: #fdba74; --va-tint: rgba(253, 186, 116, 0.1); }
+.dark .va-tone-conclusion { --va-ink: #bef264; --va-tint: rgba(190, 242, 100, 0.1); }
+.dark .va-tone-diagram { --va-ink: #cbd5e1; --va-tint: rgba(203, 213, 225, 0.1); }
