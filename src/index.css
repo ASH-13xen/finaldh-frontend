@@ -184,14 +184,16 @@ body {
 
 /* Handwritten sections: a ruled notebook page. Every row of text sits on a 32px line. */
 .notebook {
+  --notebook-rule: var(--border-subtle);
   padding: 8px 14px 8px 38px;
   line-height: 32px;
   overflow-wrap: anywhere;
   background-color: var(--bg-surface-raised);
   background-image:
     linear-gradient(to right, transparent 27px, rgba(220, 38, 38, 0.35) 27px 28px, transparent 28px),
-    repeating-linear-gradient(to bottom, transparent 0 31px, var(--border-subtle) 31px 32px);
+    repeating-linear-gradient(to bottom, transparent 0 31px, var(--notebook-rule) 31px 32px);
   background-position: 0 0, 0 4px;
   border: 1px solid var(--border-default);
   border-radius: 12px;
 }
+.dark .notebook { --notebook-rule: var(--border-default); }
