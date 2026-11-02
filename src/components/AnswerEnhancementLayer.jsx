@@ -57,19 +57,22 @@ function Highlighted({ text, keywords }) {
   return text.split(re).map((part, i) => (i % 2 ? <b key={i} className="text-text-primary">{part}</b> : part));
 }
 
-function AltBlock({ label, alt }) {
+// A chip row that takes up exact notebook lines, so handwriting below stays on the rules.
+const NotebookChips = ({ items }) => (
+  <div className="flex flex-wrap gap-x-1">
+    {items.map((k, i) => (
+      <span key={i} className="my-1 h-6 leading-6 px-1.5 rounded font-sans text-[13px] bg-surface text-[var(--va-ink)] border border-border-default">{k}</span>
+    ))}
+  </div>
+);
+
+function AltBlock({ label, alt, tone }) {
   if (!alt?.text) return null;
   return (
-    <div className="mt-2">
-      <p className="text-[13px] font-bold" style={{ color: TONE.addon.color }}>{label}</p>
-      <p className="mt-0.5 text-sm leading-relaxed text-text-secondary"><Highlighted text={alt.text} keywords={alt.keywords} /></p>
-      {alt.keywords?.length ? (
-        <div className="mt-1 flex flex-wrap gap-1">
-          {alt.keywords.map((k, i) => (
-            <span key={i} className="px-1.5 py-0.5 rounded text-[12px] bg-status-info-bg text-status-info-text">{k}</span>
-          ))}
-        </div>
-      ) : null}
+    <div className={`mt-8 va-tone-${tone} text-[var(--va-ink)]`}>
+      <p className="font-bold">{label}</p>
+      <p><Highlighted text={alt.text} keywords={alt.keywords} /></p>
+      {alt.keywords?.length ? <NotebookChips items={alt.keywords} /> : null}
     </div>
   );
 }
@@ -239,37 +242,33 @@ export function TopperTakeaways({ enhancement, topper }) {
   const t = enhancement?.takeaways;
   if (!t || (!t.techniques?.length && !t.enrichment?.length && !t.keywords?.length && !t.altIntro?.text && !t.altConclusion?.text)) return null;
   return (
-    <div className="rounded-xl border border-border-default bg-surface-raised p-3 mb-4">
-      <p className="text-sm font-bold text-text-primary uppercase tracking-wide">
+    <div className="notebook mb-4 font-hand text-[20px] text-text-primary">
+      <p className="text-[22px] font-bold">
         ✨ Takeaways{topper ? ` · ${topper}` : ''}
         {!enhancement.published && (
-          <span className="ml-2 px-1.5 py-0.5 rounded text-[12px] bg-status-warning-bg text-status-warning-text normal-case">Draft</span>
+          <span className="ml-2 px-1.5 py-0.5 rounded font-sans text-[12px] bg-status-warning-bg text-status-warning-text">Draft</span>
         )}
       </p>
       {t.techniques?.length ? (
-        <div className="mt-2">
-          <p className="text-[13px] font-bold" style={{ color: TONE.works.color }}>Techniques to copy</p>
-          <ul className="mt-0.5 space-y-0.5">
-            {t.techniques.map((s, i) => <li key={i} className="text-sm text-text-secondary">• {s}</li>)}
+        <div className="va-tone-fact text-[var(--va-ink)]">
+          <p className="font-bold">Techniques to copy</p>
+          <ul>
+            {t.techniques.map((s, i) => <li key={i}>• {s}</li>)}
           </ul>
         </div>
       ) : null}
       {t.enrichment?.length ? (
-        <div className="mt-2">
-          <p className="text-[13px] font-bold" style={{ color: TONE.addon.color }}>Enrichment bank</p>
-          <ul className="mt-0.5 space-y-0.5">
-            {t.enrichment.map((s, i) => <li key={i} className="text-sm text-text-secondary">• {s}</li>)}
+        <div className="mt-8 va-tone-intro text-[var(--va-ink)]">
+          <p className="font-bold">Enrichment bank</p>
+          <ul>
+            {t.enrichment.map((s, i) => <li key={i}>• {s}</li>)}
           </ul>
         </div>
       ) : null}
-      <AltBlock label="Alternate introduction" alt={t.altIntro} />
-      <AltBlock label="Alternate conclusion" alt={t.altConclusion} />
+      <AltBlock label="Alternate introduction" alt={t.altIntro} tone="intro" />
+      <AltBlock label="Alternate conclusion" alt={t.altConclusion} tone="conclusion" />
       {t.keywords?.length ? (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {t.keywords.map((k, i) => (
-            <span key={i} className="px-1.5 py-0.5 rounded text-[12px] bg-sunken text-text-secondary border border-border-default">{k}</span>
-          ))}
-        </div>
+        <div className="mt-8 va-tone-case"><NotebookChips items={t.keywords} /></div>
       ) : null}
     </div>
   );

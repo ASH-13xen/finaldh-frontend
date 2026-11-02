@@ -162,7 +162,7 @@ body {
   .no-copy body { display: none !important; }
 }
 
-/* Value addition notes: one ink + soft tint per note type. */
+/* Value addition notes and Toppers Copy analysis: one ink + soft tint per kind of content. */
 .va-tone-intro { --va-ink: #1d4ed8; --va-tint: #eff6ff; }
 .va-tone-quote { --va-ink: #7e22ce; --va-tint: #faf5ff; }
 .va-tone-data { --va-ink: #0e7490; --va-tint: #ecfeff; }
@@ -181,3 +181,17 @@ body {
 .dark .va-tone-now { --va-ink: #fdba74; --va-tint: rgba(253, 186, 116, 0.1); }
 .dark .va-tone-conclusion { --va-ink: #bef264; --va-tint: rgba(190, 242, 100, 0.1); }
 .dark .va-tone-diagram { --va-ink: #cbd5e1; --va-tint: rgba(203, 213, 225, 0.1); }
+
+/* Handwritten sections: a ruled notebook page. Every row of text sits on a 32px line. */
+.notebook {
+  padding: 8px 14px 8px 38px;
+  line-height: 32px;
+  overflow-wrap: anywhere;
+  background-color: var(--bg-surface-raised);
+  background-image:
+    linear-gradient(to right, transparent 27px, rgba(220, 38, 38, 0.35) 27px 28px, transparent 28px),
+    repeating-linear-gradient(to bottom, transparent 0 31px, var(--border-subtle) 31px 32px);
+  background-position: 0 0, 0 4px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+}

@@ -810,7 +810,7 @@ function AnswerView({
     <button
       onClick={() => setLayout(mode)}
       title={title}
-      className={`px-2 py-1 rounded-md text-[11px] font-bold whitespace-nowrap border cursor-pointer transition-colors ${
+      className={`px-2 py-1 rounded-md text-[13px] font-bold whitespace-nowrap border cursor-pointer transition-colors ${
         layout === mode
           ? 'bg-brand text-text-on-accent border-brand'
           : 'bg-surface text-text-secondary border-border-default hover:bg-surface-raised'
@@ -830,7 +830,7 @@ function AnswerView({
           ← Back to questions
         </button>
         <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
-          {noteFlash && <span className="text-[11px] font-bold text-brand">Saved to My Notes</span>}
+          {noteFlash && <span className="text-[13px] font-bold text-brand">Saved to My Notes</span>}
           {qRef && (
             <BookmarkButton label="Bookmark question" activeLabel="Question saved" active={bookmarks.isBookmarked(qRef)} onToggle={() => bookmarks.toggle(qRef)} />
           )}
@@ -842,7 +842,7 @@ function AnswerView({
               type="button"
               onClick={() => onNote(aRef || qRef, aRef ? `${qTitle} — ${topperLabel(activeAnswer)}` : qTitle)}
               title="Add a note (or select text in the AI analysis)"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer transition-colors bg-surface border-border-default text-text-secondary hover:border-brand hover:text-text-primary"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[13px] font-bold cursor-pointer transition-colors bg-surface border-border-default text-text-secondary hover:border-brand hover:text-text-primary"
             >
               <span aria-hidden="true">✎</span>
               <span className="hidden sm:inline">Note</span>
@@ -852,7 +852,7 @@ function AnswerView({
             type="button"
             onClick={onToggleCompleted}
             aria-pressed={isCompleted}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[13px] font-bold cursor-pointer transition-colors ${
               isCompleted
                 ? 'bg-brand border-brand text-text-on-accent hover:opacity-90'
                 : 'bg-surface border-border-default text-text-secondary hover:border-brand hover:text-text-primary'
@@ -862,7 +862,7 @@ function AnswerView({
             <span className="hidden sm:inline">{isCompleted ? 'Completed' : 'Mark as completed'}</span>
           </button>
           <span className="w-px h-5 bg-border-default mx-1 hidden sm:block" aria-hidden="true" />
-          <span className="text-[11px] font-bold text-text-tertiary uppercase tracking-wider hidden sm:inline">Layout</span>
+          <span className="text-[13px] font-bold text-text-tertiary uppercase tracking-wider hidden sm:inline">Layout</span>
           {isWide && <LayoutBtn mode="split" label="⇄ Side by side" title="Resizable split — drag the divider" />}
           <LayoutBtn mode="stack" label="≡ Stacked" title="Analysis below the answer sheet" />
           <LayoutBtn mode="hidden" label="✕ Hide analysis" title="Answer sheet only" />
@@ -880,10 +880,10 @@ function AnswerView({
           className="flex-grow flex flex-col min-h-0 bg-surface border border-border-default rounded-2xl overflow-hidden"
         >
           <div className="px-4 py-3 border-b border-border-default bg-surface-raised flex-shrink-0">
-            <p className="text-sm font-bold text-text-primary leading-snug">
+            <p className="text-[17px] font-bold text-text-primary leading-snug">
               {activeQuestion?.questionText || 'Untitled question'}
             </p>
-            <p className="text-[11px] text-text-tertiary mt-1">
+            <p className="text-[13px] text-text-tertiary mt-1">
               {activeTc?.topic}
               {(() => {
                 const st = (activeTc?.subtopics || []).find((x) => x._id === activeQuestion?.subtopicId);
@@ -893,19 +893,19 @@ function AnswerView({
               {activeQuestion?.marks ? ` · ${activeQuestion.marks} marks` : ''}
             </p>
             {activeAnswer?.curatorNote ? (
-              <p className="text-[11px] text-brand italic mt-1">
+              <p className="text-[13px] text-brand italic mt-1">
                 {topperLabel(activeAnswer)} — {activeAnswer.curatorNote}
               </p>
             ) : null}
           </div>
           <div className="px-4 py-2 border-b border-border-default bg-surface flex items-center gap-2 flex-shrink-0 overflow-x-auto">
-            <span className="text-[11px] font-bold text-text-tertiary uppercase tracking-wider flex-shrink-0">Toppers</span>
+            <span className="text-[13px] font-bold text-text-tertiary uppercase tracking-wider flex-shrink-0">Toppers</span>
             <div className="flex gap-1.5">
               {(activeQuestion?.answers || []).map((a, i) => (
                 <button
                   key={i}
                   onClick={() => setActiveAnswerIdx(i)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer border ${
+                  className={`px-2.5 py-1 rounded-md text-[13px] font-bold whitespace-nowrap transition-all cursor-pointer border ${
                     i === activeAnswerIdx
                       ? 'bg-brand text-text-on-accent border-brand'
                       : 'bg-surface text-text-secondary border-border-default hover:bg-surface-raised'
@@ -929,7 +929,7 @@ function AnswerView({
             {activeAnswer && (
               <button
                 onClick={toggleFullscreen}
-                className="flex-shrink-0 px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap bg-surface text-text-secondary border border-border-default hover:bg-surface-raised cursor-pointer"
+                className="flex-shrink-0 px-2.5 py-1 rounded-md text-[13px] font-bold whitespace-nowrap bg-surface text-text-secondary border border-border-default hover:bg-surface-raised cursor-pointer"
                 title="Toggle full screen (Esc to exit)"
               >
                 {isFullscreen ? '✕ Exit full screen' : '⛶ Full screen'}
@@ -979,7 +979,7 @@ function AnswerView({
             }`}
           >
             <div className="px-4 py-2.5 border-b border-border-default bg-surface-raised flex-shrink-0">
-              <span className="text-xs font-bold text-text-primary uppercase tracking-wide">AI Analysis</span>
+              <span className="text-sm font-bold text-text-primary uppercase tracking-wide">AI Analysis</span>
             </div>
             <SelectionToNote
               className="flex-grow overflow-y-auto p-4"
@@ -1249,10 +1249,10 @@ function ValueAdditionReader({ item, topicName, onClose }) {
   );
 }
 
-function AnalysisSection({ title, children }) {
+function AnalysisSection({ title, tone, children }) {
   return (
-    <div className="space-y-1.5">
-      <h4 className="text-[11px] font-bold text-text-tertiary uppercase tracking-wider">{title}</h4>
+    <div className={`space-y-2 ${tone ? `va-tone-${tone}` : ''}`}>
+      <h4 className={`text-sm font-bold uppercase tracking-wider ${tone ? 'text-[var(--va-ink)]' : 'text-text-primary'}`}>{title}</h4>
       {children}
     </div>
   );
@@ -1270,7 +1270,7 @@ const TYPE_COLORS = {
 };
 const TypeChip = ({ type }) =>
   type ? (
-    <span className={`text-[10px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 border ${TYPE_COLORS[type.toLowerCase()] || TYPE_COLORS.context}`}>
+    <span className={`text-[12px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 border ${TYPE_COLORS[type.toLowerCase()] || TYPE_COLORS.context}`}>
       {type}
     </span>
   ) : null;
@@ -1280,12 +1280,12 @@ function ExcerptCard({ item }) {
     <div className="p-3 bg-sunken border border-border-default rounded-xl space-y-1.5">
       <div className="flex items-center gap-2 flex-wrap">
         <TypeChip type={item.type} />
-        {item.wordCount ? <span className="text-[11px] text-text-tertiary font-semibold">{item.wordCount} words</span> : null}
+        {item.wordCount ? <span className="text-[13px] text-text-tertiary font-semibold">{item.wordCount} words</span> : null}
       </div>
-      <p className="font-reading text-sm text-text-primary leading-relaxed">{item.text}</p>
-      <p className="text-[11px] text-text-tertiary font-semibold">— {item.topper || 'topper'}</p>
+      <p className="font-reading text-[17px] text-text-primary leading-relaxed">{item.text}</p>
+      <p className="text-[13px] text-text-tertiary font-semibold">— {item.topper || 'topper'}</p>
       {item.curatorNote ? (
-        <p className="text-[11px] text-brand italic">Why we picked it: {item.curatorNote}</p>
+        <p className="text-[13px] text-brand italic">Why we picked it: {item.curatorNote}</p>
       ) : null}
     </div>
   );
@@ -1303,14 +1303,14 @@ function KeywordChips({ items }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((k, i) => (
-        <span key={i} className="text-[11px] font-semibold text-text-secondary bg-surface-raised border border-border-default px-2 py-0.5 rounded-full">{k}</span>
+        <span key={i} className="text-[13px] font-semibold text-[color:var(--va-ink,var(--text-secondary))] bg-surface border border-[color:var(--va-ink,var(--border-default))] px-2 py-0.5 rounded-full">{k}</span>
       ))}
     </div>
   );
 }
 
 const WordBadge = ({ n }) =>
-  n ? <span className="text-[11px] text-text-tertiary font-semibold">{n} words</span> : null;
+  n ? <span className="text-[13px] text-text-tertiary font-semibold">{n} words</span> : null;
 
 // Current three-block analysis: a fresh model answer, fixes for the actual copy,
 // and transferable learnings.
@@ -1326,25 +1326,25 @@ function ModelAnswerView({ analysis }) {
       <Section title={`Model Answer${ma.totalWordCount ? ` · ~${ma.totalWordCount} words` : ''}`}>
         <div className="space-y-3">
           {ma.introduction?.text && (
-            <div className="p-3 bg-sunken border border-border-default rounded-xl space-y-1.5">
+            <div className="va-tone-intro p-3 bg-[var(--va-tint)] border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-brand">Introduction</span>
+                <span className="text-[13px] font-bold uppercase tracking-wide text-[var(--va-ink)]">Introduction</span>
                 <WordBadge n={ma.introduction.wordCount} />
               </div>
-              <p className="font-reading text-sm text-text-primary leading-relaxed">{ma.introduction.text}</p>
+              <p className="font-reading text-[17px] text-text-primary leading-relaxed">{ma.introduction.text}</p>
               <KeywordChips items={ma.introduction.keywords} />
             </div>
           )}
 
           {(ma.body || []).map((part, i) => (
             <div key={i} className="space-y-1.5">
-              {part.part && <p className="text-sm font-bold text-text-primary">{part.part}</p>}
+              {part.part && <p className="text-[17px] font-bold text-text-primary">{part.part}</p>}
               <ul className="space-y-2 mt-1">
                 {(part.points || []).map((p, j) => (
-                  <li key={j} className="font-reading text-sm text-text-primary leading-relaxed flex gap-1.5">
-                    <span className="text-text-tertiary font-bold flex-shrink-0">•</span>
+                  <li key={j} className="font-reading text-[17px] text-text-primary leading-relaxed flex gap-1.5">
+                    <span className="text-brand font-bold flex-shrink-0">•</span>
                     <span>
-                      {p.heading ? <b className="font-bold">{p.heading}: </b> : null}
+                      {p.heading ? <b className="font-bold text-brand">{p.heading}: </b> : null}
                       {p.text}
                     </span>
                   </li>
@@ -1354,27 +1354,27 @@ function ModelAnswerView({ analysis }) {
           ))}
 
           {ma.wayForward?.text && (
-            <div className="p-3 bg-accent-soft-bg border border-accent-soft-border rounded-xl space-y-1.5">
+            <div className="va-tone-data p-3 bg-[var(--va-tint)] border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-brand">Way Forward</span>
+                <span className="text-[13px] font-bold uppercase tracking-wide text-[var(--va-ink)]">Way Forward</span>
                 <WordBadge n={ma.wayForward.wordCount} />
               </div>
-              <p className="font-reading text-sm text-text-primary leading-relaxed">{ma.wayForward.text}</p>
+              <p className="font-reading text-[17px] text-text-primary leading-relaxed">{ma.wayForward.text}</p>
               {ma.wayForward.sources?.length ? (
-                <p className="text-[11px] text-text-tertiary font-semibold">Sources: {ma.wayForward.sources.join(' · ')}</p>
+                <p className="text-[13px] text-text-tertiary font-semibold">Sources: {ma.wayForward.sources.join(' · ')}</p>
               ) : null}
             </div>
           )}
 
           {ma.conclusion?.text && (
-            <div className="p-3 bg-sunken border border-border-default rounded-xl space-y-1.5">
+            <div className="va-tone-conclusion p-3 bg-[var(--va-tint)] border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-brand">Conclusion</span>
+                <span className="text-[13px] font-bold uppercase tracking-wide text-[var(--va-ink)]">Conclusion</span>
                 <WordBadge n={ma.conclusion.wordCount} />
               </div>
-              <p className="font-reading text-sm text-text-primary leading-relaxed">{ma.conclusion.text}</p>
+              <p className="font-reading text-[17px] text-text-primary leading-relaxed">{ma.conclusion.text}</p>
               {ma.conclusion.quote ? (
-                <p className="text-[11px] text-brand italic border-l-2 border-brand/40 pl-2">{ma.conclusion.quote}</p>
+                <p className="text-[13px] text-[var(--va-ink)] italic border-l-2 border-l-[var(--va-ink)] pl-2">{ma.conclusion.quote}</p>
               ) : null}
             </div>
           )}
@@ -1382,19 +1382,19 @@ function ModelAnswerView({ analysis }) {
       </Section>
 
       {(diagramIsRenderable(analysis.diagram) || analysis.diagram?.howToDraw || analysis.diagram?.mermaid) && (
-        <Section title={analysis.diagram.title ? `Diagram — ${analysis.diagram.title}` : 'Diagram'}>
-          <div className="p-3 bg-sunken border border-border-default rounded-xl space-y-2.5">
+        <Section tone="diagram" title={analysis.diagram.title ? `Diagram — ${analysis.diagram.title}` : 'Diagram'}>
+          <div className="va-tone-diagram p-3 bg-[var(--va-tint)] border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl space-y-2.5">
             {diagramIsRenderable(analysis.diagram) ? (
               <div className="bg-surface border border-border-default rounded-lg p-2.5">
                 <AnswerDiagram diagram={analysis.diagram} />
               </div>
             ) : null}
             {analysis.diagram.howToDraw && (
-              <p className="font-reading text-sm text-text-primary leading-relaxed">{analysis.diagram.howToDraw}</p>
+              <p className="font-reading text-[17px] text-text-primary leading-relaxed">{analysis.diagram.howToDraw}</p>
             )}
             <KeywordChips items={analysis.diagram.keywords} />
             {!diagramIsRenderable(analysis.diagram) && analysis.diagram.mermaid && (
-              <pre className="text-[11px] bg-surface border border-border-default rounded-lg p-2 overflow-x-auto text-text-secondary whitespace-pre">
+              <pre className="text-[13px] bg-surface border border-border-default rounded-lg p-2 overflow-x-auto text-text-secondary whitespace-pre">
 {analysis.diagram.mermaid}
               </pre>
             )}
@@ -1403,18 +1403,18 @@ function ModelAnswerView({ analysis }) {
       )}
 
       {improvements.length > 0 && (
-        <Section title="Improve the Actual Answer">
+        <Section tone="example" title="Improve the Actual Answer">
           <div className="space-y-2">
             {improvements.map((it, i) => (
-              <div key={i} className="p-3 bg-sunken border border-border-default rounded-xl space-y-1">
+              <div key={i} className="va-tone-example p-3 bg-[var(--va-tint)] border border-border-default border-l-4 border-l-[var(--va-ink)] rounded-xl space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   {it.priority ? (
-                    <span className={`text-[10px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 border ${PRIORITY_CHIP[it.priority] || PRIORITY_CHIP.low}`}>{it.priority}</span>
+                    <span className={`text-[12px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 border ${PRIORITY_CHIP[it.priority] || PRIORITY_CHIP.low}`}>{it.priority}</span>
                   ) : null}
-                  {it.area ? <span className="text-[11px] text-text-tertiary font-semibold uppercase tracking-wide">{it.area}</span> : null}
+                  {it.area ? <span className="text-[13px] text-text-tertiary font-semibold uppercase tracking-wide">{it.area}</span> : null}
                 </div>
-                {it.observation && <p className="font-reading text-sm text-text-secondary leading-relaxed">{it.observation}</p>}
-                {it.fix && <p className="font-reading text-sm text-text-primary leading-relaxed"><span className="font-bold text-brand">Fix: </span>{it.fix}</p>}
+                {it.observation && <p className="font-reading text-[17px] text-text-secondary leading-relaxed">{it.observation}</p>}
+                {it.fix && <p className="font-reading text-[17px] text-text-primary leading-relaxed"><span className="font-bold text-[var(--va-ink)]">Fix: </span>{it.fix}</p>}
               </div>
             ))}
           </div>
@@ -1422,16 +1422,16 @@ function ModelAnswerView({ analysis }) {
       )}
 
       {analysis.learnings?.length > 0 && (
-        <Section title="What to Learn From This Answer">
-          <div className="space-y-2">
+        <Section tone="quote" title="What to Learn From This Answer">
+          <div className="notebook font-hand text-[20px] text-[var(--va-ink)]">
             {analysis.learnings.map((l, i) => (
-              <div key={i} className="space-y-0.5">
-                <p className="font-reading text-sm text-text-primary leading-relaxed flex gap-1.5">
-                  <span className="text-text-tertiary font-bold flex-shrink-0">{i + 1}.</span>
+              <div key={i}>
+                <p className="flex gap-2">
+                  <span className="font-bold flex-shrink-0">{i + 1}.</span>
                   <span>{l.lesson}</span>
                 </p>
                 {(l.seenIn || l.applyElsewhere) && (
-                  <p className="text-[11px] text-text-tertiary italic pl-4">
+                  <p className="text-[17px] text-text-secondary pl-6">
                     {l.seenIn ? `Seen in: ${l.seenIn}. ` : ''}{l.applyElsewhere ? `Use it on: ${l.applyElsewhere}.` : ''}
                   </p>
                 )}
@@ -1442,12 +1442,12 @@ function ModelAnswerView({ analysis }) {
       )}
 
       {analysis.keywords?.length > 0 && (
-        <Section title="Keyword Bank">
+        <Section tone="case" title="Keyword Bank">
           <KeywordChips items={analysis.keywords} />
         </Section>
       )}
 
-      <p className="text-[11px] text-text-tertiary pt-2 border-t border-border-default">
+      <p className="text-[13px] text-text-tertiary pt-2 border-t border-border-default">
         Generated {new Date(analysis.generatedAt).toLocaleDateString()} · {analysis.aiModel || 'AI'}
       </p>
     </div>
@@ -1456,7 +1456,7 @@ function ModelAnswerView({ analysis }) {
 
 function AnalysisView({ analysis }) {
   if (!analysis || !analysis.generatedAt) {
-    return <p className="text-sm text-text-tertiary italic">AI analysis has not been generated for this question yet.</p>;
+    return <p className="text-[17px] text-text-tertiary italic">AI analysis has not been generated for this question yet.</p>;
   }
   const Section = AnalysisSection;
 
@@ -1476,36 +1476,36 @@ function AnalysisView({ analysis }) {
       <div className="space-y-4">
         {typeof analysis.modelAnswer === 'string' && analysis.modelAnswer && (
           <Section title="Model Answer">
-            <p className="font-reading text-sm text-text-primary leading-relaxed whitespace-pre-line">{analysis.modelAnswer}</p>
+            <p className="font-reading text-[17px] text-text-primary leading-relaxed whitespace-pre-line">{analysis.modelAnswer}</p>
           </Section>
         )}
         {analysis.keywords?.length > 0 && (
-          <Section title="Keywords">
+          <Section tone="case" title="Keywords">
             <div className="flex flex-wrap gap-1.5">
               {analysis.keywords.map((k, i) => (
-                <span key={i} className="text-[11px] font-semibold text-text-secondary bg-surface-raised border border-border-default px-2 py-0.5 rounded-full">{k}</span>
+                <span key={i} className="text-[13px] font-semibold text-text-secondary bg-surface-raised border border-border-default px-2 py-0.5 rounded-full">{k}</span>
               ))}
             </div>
           </Section>
         )}
         {analysis.commonStructure && (
-          <Section title="How Toppers Structure It"><p className="font-reading text-sm text-text-primary leading-relaxed">{analysis.commonStructure}</p></Section>
+          <Section title="How Toppers Structure It"><p className="font-reading text-[17px] text-text-primary leading-relaxed">{analysis.commonStructure}</p></Section>
         )}
         {analysis.whatToppersDidWell?.length > 0 && (
           <Section title="What Toppers Did Well">
-            <ul className="font-reading list-disc list-inside space-y-1 text-sm text-text-primary leading-relaxed">
+            <ul className="font-reading list-disc list-inside space-y-1 text-[17px] text-text-primary leading-relaxed">
               {analysis.whatToppersDidWell.map((x, i) => <li key={i}>{x}</li>)}
             </ul>
           </Section>
         )}
         {analysis.valueAddition?.length > 0 && (
-          <Section title="Value Addition">
-            <ul className="font-reading list-disc list-inside space-y-1 text-sm text-text-primary leading-relaxed">
+          <Section tone="data" title="Value Addition">
+            <ul className="font-reading list-disc list-inside space-y-1 text-[17px] text-text-primary leading-relaxed">
               {analysis.valueAddition.map((x, i) => <li key={i}>{x}</li>)}
             </ul>
           </Section>
         )}
-        <p className="text-[11px] text-text-tertiary pt-2 border-t border-border-default">
+        <p className="text-[13px] text-text-tertiary pt-2 border-t border-border-default">
           Generated {new Date(analysis.generatedAt).toLocaleDateString()} · {analysis.aiModel || 'AI'}
         </p>
       </div>
@@ -1516,12 +1516,12 @@ function AnalysisView({ analysis }) {
     <div className="space-y-5">
       {analysis.modelSkeleton && (
         <Section title="Model Skeleton">
-          <p className="font-reading text-sm text-text-primary leading-relaxed whitespace-pre-line">{analysis.modelSkeleton}</p>
+          <p className="font-reading text-[17px] text-text-primary leading-relaxed whitespace-pre-line">{analysis.modelSkeleton}</p>
         </Section>
       )}
 
       {analysis.intros?.length > 0 && (
-        <Section title={`Intro Bank (${analysis.intros.length})`}>
+        <Section tone="intro" title={`Intro Bank (${analysis.intros.length})`}>
           <div className="space-y-2">
             {analysis.intros.map((it, i) => <ExcerptCard key={i} item={it} />)}
           </div>
@@ -1533,17 +1533,17 @@ function AnalysisView({ analysis }) {
           <div className="space-y-3">
             {analysis.bodyThemes.map((t, i) => (
               <div key={i} className="space-y-1.5">
-                <p className="text-sm font-bold text-text-primary">{t.title}</p>
-                {t.gloss && <p className="text-[11px] text-text-tertiary italic">{t.gloss}</p>}
+                <p className="text-[17px] font-bold text-text-primary">{t.title}</p>
+                {t.gloss && <p className="text-[13px] text-text-tertiary italic">{t.gloss}</p>}
                 <ol className="space-y-1.5 mt-1">
                   {t.points.map((p, j) => (
-                    <li key={j} className="font-reading text-sm text-text-primary leading-relaxed flex gap-1.5">
+                    <li key={j} className="font-reading text-[17px] text-text-primary leading-relaxed flex gap-1.5">
                       <span className="text-text-tertiary font-bold flex-shrink-0">{j + 1}.</span>
                       <span>
                         {p.text}
                         {p.example ? <span className="text-text-secondary"> — e.g. {p.example}</span> : null}
                         {p.toppers?.length ? (
-                          <span className="text-[11px] text-text-tertiary font-semibold"> [{p.toppers.join(', ')}]</span>
+                          <span className="text-[13px] text-text-tertiary font-semibold"> [{p.toppers.join(', ')}]</span>
                         ) : null}
                       </span>
                     </li>
@@ -1556,7 +1556,7 @@ function AnalysisView({ analysis }) {
       )}
 
       {analysis.conclusions?.length > 0 && (
-        <Section title={`Conclusion Bank (${analysis.conclusions.length})`}>
+        <Section tone="conclusion" title={`Conclusion Bank (${analysis.conclusions.length})`}>
           <div className="space-y-2">
             {analysis.conclusions.map((it, i) => <ExcerptCard key={i} item={it} />)}
           </div>
@@ -1564,14 +1564,14 @@ function AnalysisView({ analysis }) {
       )}
 
       {analysis.diagrams?.length > 0 && (
-        <Section title="Diagrams">
+        <Section tone="diagram" title="Diagrams">
           <div className="space-y-2.5">
             {analysis.diagrams.map((d, i) => (
               <div key={i} className="p-3 bg-sunken border border-border-default rounded-xl space-y-1.5">
-                <p className="text-[11px] text-text-tertiary font-semibold">{d.topper || 'topper'}</p>
-                {d.description && <p className="font-reading text-sm text-text-primary leading-relaxed">{d.description}</p>}
+                <p className="text-[13px] text-text-tertiary font-semibold">{d.topper || 'topper'}</p>
+                {d.description && <p className="font-reading text-[17px] text-text-primary leading-relaxed">{d.description}</p>}
                 {d.mermaid && (
-                  <pre className="text-[11px] bg-surface border border-border-default rounded-lg p-2 overflow-x-auto text-text-secondary whitespace-pre">
+                  <pre className="text-[13px] bg-surface border border-border-default rounded-lg p-2 overflow-x-auto text-text-secondary whitespace-pre">
 {d.mermaid}
                   </pre>
                 )}
@@ -1582,24 +1582,24 @@ function AnalysisView({ analysis }) {
       )}
 
       {analysis.keywords?.length > 0 && (
-        <Section title="Keyword Bank">
+        <Section tone="case" title="Keyword Bank">
           <div className="flex flex-wrap gap-1.5">
             {analysis.keywords.map((k, i) => (
-              <span key={i} className="text-[11px] font-semibold text-text-secondary bg-surface-raised border border-border-default px-2 py-0.5 rounded-full">{k}</span>
+              <span key={i} className="text-[13px] font-semibold text-text-secondary bg-surface-raised border border-border-default px-2 py-0.5 rounded-full">{k}</span>
             ))}
           </div>
         </Section>
       )}
 
       {analysis.techniques?.length > 0 && (
-        <Section title="Transferable Techniques">
-          <ul className="font-reading list-disc list-inside space-y-1 text-sm text-text-primary leading-relaxed">
+        <Section tone="quote" title="Transferable Techniques">
+          <ul className="font-reading list-disc list-inside space-y-1 text-[17px] text-text-primary leading-relaxed">
             {analysis.techniques.map((x, i) => <li key={i}>{x}</li>)}
           </ul>
         </Section>
       )}
 
-      <p className="text-[11px] text-text-tertiary pt-2 border-t border-border-default">
+      <p className="text-[13px] text-text-tertiary pt-2 border-t border-border-default">
         Generated {new Date(analysis.generatedAt).toLocaleDateString()} · {analysis.aiModel || 'AI'}
       </p>
     </div>

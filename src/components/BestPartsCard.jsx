@@ -21,7 +21,7 @@ export default function BestPartsCard({ parts, onOpenTopper }) {
 
   return (
     <section className="mb-5 rounded-2xl border border-accent-soft-border bg-accent-soft-bg/50 p-3">
-      <p className="text-[11px] font-extrabold uppercase tracking-wider text-brand mb-2">📸 Best part of the answer</p>
+      <p className="text-[13px] font-extrabold uppercase tracking-wider text-brand mb-2">📸 Best part of the answer</p>
       <div className="space-y-3">
         {parts.map((p) => (
           <figure key={p._id} className="rounded-xl overflow-hidden border border-border-default bg-surface">
