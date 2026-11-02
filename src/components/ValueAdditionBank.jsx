@@ -157,7 +157,7 @@ export default function ValueAdditionBank({ entryId, title, q, onSearch }) {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-4xl mx-auto px-5 py-5 space-y-6">
+      <div className="sm:w-[80%] mx-auto px-5 sm:px-0 py-5 space-y-6">
         <div className="space-y-2.5">
           <p className="sm:hidden font-reading text-lg font-semibold text-text-primary leading-snug">{title}</p>
           {multi && (
