@@ -18,6 +18,9 @@ const TYPES = [
   ['diagram', 'Diagrams', 'Diagram'],
 ];
 
+// These note types are drawn in the handwriting font, like points added by pen.
+const HANDWRITTEN = new Set(['quote', 'data']);
+
 const fold = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -35,12 +38,12 @@ function Hl({ text, terms }) {
 // "Label: text". Section, type and sub-heading are the headings above the box (see sectionRuns).
 function NoteBox({ notes, terms }) {
   return (
-    <ul className="p-3 pl-7 bg-surface border border-border-default rounded-xl list-disc marker:text-brand space-y-2">
+    <ul className="p-4 pl-8 bg-surface border border-border-default rounded-xl list-disc marker:text-brand space-y-2.5">
       {notes.map((note) => (
-        <li key={note.id} className={`text-[15px] leading-relaxed font-reading ${note.type === 'quote' ? 'text-text-primary' : 'text-text-secondary'}`}>
+        <li key={note.id} className={`leading-relaxed ${HANDWRITTEN.has(note.type) ? 'font-hand text-[20px] text-text-primary' : 'font-reading text-[18px] text-text-secondary'}`}>
           {note.title ? <b className="font-bold text-text-primary not-italic"><Hl text={note.title} terms={terms} />{note.text ? ': ' : ''}</b> : null}
           {note.cols?.length ? (
-            <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 mt-1 text-sm">
+            <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 mt-1 text-[0.9em]">
               {note.cols.map(([k, v], i) => (
                 <div key={i} className="contents">
                   <dt className="text-text-tertiary">{k}</dt>
@@ -49,7 +52,7 @@ function NoteBox({ notes, terms }) {
               ))}
             </dl>
           ) : (
-            <span className={note.type === 'quote' ? 'italic' : ''}><Hl text={note.text} terms={terms} /></span>
+            <span><Hl text={note.text} terms={terms} /></span>
           )}
         </li>
       ))}
@@ -61,9 +64,10 @@ function NoteBox({ notes, terms }) {
 // the search / filters simply drop out. A row's cells are matched to the header by label.
 function NoteTable({ table, rows, terms }) {
   const [first, ...rest] = table.head;
+  const body = HANDWRITTEN.has(rows[0]?.type) ? 'font-hand text-[18px] text-text-primary' : 'font-reading text-text-secondary';
   return (
     <div className="overflow-x-auto border border-border-default rounded-xl bg-surface">
-      <table className="w-full text-sm border-collapse">
+      <table className="w-full text-base border-collapse">
         <thead>
           <tr className="bg-sunken text-left">
             {[first, ...rest].map((h, i) => (
@@ -76,7 +80,7 @@ function NoteTable({ table, rows, terms }) {
             <tr key={n.id} className="border-t border-border-default first:border-t-0 align-top">
               <td className="px-3 py-2 font-semibold text-text-primary"><Hl text={n.title} terms={terms} /></td>
               {rest.map((h, i) => (
-                <td key={i} className="px-3 py-2 font-reading text-text-secondary">
+                <td key={i} className={`px-3 py-2 ${body}`}>
                   <Hl text={n.cols?.find(([k]) => k === h)?.[1] || ''} terms={terms} />
                 </td>
               ))}
@@ -143,13 +147,14 @@ export default function ValueAdditionBank({ entryId }) {
 
   const sec = sectionsById[section];
   const multi = bank.sections.length > 1;
-  const chip = (active) => `px-2.5 py-1 rounded-full border text-xs font-semibold cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-default ${
+  const chip = (active) => `px-3 py-1 rounded-full border text-sm font-semibold cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-default ${
     active ? 'bg-text-primary text-surface border-text-primary' : 'bg-surface text-text-secondary border-border-default hover:border-brand/60'
   }`;
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="sticky top-0 z-10 bg-surface border-b border-border-default px-5 py-3 space-y-2.5">
+      <div className="sticky top-0 z-10 bg-surface border-b border-border-default px-5 py-3">
+        <div className="max-w-4xl mx-auto space-y-2.5">
         <div className="flex flex-wrap gap-2">
           <input
             id="va-bank-search"
@@ -157,14 +162,14 @@ export default function ValueAdditionBank({ entryId }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search facts, data, examples… e.g. UNESCO, inscription, 2023"
-            className="flex-1 min-w-[180px] bg-sunken border border-border-default focus:border-brand text-text-primary rounded-lg px-3 py-2 text-sm focus:outline-none"
+            className="flex-1 min-w-[180px] bg-sunken border border-border-default focus:border-brand text-text-primary rounded-lg px-3 py-2 text-base focus:outline-none"
           />
           {multi && (
             <select
               id="va-bank-section"
               value={section}
               onChange={(e) => { setSection(e.target.value); setShowPyqs(false); }}
-              className="max-w-full bg-sunken border border-border-default text-text-primary rounded-lg px-2 py-2 text-sm focus:outline-none focus:border-brand"
+              className="max-w-full bg-sunken border border-border-default text-text-primary rounded-lg px-2 py-2 text-base focus:outline-none focus:border-brand"
             >
               <option value="all">All sections ({bank.sections.length})</option>
               {bank.sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -181,24 +186,25 @@ export default function ValueAdditionBank({ entryId }) {
             </button>
           ))}
         </div>
+        </div>
       </div>
 
-      <div className="px-5 py-4 space-y-5">
+      <div className="max-w-4xl mx-auto px-5 py-6 space-y-6">
         {(sec || !multi) && (() => {
           const s = sec || bank.sections[0];
           return (s.pyqs.length > 0 || s.keywords.length > 0) && (
             <div className="space-y-2">
               {s.pyqs.length > 0 && (
                 <div>
-                  <button className="text-xs font-bold text-brand cursor-pointer" onClick={() => setShowPyqs((v) => !v)}>
+                  <button className="text-sm font-bold text-brand cursor-pointer" onClick={() => setShowPyqs((v) => !v)}>
                     {showPyqs ? '▾' : '▸'} PYQs these notes cover ({s.pyqs.length})
                   </button>
                   {showPyqs && (
                     <ul className="mt-2 space-y-1.5">
                       {s.pyqs.map((p, i) => (
-                        <li key={i} className="flex gap-2 text-[13px] text-text-secondary">
+                        <li key={i} className="flex gap-2 text-base text-text-secondary">
                           <span className="font-bold text-brand tabular-nums flex-shrink-0">{p.year}</span>
-                          <span className="font-reading">{p.question}{p.map ? <span className="block text-[11px] text-text-tertiary">Notes: {p.map}</span> : null}</span>
+                          <span className="font-reading">{p.question}{p.map ? <span className="block text-sm text-text-tertiary">Notes: {p.map}</span> : null}</span>
                         </li>
                       ))}
                     </ul>
@@ -208,7 +214,7 @@ export default function ValueAdditionBank({ entryId }) {
               {s.keywords.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {s.keywords.map((k) => (
-                    <button key={k} onClick={() => setQ(k)} className="text-[11px] px-2 py-0.5 rounded-md bg-sunken text-text-secondary hover:text-brand cursor-pointer">{k}</button>
+                    <button key={k} onClick={() => setQ(k)} className="text-sm px-2 py-0.5 rounded-md bg-sunken text-text-secondary hover:text-brand cursor-pointer">{k}</button>
                   ))}
                 </div>
               )}
@@ -216,27 +222,27 @@ export default function ValueAdditionBank({ entryId }) {
           );
         })()}
 
-        <p className="text-xs text-text-tertiary">
+        <p className="text-sm text-text-tertiary">
           {shown.length} note{shown.length === 1 ? '' : 's'}
           {sec ? ` in ${sec.name}` : ''}
           {q.trim() ? ` matching “${q.trim()}”` : ''}
         </p>
 
         {!shown.length && (
-          <p className="text-sm text-text-tertiary italic py-6 text-center">No notes match. Try a shorter word, another section, or clear the type filter.</p>
+          <p className="text-base text-text-tertiary italic py-6 text-center">No notes match. Try a shorter word, another section, or clear the type filter.</p>
         )}
 
         {sectionRuns.map((sr) => (
           <section key={sr.id} className="space-y-3">
             {multi && (
-              <h3 className="text-base font-bold text-text-primary border-b border-border-default pb-1.5">
+              <h3 className="text-xl font-bold text-text-primary border-b border-border-default pb-1.5">
                 {sectionNo[sr.id]}. {sectionsById[sr.id]?.name}
               </h3>
             )}
             {sr.runs.map((run) => (
               <div key={run.notes[0].id} className="space-y-2">
                 {run.head && (
-                  <h4 className="text-xs font-bold uppercase tracking-wide text-text-tertiary">
+                  <h4 className="text-sm font-bold uppercase tracking-wide text-text-tertiary">
                     {TYPES.find(([k]) => k === run.type)?.[1] || 'Notes'}
                     {run.sub ? <span className="normal-case font-semibold"> · <Hl text={run.sub} terms={terms} /></span> : null}
                   </h4>

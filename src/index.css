@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400..800&family=Kalam:wght@400;700&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -40,6 +40,7 @@
 
   --font-display: "Fraunces", "Source Serif 4", Georgia, serif;
   --font-sans: "Inter", system-ui, sans-serif;
+  --font-hand: "Kalam", "Segoe Print", cursive;
 }
 
 /* Semantic tokens — light mode (default) */
