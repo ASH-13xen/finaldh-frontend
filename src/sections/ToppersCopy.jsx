@@ -1338,19 +1338,14 @@ function ModelAnswerView({ analysis }) {
 
           {(ma.body || []).map((part, i) => (
             <div key={i} className="space-y-1.5">
-              <p className="text-sm font-bold text-text-primary">
-                <span className="text-text-tertiary">Body {i + 1} — </span>{part.part}
-              </p>
+              {part.part && <p className="text-sm font-bold text-text-primary">{part.part}</p>}
               <ul className="space-y-2 mt-1">
                 {(part.points || []).map((p, j) => (
                   <li key={j} className="font-reading text-sm text-text-primary leading-relaxed flex gap-1.5">
                     <span className="text-text-tertiary font-bold flex-shrink-0">•</span>
                     <span>
+                      {p.heading ? <b className="font-bold">{p.heading}: </b> : null}
                       {p.text}
-                      {p.tag ? <span className="ml-1 text-[10px] font-bold uppercase tracking-wide text-text-tertiary">[{p.tag}]</span> : null}
-                      {p.unconventionalBecause ? (
-                        <span className="block text-[11px] text-text-tertiary italic mt-0.5">Why it stands out: {p.unconventionalBecause}</span>
-                      ) : null}
                     </span>
                   </li>
                 ))}
