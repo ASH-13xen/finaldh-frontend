@@ -57,6 +57,54 @@ function Disclosure({ title, subtitle, open, onToggle, children, id }) {
   );
 }
 
+// Solutions in syllabus order: chapter → sub-topic → test order. A question whose chapter is not in
+// the syllabus any more, or was never placed, comes last.
+function groupBySyllabus(questions, outline) {
+  const groups = outline.map((c) => {
+    const inChapter = questions.filter((q) => q.syllabus?.chapter === c.key);
+    const rank = (q) => {
+      const i = c.subtopics.indexOf(q.syllabus.subtopic);
+      return i < 0 ? c.subtopics.length : i;
+    };
+    return { key: c.key, title: `${c.number}. ${c.title}`, questions: [...inChapter].sort((a, b) => rank(a) - rank(b) || a.order - b.order) };
+  });
+  const known = new Set(outline.map((c) => c.key));
+  groups.push({ key: 'other', title: 'Other questions', questions: questions.filter((q) => !known.has(q.syllabus?.chapter)) });
+  return groups.filter((g) => g.questions.length);
+}
+
+function SyllabusGroup({ group, children }) {
+  const correct = group.questions.filter((q) => q.isCorrect === true).length;
+  const wrong = group.questions.filter((q) => q.isCorrect === false).length;
+  let lastSub = null;
+  return (
+    <details open className="group/chapter">
+      <summary className="cursor-pointer list-none flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b-2 border-brand pb-1.5 mb-3">
+        <h3 className="text-lg font-display font-extrabold text-text-primary">
+          <Icon name="chevronDown" className="inline w-4 h-4 mr-1 -rotate-90 group-open/chapter:rotate-0 transition-transform" />
+          {group.title}
+        </h3>
+        <span className="text-sm font-semibold text-text-tertiary">
+          {group.questions.length} question{group.questions.length === 1 ? '' : 's'} · {correct} correct · {wrong} wrong
+        </span>
+      </summary>
+      <div className="flex flex-col gap-4">
+        {group.questions.map((q) => {
+          const sub = q.syllabus?.subtopic || '';
+          const showSub = sub && sub !== lastSub;
+          lastSub = sub;
+          return (
+            <div key={q.order} className="flex flex-col gap-2">
+              {showSub && <p className="text-sm font-bold text-brand">{sub}</p>}
+              {children(q)}
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
 function ReviewCard({ q, flagged, onFlag, onReport }) {
   const status = q.isCorrect === true ? 'correct' : q.isCorrect === false ? 'wrong' : 'skipped';
   const [showExplanation, setShowExplanation] = useState(status !== 'correct'); // open by default where there is something to learn
@@ -136,6 +184,7 @@ export default function McqAnalyzer({ attemptId, onBack, onViewHistory, onPracti
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reviewFilter, setReviewFilter] = useState('All');
+  const [reviewOrder, setReviewOrder] = useState('syllabus'); // 'syllabus' | 'test'
   const [analyticsOpen, setAnalyticsOpen] = useState({});
   const [flagOverrides, setFlagOverrides] = useState({});
   const [reportTarget, setReportTarget] = useState(null);
@@ -218,6 +267,9 @@ export default function McqAnalyzer({ attemptId, onBack, onViewHistory, onPracti
     ['Marked', review.filter((q) => q.status === 'marked-for-review' || q.status === 'answered-marked-for-review').length],
     ['Flagged', review.filter((q) => q.flagged).length]
   ];
+  const canArrange = review.some((q) => q.syllabus) && result.syllabusOutline?.length > 0;
+  const showBySyllabus = canArrange && reviewOrder === 'syllabus';
+
   const filteredReview = review.filter((q) => {
     if (reviewFilter === 'Wrong') return q.isCorrect === false;
     if (reviewFilter === 'Correct') return q.isCorrect === true;
@@ -326,6 +378,20 @@ export default function McqAnalyzer({ attemptId, onBack, onViewHistory, onPracti
           <h2 className="text-xl font-display font-extrabold text-text-primary">Question-by-question review</h2>
           <p className="text-sm text-text-tertiary mt-0.5">Read every explanation — this is where most of the learning happens. Flag anything you want to practise again.</p>
         </div>
+        {canArrange && (
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Order of the solutions">
+            {[['syllabus', 'Syllabus-wise'], ['test', 'Test order']].map(([k, label]) => (
+              <button
+                key={k}
+                aria-pressed={reviewOrder === k}
+                onClick={() => setReviewOrder(k)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-bold cursor-pointer transition-all ${reviewOrder === k ? 'bg-accent-soft-bg text-brand' : 'text-text-secondary hover:bg-sunken'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Review filter">
           {FILTERS.map(([f, n]) => (
             <button
@@ -343,7 +409,11 @@ export default function McqAnalyzer({ attemptId, onBack, onViewHistory, onPracti
           <div className="bg-surface border border-dashed border-border-default rounded-2xl py-12 text-center text-text-tertiary text-base">No questions in this view.</div>
         ) : (
           <div className="flex flex-col gap-4">
-            {filteredReview.map((q) => (
+            {showBySyllabus ? groupBySyllabus(filteredReview, result.syllabusOutline).map((group) => (
+              <SyllabusGroup key={group.key} group={group}>
+                {(q) => <ReviewCard key={q.order} q={q} flagged={q.flagged} onFlag={() => toggleFlag(q)} onReport={() => setReportTarget(q)} />}
+              </SyllabusGroup>
+            )) : filteredReview.map((q) => (
               <ReviewCard key={q.order} q={q} flagged={q.flagged} onFlag={() => toggleFlag(q)} onReport={() => setReportTarget(q)} />
             ))}
           </div>

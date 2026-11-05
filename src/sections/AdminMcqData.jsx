@@ -8,6 +8,7 @@ import { ActionButton, Chip, Modal } from '../components/mcq/ui';
 import QuestionEditor from '../components/mcq/QuestionEditor';
 import AdminMcqReports from './AdminMcqReports';
 import AdminMcqAttempts from './AdminMcqAttempts';
+import AdminSyllabus from './AdminSyllabus';
 
 function UploadSummary({ summary }) {
   if (!summary) return null;
@@ -16,6 +17,16 @@ function UploadSummary({ summary }) {
       <div className="p-3 bg-status-success-bg border border-status-success-text/30 rounded-xl text-status-success-text text-xs font-semibold">
         {summary.message}
       </div>
+      {summary.syllabus?.placing && (
+        <div className="p-3 bg-status-info-bg border border-status-info-text/30 rounded-xl text-status-info-text text-xs font-semibold">
+          AI is arranging {summary.syllabus.count} question(s) by the {summary.syllabus.subject} syllabus. You can check them in the Syllabus tab.
+        </div>
+      )}
+      {summary.syllabus && !summary.syllabus.placing && !summary.syllabus.count && !summary.syllabus.error && !summary.syllabus.hasSyllabus && (
+        <div className="p-3 bg-status-warning-bg border border-status-warning-text/30 rounded-xl text-status-warning-text text-xs font-semibold">
+          {summary.syllabus.subject} has no syllabus yet, so solutions stay in test order. Upload one in the Syllabus tab to arrange them.
+        </div>
+      )}
       {summary.skippedRows?.length > 0 && (
         <div className="p-3 bg-status-danger-bg border border-status-danger-text/30 rounded-xl text-status-danger-text text-xs space-y-1">
           <p className="font-bold uppercase text-[10px] tracking-wide">Skipped Rows ({summary.skippedRows.length})</p>
@@ -55,6 +66,15 @@ function ManageTestsTab({ tests, loadingTests, refreshTests }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  // Subjects with an uploaded syllabus (e.g. Economy) can have tests too.
+  const [syllabusSubjects, setSyllabusSubjects] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/syllabus/admin', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      .then((r) => (r.ok ? r.json() : { syllabi: [] }))
+      .then((d) => setSyllabusSubjects((d.syllabi || []).map((s) => s.subject).filter((s) => !SUBJECT_NAMES[s] && !OPTIONAL_NAMES[s])))
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -152,6 +172,11 @@ function ManageTestsTab({ tests, loadingTests, refreshTests }) {
                 className="w-full bg-sunken border border-border-default hover:border-text-tertiary focus:border-brand text-text-primary rounded-xl px-4 py-2.5 text-xs font-semibold transition-all"
               >
                 <option value="">Select subject...</option>
+                {syllabusSubjects.length > 0 && (
+                  <optgroup label="Subjects with a syllabus">
+                    {syllabusSubjects.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </optgroup>
+                )}
                 <optgroup label="General Studies Modules">
                   {Object.entries(SUBJECT_NAMES).map(([id, name]) => (
                     <option key={id} value={id}>{name}</option>
@@ -1067,6 +1092,7 @@ const SUB_TABS = [
   ['manage', 'Create / Manage Tests', null],
   ['upload', 'Upload Questions', null],
   ['build', 'Build Questions', null],
+  ['syllabus', 'Syllabus', null],
   ['reports', 'Reported Questions', 'reports'],
   ['attempts', 'Student Attempts', null],
   ['pricing', 'Subject Pricing', null],
@@ -1134,6 +1160,8 @@ function AdminMcqDataInner() {
         <UploadQuestionsTab tests={tests} loadingTests={loadingTests} />
       ) : activeSubTab === 'build' ? (
         <BuildQuestionsTab tests={tests} loadingTests={loadingTests} refreshTests={refreshTests} editRequest={editRequest} onEditHandled={() => setEditRequest(null)} />
+      ) : activeSubTab === 'syllabus' ? (
+        <AdminSyllabus tests={tests} />
       ) : activeSubTab === 'reports' ? (
         <AdminMcqReports onEditQuestion={openEditor} onCountChange={setPendingReports} />
       ) : activeSubTab === 'attempts' ? (
