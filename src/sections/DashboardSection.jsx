@@ -21,6 +21,8 @@ import McqFlow from './McqFlow';
 import AdminView from './AdminView';
 import AdminContactUsers from './AdminContactUsers';
 import PaymentRejectionNotice from '../components/PaymentRejectionNotice';
+import ComingSoon from './ComingSoon';
+import { MCQ_SECTION_LIVE } from '../lib/features';
 
 export default function DashboardSection({ user, onLogout, activeTab, setActiveTab, onUserUpdate }) {
   const [syllabusData, setSyllabusData] = useState(null);
@@ -143,7 +145,9 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
         )}
 
         {activeTab?.startsWith('mcq_') && (
-          <McqFlow user={user} />
+          MCQ_SECTION_LIVE
+            ? <McqFlow user={user} />
+            : <ComingSoon title="MCQ Test Series" onBack={() => setActiveTab('student')} />
         )}
 
         {activeTab === 'admin_mcq_data' && (

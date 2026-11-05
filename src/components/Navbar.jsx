@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { gsap, prefersReducedMotion } from '../lib/gsapSetup';
 import { useTheme } from '../contexts/ThemeContext';
 import InboxBell from './InboxBell';
+import { MCQ_SECTION_LIVE } from '../lib/features';
 
 const buttonClass = (active) =>
   `text-[9px] sm:text-xs font-sans font-semibold px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-md md:rounded-lg transition-all duration-200 cursor-pointer whitespace-nowrap ${
@@ -33,7 +34,16 @@ const getNavLinks = (user, pendingReports = 0) => {
       key: 'mcq',
       target: 'mcq_tests',
       match: (t) => t?.startsWith('mcq_'),
-      label: 'MCQ Tests'
+      label: (
+        <>
+          MCQ Tests
+          {!MCQ_SECTION_LIVE && (
+            <span className="ml-1 sm:ml-1.5 inline-flex items-center px-1 sm:px-1.5 rounded-full bg-accent-soft-bg border border-accent-soft-border text-brand text-[7px] sm:text-[9px] font-extrabold uppercase tracking-wider align-middle">
+              Soon
+            </span>
+          )}
+        </>
+      )
     }
   ];
 
