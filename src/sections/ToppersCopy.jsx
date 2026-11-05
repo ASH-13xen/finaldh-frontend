@@ -2,7 +2,8 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } fr
 import LoadingSpinner from '../components/LoadingSpinner';
 import PdfAnswerViewer from '../components/PdfAnswerViewer';
 import { TopperTakeaways } from '../components/AnswerEnhancementLayer';
-import BestPartsCard, { ImageZoom } from '../components/BestPartsCard';
+import BestPartsCard from '../components/BestPartsCard';
+import ImageZoom from '../components/ImageZoom';
 import AnswerDiagram from '../components/AnswerDiagram';
 import PyqAnswerView from '../components/PyqAnswerView';
 import ValueAdditionBank from '../components/ValueAdditionBank';

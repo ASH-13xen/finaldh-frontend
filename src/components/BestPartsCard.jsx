@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 
 // "Best part of the answer" — admin-cropped highlights from the toppers' copies for one
 // question (see AdminToppersBestParts.jsx). Shown at the top of the answer view's analysis
@@ -8,28 +7,15 @@ import { createPortal } from 'react-dom';
 const imageUrl = (id) =>
   `/api/toppers-copy/best-parts/${id}/image?token=${encodeURIComponent(localStorage.getItem('token') || '')}`;
 
-// Full-size image over the whole page (portal: the readers sit in their own stacking context).
-export function ImageZoom({ src, caption, onClose }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return createPortal(
-    <div className="fixed inset-0 z-[90] bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
-      <figure className="max-w-5xl w-full max-h-full overflow-auto" onClick={(e) => e.stopPropagation()}>
-        <img src={src} alt={caption || 'Enlarged image'} className="w-full h-auto bg-white rounded-lg" draggable={false} />
-        {caption && <figcaption className="mt-2 text-sm text-white/90 text-center">{caption}</figcaption>}
-      </figure>
-      <button className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/15 text-white text-lg cursor-pointer" onClick={onClose} aria-label="Close">✕</button>
-    </div>,
-    document.body,
-  );
-}
-
 export default function BestPartsCard({ parts, onOpenTopper }) {
   const [zoom, setZoom] = useState(null);
+
+  useEffect(() => {
+    if (!zoom) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setZoom(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [zoom]);
 
   if (!parts?.length) return null;
 
@@ -65,7 +51,15 @@ export default function BestPartsCard({ parts, onOpenTopper }) {
         ))}
       </div>
 
-      {zoom && <ImageZoom src={imageUrl(zoom._id)} caption={zoom.caption} onClose={() => setZoom(null)} />}
+      {zoom && (
+        <div className="fixed inset-0 z-[90] bg-black/80 flex items-center justify-center p-4" onClick={() => setZoom(null)}>
+          <figure className="max-w-5xl w-full max-h-full overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <img src={imageUrl(zoom._id)} alt={zoom.caption || 'Best part'} className="w-full h-auto bg-white rounded-lg" draggable={false} />
+            {zoom.caption && <figcaption className="mt-2 text-sm text-white/90 text-center">{zoom.caption}</figcaption>}
+          </figure>
+          <button className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/15 text-white text-lg cursor-pointer" onClick={() => setZoom(null)} aria-label="Close">✕</button>
+        </div>
+      )}
     </section>
   );
 }
