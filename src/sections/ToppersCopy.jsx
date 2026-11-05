@@ -2,7 +2,7 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } fr
 import LoadingSpinner from '../components/LoadingSpinner';
 import PdfAnswerViewer from '../components/PdfAnswerViewer';
 import { TopperTakeaways } from '../components/AnswerEnhancementLayer';
-import BestPartsCard from '../components/BestPartsCard';
+import BestPartsCard, { ImageZoom } from '../components/BestPartsCard';
 import AnswerDiagram from '../components/AnswerDiagram';
 import PyqAnswerView from '../components/PyqAnswerView';
 import ValueAdditionBank from '../components/ValueAdditionBank';
@@ -1129,9 +1129,11 @@ function ValueAdditionList({ items, selectedId, onOpen }) {
   if (!items.length) {
     return <p className="text-sm text-text-tertiary italic">No value addition for this topic yet.</p>;
   }
-  return (
+  const bestParts = items.filter((v) => v.kind === 'bestPart');
+  const others = items.filter((v) => v.kind !== 'bestPart');
+  const cards = (list) => (
     <div className="space-y-2.5">
-      {items.map((v) => {
+      {list.map((v) => {
         const selected = v._id === selectedId;
         return (
           <button
@@ -1142,6 +1144,11 @@ function ValueAdditionList({ items, selectedId, onOpen }) {
             }`}
           >
             <div className="flex items-center gap-2 mb-1 flex-wrap">
+              {v.images?.length ? (
+                <span className="text-[11px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">
+                  {v.images.length} image{v.images.length === 1 ? '' : 's'}
+                </span>
+              ) : null}
               {v.hasBank ? (
                 <span className="text-[11px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">
                   Searchable notes{v.bankStats?.notes ? ` · ${v.bankStats.notes}` : ''}
@@ -1162,6 +1169,40 @@ function ValueAdditionList({ items, selectedId, onOpen }) {
           </button>
         );
       })}
+    </div>
+  );
+  if (!bestParts.length) return cards(others);
+  return (
+    <div className="space-y-5">
+      <section>
+        <h3 className="text-[13px] font-extrabold uppercase tracking-wider text-brand mb-2">📸 Best part of answer</h3>
+        {cards(bestParts)}
+      </section>
+      {others.length > 0 && (
+        <section>
+          <h3 className="text-[13px] font-extrabold uppercase tracking-wider text-text-secondary mb-2">Notes &amp; data</h3>
+          {cards(others)}
+        </section>
+      )}
+    </div>
+  );
+}
+
+// Images the admin added to an entry; tap one to see it full size.
+function ValueAdditionImages({ entryId, images }) {
+  const [zoom, setZoom] = useState(null);
+  const url = (image) => `/api/toppers-copy/value-additions/${entryId}/images/${image._id}?token=${encodeURIComponent(localStorage.getItem('token') || '')}`;
+  return (
+    <div className="space-y-5">
+      {images.map((image) => (
+        <figure key={image._id} className="rounded-xl overflow-hidden border border-border-default bg-surface">
+          <button onClick={() => setZoom(image)} className="block w-full bg-white cursor-zoom-in" title="Tap to enlarge">
+            <img src={url(image)} alt={image.caption || 'Best part of the answer'} className="block mx-auto max-w-full h-auto" loading="lazy" draggable={false} />
+          </button>
+          {image.caption && <figcaption className="px-4 py-3 font-reading text-[18px] text-text-primary leading-relaxed border-t border-border-default">{image.caption}</figcaption>}
+        </figure>
+      ))}
+      {zoom && <ImageZoom src={url(zoom)} caption={zoom.caption} onClose={() => setZoom(null)} />}
     </div>
   );
 }
@@ -1188,10 +1229,18 @@ function ValueAdditionNotes({ text }) {
 
 function ValueAdditionReader({ item, topicName, onClose }) {
   const hasNotes = !!item.body?.trim();
-  // An entry with a Word-file notes bank opens on the bank; its notes / PDF (if any) sit behind a toggle.
-  const [view, setView] = useState('bank');
+  const hasImages = item.images?.length > 0;
+  // Notes sit with the images when there are any, otherwise with the PDF.
+  const views = [
+    hasImages && ['images', hasNotes ? 'Notes & images' : 'Images'],
+    item.hasBank && ['bank', 'Searchable notes'],
+    (item.hasPdf || (hasNotes && !hasImages)) && ['file', item.hasPdf ? 'PDF' : 'Notes'],
+  ].filter(Boolean);
+  // An entry opens on its first view; the others (if any) sit behind a toggle.
+  const [view, setView] = useState(views[0]?.[0]);
   const [q, setQ] = useState('');
-  const showBank = item.hasBank && (view === 'bank' || (!hasNotes && !item.hasPdf));
+  const showBank = view === 'bank';
+  const notesWithFile = hasNotes && !hasImages;
   return (
     <>
       <div className="border-b border-border-default flex-shrink-0">
@@ -1210,13 +1259,13 @@ function ValueAdditionReader({ item, topicName, onClose }) {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search facts, data, examples…"
-              className="min-w-0 flex-1 sm:flex-none sm:w-72 bg-sunken border border-border-default focus:border-brand text-text-primary rounded-lg px-3 py-1.5 text-base focus:outline-none"
+              className="min-w-0 flex-1 sm:flex-none sm:w-72 bg-slate-900 [color-scheme:dark] border border-slate-600 focus:border-brand text-white placeholder:text-slate-300 font-medium rounded-lg px-3 py-1.5 text-base focus:outline-none"
             />
           )}
         </div>
-        {item.hasBank && (hasNotes || item.hasPdf) && (
+        {views.length > 1 && (
           <div className="sm:w-[80%] mx-auto px-4 sm:px-0 flex gap-1 pb-2">
-            {[['bank', 'Searchable notes'], ['file', item.hasPdf ? 'PDF' : 'Notes']].map(([k, label]) => (
+            {views.map(([k, label]) => (
               <button
                 key={k}
                 onClick={() => setView(k)}
@@ -1229,14 +1278,22 @@ function ValueAdditionReader({ item, topicName, onClose }) {
         )}
       </div>
       {showBank && <ValueAdditionBank key={item._id} entryId={item._id} title={item.title} q={q} onSearch={setQ} />}
-      {!showBank && hasNotes && (
+      {view === 'images' && (
+        <div className="flex-1 overflow-y-auto py-5">
+          <div className="sm:w-[80%] mx-auto px-5 sm:px-0 space-y-5">
+            {hasNotes && <ValueAdditionNotes text={item.body} />}
+            <ValueAdditionImages entryId={item._id} images={item.images} />
+          </div>
+        </div>
+      )}
+      {view === 'file' && notesWithFile && (
         <div className={`py-5 overflow-y-auto ${item.hasPdf ? 'max-h-[40%] flex-shrink-0 border-b border-border-default' : 'flex-1'}`}>
           <div className="sm:w-[80%] mx-auto px-5 sm:px-0">
             <ValueAdditionNotes text={item.body} />
           </div>
         </div>
       )}
-      {!showBank && item.hasPdf && (
+      {view === 'file' && item.hasPdf && (
         <div className="relative flex-1 min-h-[260px]">
           <PdfAnswerViewer
             key={`${item._id}-${item.updatedAt}`}
