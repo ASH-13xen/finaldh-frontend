@@ -20,12 +20,13 @@ const KNOWN_TABS = [
   'progress',
   'admin_progress_data',
   'admin_mcq_data',
+  'admin_interview_data',
 ];
 
 export const DEFAULT_TAB = 'buy_pdfs';
 
 export const isValidTab = (tab) =>
-  typeof tab === 'string' && (KNOWN_TABS.includes(tab) || tab.startsWith('mcq_'));
+  typeof tab === 'string' && (KNOWN_TABS.includes(tab) || tab.startsWith('mcq_') || tab.startsWith('interview_'));
 
 export const readTabFromHash = () => {
   if (typeof window === 'undefined') return DEFAULT_TAB;

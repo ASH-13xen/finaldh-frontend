@@ -22,7 +22,9 @@ import AdminView from './AdminView';
 import AdminContactUsers from './AdminContactUsers';
 import PaymentRejectionNotice from '../components/PaymentRejectionNotice';
 import ComingSoon from './ComingSoon';
-import { MCQ_SECTION_LIVE } from '../lib/features';
+import InterviewFlow from './InterviewFlow';
+import AdminInterviewData from './AdminInterviewData';
+import { MCQ_SECTION_LIVE, INTERVIEW_SECTION_LIVE } from '../lib/features';
 
 export default function DashboardSection({ user, onLogout, activeTab, setActiveTab, onUserUpdate }) {
   const [syllabusData, setSyllabusData] = useState(null);
@@ -152,6 +154,17 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'admin_mcq_data' && (
           <AdminMcqData />
+        )}
+
+        {/* Admins only until INTERVIEW_SECTION_LIVE; students have no link to it and get Coming Soon from a direct URL. */}
+        {activeTab?.startsWith('interview_') && (
+          INTERVIEW_SECTION_LIVE || user.isAdmin
+            ? <InterviewFlow key={activeTab} user={user} activeTab={activeTab} />
+            : <ComingSoon title="Mock Interview" onBack={() => setActiveTab('student')} />
+        )}
+
+        {activeTab === 'admin_interview_data' && (
+          <AdminInterviewData />
         )}
       </ErrorBoundary>
       </main>

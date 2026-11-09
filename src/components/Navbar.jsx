@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { gsap, prefersReducedMotion } from '../lib/gsapSetup';
 import { useTheme } from '../contexts/ThemeContext';
 import InboxBell from './InboxBell';
-import { MCQ_SECTION_LIVE } from '../lib/features';
+import { MCQ_SECTION_LIVE, INTERVIEW_SECTION_LIVE } from '../lib/features';
 
 const buttonClass = (active) =>
   `text-[9px] sm:text-xs font-sans font-semibold px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-md md:rounded-lg transition-all duration-200 cursor-pointer whitespace-nowrap ${
@@ -46,6 +46,25 @@ const getNavLinks = (user, pendingReports = 0) => {
       )
     }
   ];
+
+  // Mock Interview: admins only until INTERVIEW_SECTION_LIVE.
+  if (INTERVIEW_SECTION_LIVE || user.isAdmin) {
+    links.push({
+      key: 'interview',
+      target: 'interview_home',
+      match: (t) => t?.startsWith('interview_'),
+      label: (
+        <>
+          <span className="hidden sm:inline">Mock </span>Interview
+          {!INTERVIEW_SECTION_LIVE && (
+            <span className="ml-1 sm:ml-1.5 inline-flex items-center px-1 sm:px-1.5 rounded-full bg-accent-soft-bg border border-accent-soft-border text-brand text-[7px] sm:text-[9px] font-extrabold uppercase tracking-wider align-middle">
+              Admins
+            </span>
+          )}
+        </>
+      )
+    });
+  }
 
   if (!user.isAdmin) {
     links.push({
@@ -182,6 +201,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
   // and otherwise ignores a click on its own nav link).
   const goToLink = (link) => {
     if (link.key === 'mcq' && link.key === activeKey) window.dispatchEvent(new CustomEvent('mcq:home'));
+    if (link.key === 'interview' && link.key === activeKey) window.dispatchEvent(new CustomEvent('interview:home'));
     setActiveTab(link.target);
   };
   const navRef = useRef(null);

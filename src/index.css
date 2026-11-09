@@ -133,3 +133,66 @@ body {
   background-color: var(--bg-page);
   color: var(--text-primary);
 }
+
+/* ---------- Mock Interview section ---------- */
+
+/* Soft emerald/teal/amber wash behind the interview section's page headers. */
+.iv-aurora {
+  background:
+    radial-gradient(60% 80% at 10% 0%, color-mix(in oklab, var(--color-accent-400) 22%, transparent) 0%, transparent 70%),
+    radial-gradient(50% 70% at 90% 10%, color-mix(in oklab, #38bdf8 16%, transparent) 0%, transparent 70%),
+    radial-gradient(40% 60% at 60% 100%, color-mix(in oklab, #f59e0b 12%, transparent) 0%, transparent 70%);
+}
+.dark .iv-aurora {
+  background:
+    radial-gradient(60% 80% at 10% 0%, color-mix(in oklab, var(--color-accent-500) 26%, transparent) 0%, transparent 70%),
+    radial-gradient(50% 70% at 90% 10%, color-mix(in oklab, #0ea5e9 18%, transparent) 0%, transparent 70%),
+    radial-gradient(40% 60% at 60% 100%, color-mix(in oklab, #d97706 12%, transparent) 0%, transparent 70%);
+}
+
+/* The interview room is a dark "stage" in both themes, like a video call. */
+.iv-stage {
+  background:
+    radial-gradient(80% 60% at 50% 0%, rgba(18, 155, 110, 0.22) 0%, transparent 60%),
+    radial-gradient(60% 50% at 100% 100%, rgba(56, 189, 248, 0.10) 0%, transparent 60%),
+    linear-gradient(180deg, #0f1412 0%, #0b0f0d 100%);
+}
+
+@keyframes iv-ring {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+.iv-ring { animation: iv-ring 1.6s ease-out infinite; }
+.iv-ring-delay { animation-delay: 0.8s; }
+
+@keyframes iv-bar {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+.iv-bar { animation: iv-bar 0.9s ease-in-out infinite; transform-origin: center; }
+
+@keyframes iv-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-3px); }
+}
+.iv-dot { animation: iv-dot 1.2s ease-in-out infinite; }
+
+@keyframes iv-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.iv-rise { animation: iv-rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+@keyframes iv-shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.iv-skeleton {
+  background: linear-gradient(90deg, var(--bg-sunken) 0%, var(--bg-surface-raised) 50%, var(--bg-sunken) 100%);
+  background-size: 800px 100%;
+  animation: iv-shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-ring, .iv-bar, .iv-dot, .iv-rise, .iv-skeleton { animation: none !important; }
+}
