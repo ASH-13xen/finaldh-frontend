@@ -1422,7 +1422,8 @@ function ModelAnswerView({ analysis }) {
   );
 }
 
-function AnalysisView({ analysis }) {
+// Also used by the admin "From Claude chat" import preview (AdminToppersChatImport.jsx).
+export function AnalysisView({ analysis }) {
   if (!analysis || !analysis.generatedAt) {
     return <p className="text-sm text-text-tertiary italic">AI analysis has not been generated for this question yet.</p>;
   }
