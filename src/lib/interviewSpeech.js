@@ -88,6 +88,160 @@ export function useSpeaker() {
   return { supported, speaking, speak, stop, voiceCount: voices.length, hasIndianVoice: voices.some((v) => /en[-_]IN/i.test(v.lang)) };
 }
 
+// ------------------------------------------------------------------ the board's neural voice
+
+const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
+
+// Natural voices from the server (Gemini text-to-speech): 16-bit PCM streamed from /api/interview, played
+// with Web Audio as it arrives so the question starts about a second after it is asked. Each clip is
+// kept, so "repeat the question" doesn't fetch it again. play() rejects when the server can't produce a
+// voice (AI off, quota), and callers fall back to useSpeaker().
+export function useBoardVoice() {
+  const ctxRef = useRef(null);
+  const analyserRef = useRef(null);
+  const sourcesRef = useRef([]);
+  const token = useRef(0);
+  const cache = useRef(new Map());
+  const [speaking, setSpeaking] = useState(false);
+  const [level, setLevel] = useState(0);
+
+  const audio = useCallback(() => {
+    if (!ctxRef.current) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      const ctx = new Ctx();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.connect(ctx.destination);
+      ctxRef.current = ctx;
+      analyserRef.current = analyser;
+    }
+    return ctxRef.current;
+  }, []);
+
+  // Call from a click handler: browsers only let audio start after the user has interacted.
+  const unlock = useCallback(() => { audio()?.resume().catch(() => {}); }, [audio]);
+
+  const stopSources = () => {
+    for (const s of sourcesRef.current) { try { s.stop(); } catch { /* already stopped */ } }
+    sourcesRef.current = [];
+  };
+
+  const stop = useCallback(() => {
+    token.current += 1;
+    stopSources();
+    setSpeaking(false);
+  }, []);
+
+  // Voice level for the speaking member's ring, while audio plays.
+  useEffect(() => {
+    if (!speaking || !analyserRef.current) return undefined;
+    const an = analyserRef.current;
+    const buf = new Uint8Array(an.fftSize);
+    let raf;
+    const tick = () => {
+      an.getByteTimeDomainData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+      setLevel(Math.min(1, Math.sqrt(sum / buf.length) * 5));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [speaking]);
+
+  const play = useCallback(async (key, url) => {
+    const ctx = audio();
+    if (!ctx) throw new Error('Web Audio is not supported');
+    const my = ++token.current;
+    stopSources();
+    if (ctx.state === 'suspended') await ctx.resume().catch(() => {});
+
+    let at = ctx.currentTime + 0.05;
+    let last = null;
+    const schedule = (samples, rate) => {
+      const b = ctx.createBuffer(1, samples.length, rate);
+      b.copyToChannel(samples, 0);
+      const src = ctx.createBufferSource();
+      src.buffer = b;
+      src.connect(analyserRef.current);
+      if (at < ctx.currentTime) at = ctx.currentTime + 0.02;
+      src.start(at);
+      at += b.duration;
+      sourcesRef.current.push(src);
+      last = src;
+    };
+    const finished = () => new Promise((resolve) => {
+      if (!last) { resolve(); return; }
+      last.onended = resolve;
+      setTimeout(resolve, Math.max(0, (at - ctx.currentTime) * 1000) + 800); // in case onended never fires
+    });
+
+    const cached = cache.current.get(key);
+    if (cached) {
+      setSpeaking(true);
+      schedule(cached.samples, cached.rate);
+      await finished();
+      if (my === token.current) setSpeaking(false);
+      return;
+    }
+
+    const res = await fetch(url, { headers: authHeaders() });
+    if (!res.ok || !res.body) throw new Error(`voice unavailable (${res.status})`);
+    if (my !== token.current) return;
+    const rate = Number(res.headers.get('X-Sample-Rate')) || 24000;
+    const reader = res.body.getReader();
+    const minChunk = Math.round(rate * 0.2); // ~0.2 s per scheduled buffer keeps playback smooth
+    const parts = [];
+    let pending = [];
+    let pendingLen = 0;
+    let carry = null;
+    const flush = () => {
+      if (!pendingLen) return;
+      const merged = new Float32Array(pendingLen);
+      let o = 0;
+      for (const p of pending) { merged.set(p, o); o += p.length; }
+      pending = [];
+      pendingLen = 0;
+      if (!last) setSpeaking(true);
+      schedule(merged, rate);
+    };
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (my !== token.current) { reader.cancel().catch(() => {}); return; }
+      if (done) break;
+      let bytes = value;
+      if (carry) { const m = new Uint8Array(carry.length + bytes.length); m.set(carry); m.set(bytes, carry.length); bytes = m; carry = null; }
+      if (bytes.length % 2) { carry = bytes.slice(-1); bytes = bytes.slice(0, -1); }
+      const n = bytes.length / 2;
+      if (!n) continue;
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.length);
+      const f = new Float32Array(n);
+      for (let i = 0; i < n; i++) f[i] = view.getInt16(i * 2, true) / 32768;
+      parts.push(f);
+      pending.push(f);
+      pendingLen += n;
+      if (pendingLen >= minChunk) flush();
+    }
+    flush();
+    if (!parts.length) throw new Error('voice returned no audio');
+
+    const total = parts.reduce((n, p) => n + p.length, 0);
+    const whole = new Float32Array(total);
+    let o = 0;
+    for (const p of parts) { whole.set(p, o); o += p.length; }
+    cache.current.set(key, { samples: whole, rate });
+    if (cache.current.size > 40) cache.current.delete(cache.current.keys().next().value);
+
+    await finished();
+    if (my === token.current) setSpeaking(false);
+  }, [audio]);
+
+  useEffect(() => () => { token.current += 1; stopSources(); ctxRef.current?.close().catch(() => {}); }, []);
+
+  return { play, stop, unlock, speaking, level: speaking ? level : 0 };
+}
+
 // ------------------------------------------------------------------ listening (Web Speech API)
 
 const Recognition = typeof window !== 'undefined' ? window.SpeechRecognition || window.webkitSpeechRecognition : null;

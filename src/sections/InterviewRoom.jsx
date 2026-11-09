@@ -5,7 +5,7 @@ import { useToast } from '../components/Toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { SeatAvatar, SourceChip } from '../components/interview/ui';
 import { iv, upload, errorMessage, formatClock, wordCount, ASKER_LABEL } from '../lib/interviewApi';
-import { useSpeaker, useDictation, useRecorder, useMicLevel, useCamera } from '../lib/interviewSpeech';
+import { useSpeaker, useBoardVoice, useDictation, useRecorder, useMicLevel, useCamera } from '../lib/interviewSpeech';
 
 const SEATS = ['m1', 'm2', 'chairman', 'm3', 'm4'];
 const PREF_KEY = 'interview:room';
@@ -23,10 +23,12 @@ function useNow(running) {
   return now;
 }
 
-function Seat({ asker, label, focus, active, speaking, thinking }) {
+function Seat({ asker, label, focus, active, speaking, thinking, level = 0 }) {
   return (
     <div className={`flex flex-col items-center text-center transition-all duration-300 ${active ? 'scale-100 opacity-100' : 'scale-90 opacity-55'} min-w-[64px] sm:min-w-[76px]`}>
-      <SeatAvatar asker={asker} size={active ? 'stage' : 'md'} speaking={speaking} thinking={thinking} />
+      <span className="transition-transform duration-75" style={{ transform: `scale(${1 + level * 0.08})` }}>
+        <SeatAvatar asker={asker} size={active ? 'stage' : 'md'} speaking={speaking} thinking={thinking} />
+      </span>
       <p className={`mt-2.5 text-xs sm:text-sm font-bold ${active ? 'text-white' : 'text-white/70'}`}>{label}</p>
       {active && focus && <p className="hidden md:block text-[11px] text-white/50 mt-0.5 max-w-[150px] leading-snug">{focus}</p>}
     </div>
@@ -112,7 +114,9 @@ export default function InterviewRoom({ sessionId, initial, go }) {
   const [transcribing, setTranscribing] = useState(false);
   const [closingLine, setClosingLine] = useState('');
 
-  const speaker = useSpeaker();
+  const speaker = useSpeaker(); // the browser's built-in voices: the fallback
+  const voice = useBoardVoice(); // natural voices streamed from the server when AI is on
+  const [neural, setNeural] = useState(true);
   const dict = useDictation();
   const rec = useRecorder();
   const { attach: attachCamera, error: cameraError } = useCamera(cameraOn && begun);
@@ -122,6 +126,25 @@ export default function InterviewRoom({ sessionId, initial, go }) {
   const textareaRef = useRef(null);
 
   const voiceMode = session?.inputMode === 'voice';
+  const useNeural = neural && !!session?.aiUsed;
+  const canSpeak = speaker.supported || useNeural;
+
+  // Speaks a question (or the closing line) in its member's voice: the server's natural voice when
+  // possible, the browser's otherwise. The first failure switches the rest of the interview to the fallback.
+  const { play: playVoice, stop: stopNeuralVoice } = voice;
+  const { speak: speakFallback, stop: stopFallbackVoice } = speaker;
+  const say = useCallback(async (turnKey, text, asker) => {
+    if (useNeural) {
+      try {
+        await playVoice(`${sessionId}:${turnKey}`, `/api/interview/sessions/${sessionId}/speech?turn=${turnKey}`);
+        return;
+      } catch {
+        setNeural(false);
+      }
+    }
+    await speakFallback(text, asker);
+  }, [useNeural, playVoice, speakFallback, sessionId]);
+  const stopVoices = useCallback(() => { stopNeuralVoice(); stopFallbackVoice(); }, [stopNeuralVoice, stopFallbackVoice]);
   const sttMode = voiceMode && dict.supported;
   const current = session?.current;
 
@@ -145,16 +168,16 @@ export default function InterviewRoom({ sessionId, initial, go }) {
     setTyped('');
     setTyping(false);
     setAnswerStart(null);
-    if (voiceOut && speaker.supported) {
+    if (voiceOut && canSpeak) {
       setPhase('asking');
-      await speaker.speak(turn.question, turn.asker);
+      await say(turn.idx, turn.question, turn.asker);
       if (my !== token.current) return;
     }
     setPhase('answering');
     setAnswerStart(Date.now());
     if (session?.inputMode === 'voice' && dict.supported) dict.start();
     else if (session?.inputMode !== 'voice') setTimeout(() => textareaRef.current?.focus(), 50);
-  }, [voiceOut, speaker, dict, session?.inputMode]);
+  }, [voiceOut, canSpeak, say, dict, session?.inputMode]);
 
   const currentIdx = current?.idx;
   useEffect(() => {
@@ -174,7 +197,7 @@ export default function InterviewRoom({ sessionId, initial, go }) {
 
   const finish = useCallback(async () => {
     token.current += 1;
-    speaker.stop();
+    stopVoices();
     dict.stop();
     setPhase('finishing');
     try {
@@ -184,7 +207,7 @@ export default function InterviewRoom({ sessionId, initial, go }) {
       toast.error(errorMessage(err));
       setPhase('answering');
     }
-  }, [sessionId, go, toast, speaker, dict]);
+  }, [sessionId, go, toast, stopVoices, dict]);
 
   const submit = async ({ skipped = false } = {}) => {
     if (!current || phase === 'submitting') return;
@@ -197,7 +220,7 @@ export default function InterviewRoom({ sessionId, initial, go }) {
     }
     if (!skipped && !text.trim()) { toast.info(voiceMode ? 'Say your answer first — or press Pass.' : 'Type your answer first — or press Pass.'); return; }
     token.current += 1;
-    speaker.stop();
+    stopVoices();
     setPhase('submitting');
     try {
       const r = await iv(`/sessions/${sessionId}/answer`, {
@@ -208,7 +231,7 @@ export default function InterviewRoom({ sessionId, initial, go }) {
         setSession(r.session);
         setClosingLine(r.closing);
         setPhase('closing');
-        if (voiceOut && speaker.supported) await speaker.speak(r.closing, 'chairman');
+        if (voiceOut && canSpeak) await say('closing', r.closing, 'chairman');
         await finish();
         return;
       }
@@ -260,22 +283,22 @@ export default function InterviewRoom({ sessionId, initial, go }) {
   };
 
   const repeat = async () => {
-    if (!current || phase !== 'answering' || !speaker.supported) return;
+    if (!current || phase !== 'answering' || !canSpeak) return;
     const wasListening = dict.listening;
     if (wasListening) dict.stop();
-    await speaker.speak(current.question, current.asker);
+    await say(current.idx, current.question, current.asker);
     if (wasListening) dict.start();
   };
 
   const skipReading = () => {
     token.current += 1;
-    speaker.stop();
+    stopVoices();
     setPhase('answering');
     setAnswerStart(Date.now());
     if (sttMode) dict.start();
   };
 
-  const toggleVoiceOut = () => { setVoiceOut((v) => { writePrefs({ voiceOut: !v }); if (v) speaker.stop(); return !v; }); };
+  const toggleVoiceOut = () => { setVoiceOut((v) => { writePrefs({ voiceOut: !v }); if (v) stopVoices(); return !v; }); };
   const toggleCamera = () => { setCameraOn((v) => { writePrefs({ camera: !v }); return !v; }); };
 
   if (loadError) {
@@ -336,7 +359,8 @@ export default function InterviewRoom({ sessionId, initial, go }) {
                 label={panel[a]?.label || ASKER_LABEL[a]}
                 focus={panel[a]?.focus}
                 active={a === activeAsker}
-                speaking={a === activeAsker && (speaker.speaking || phase === 'asking')}
+                speaking={a === activeAsker && (speaker.speaking || voice.speaking || phase === 'asking')}
+                level={a === activeAsker ? voice.level : 0}
                 thinking={phase === 'submitting' && a === activeAsker}
               />
             ))}
@@ -366,7 +390,7 @@ export default function InterviewRoom({ sessionId, initial, go }) {
                       <Icon name="chevronRight" className="w-3.5 h-3.5" /> Skip reading
                     </button>
                   )}
-                  {phase === 'answering' && speaker.supported && (
+                  {phase === 'answering' && canSpeak && (
                     <button onClick={repeat} className="inline-flex items-center gap-1.5 rounded-xl bg-white/8 hover:bg-white/15 px-3 py-1.5 text-xs font-semibold text-white/80 cursor-pointer">
                       <Icon name="repeat" className="w-3.5 h-3.5" /> Repeat the question
                     </button>
@@ -465,7 +489,7 @@ export default function InterviewRoom({ sessionId, initial, go }) {
               {session.turns.length > 1 ? 'Picking up where you left off. ' : ''}
               {voiceMode ? 'The board will speak each question. Answer out loud — your words appear as you talk. Press “Finish answer” when you are done.' : 'Read each question and type your answer. Press Ctrl+Enter to send.'}
             </p>
-            <button onClick={() => setBegun(true)} className="mt-7 inline-flex items-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-6 py-3.5 text-base font-bold text-white cursor-pointer shadow-xl">
+            <button onClick={() => { voice.unlock(); setBegun(true); }} className="mt-7 inline-flex items-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-6 py-3.5 text-base font-bold text-white cursor-pointer shadow-xl">
               <Icon name="play" className="w-5 h-5" /> {session.turns.length > 1 ? 'Resume interview' : 'Begin interview'}
             </button>
             <p className="text-xs text-white/40 mt-4">{session.durationMinutes} minutes · {practice ? 'practice mode' : 'real mode'}{cameraOn ? ' · camera stays on your device' : ''}</p>

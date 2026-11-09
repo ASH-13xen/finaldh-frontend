@@ -3,7 +3,7 @@ import Icon from '../components/mcq/Icon';
 import { ActionButton, ErrorBanner } from '../components/mcq/ui';
 import { Shell, PageHeader, Panel, Segmented, SeatAvatar } from '../components/interview/ui';
 import { iv, errorMessage } from '../lib/interviewApi';
-import { useSpeaker, useMicLevel, speechRecognitionSupported, useRecorder } from '../lib/interviewSpeech';
+import { useSpeaker, useBoardVoice, useMicLevel, speechRecognitionSupported, useRecorder } from '../lib/interviewSpeech';
 
 const PREF_KEY = 'interview:setup';
 const readPrefs = () => { try { return JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); } catch { return {}; } };
@@ -64,7 +64,18 @@ export default function InterviewSetup({ status, go, onHome, focus: initialFocus
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
   const speaker = useSpeaker();
+  const voice = useBoardVoice();
   const recorder = useRecorder();
+  const canPlayVoice = speaker.supported || status.ai?.available;
+
+  // The natural voice the board will use (when AI is on), otherwise the browser's.
+  const playSample = async () => {
+    voice.unlock();
+    if (status.ai?.available) {
+      try { await voice.play('sample:chairman', '/api/interview/voice-sample?asker=chairman'); return; } catch { /* fall back below */ }
+    }
+    speaker.speak('Good morning. Please have a seat. Shall we begin?', 'chairman');
+  };
   const stt = speechRecognitionSupported();
   const canSpeakAnswers = stt || (recorder.supported && status.ai?.available);
 
@@ -131,12 +142,12 @@ export default function InterviewSetup({ status, go, onHome, focus: initialFocus
             <div className="space-y-3">
               <div className="rounded-2xl border border-border-default bg-surface p-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-text-primary"><Icon name="volume" className="w-4 h-4" /> Board’s voice</div>
-                <ActionButton size="sm" disabled={!speaker.supported} onClick={() => speaker.speak('Good morning. Please have a seat. Shall we begin?', 'chairman')}>
-                  {speaker.speaking ? 'Speaking…' : 'Play sample'}
+                <ActionButton size="sm" disabled={!canPlayVoice || voice.speaking || speaker.speaking} onClick={playSample}>
+                  {speaker.speaking || voice.speaking ? 'Speaking…' : 'Play sample'}
                 </ActionButton>
               </div>
               {effectiveInput === 'voice' && <MicCheck />}
-              {!speaker.supported && <p className="text-xs text-status-warning-text">This browser can’t speak the questions aloud; they will appear as text.</p>}
+              {!canPlayVoice && <p className="text-xs text-status-warning-text">This browser can’t speak the questions aloud; they will appear as text.</p>}
             </div>
           </div>
         </section>
