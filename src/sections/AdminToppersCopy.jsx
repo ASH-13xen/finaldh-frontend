@@ -3,6 +3,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import EnhancementManager from './AdminToppersEnhancements';
 import BestPartsManager from './AdminToppersBestParts';
 import ValueAdditionManager from './AdminToppersValueAdditions';
+import ChatImportManager from './AdminToppersChatImport';
 
 // ---------------------------------------------------------------------------
 // Admin console for the Toppers Copy section. Three sub-tabs:
@@ -1268,6 +1269,7 @@ function ManageTopics() {
   const [enhanceId, setEnhanceId] = useState(null);   // topic whose enhancement manager is open
   const [bestPartsId, setBestPartsId] = useState(null); // topic whose best-part crops are open
   const [valueAddId, setValueAddId] = useState(null); // topic whose value-addition entries are open
+  const [chatImportId, setChatImportId] = useState(null); // topic whose Claude-chat import is open
 
   const loadSubjects = useCallback(async () => {
     setLoading(true);
@@ -1372,6 +1374,14 @@ function ManageTopics() {
                   Re-analyze all
                 </button>
                 <button
+                  className={chatImportId === t._id ? btnPrimary : btnGhost}
+                  disabled={!t.questionCount}
+                  onClick={() => setChatImportId((cur) => (cur === t._id ? null : t._id))}
+                  title="Paste or upload an analysis you made in Claude chat (no API)"
+                >
+                  {chatImportId === t._id ? 'Close Claude chat' : '💬 From Claude chat'}
+                </button>
+                <button
                   className={organiseId === t._id ? btnPrimary : btnGhost}
                   disabled={!t.questionCount}
                   onClick={() => setOrganiseId((cur) => (cur === t._id ? null : t._id))}
@@ -1406,6 +1416,9 @@ function ManageTopics() {
                   Delete
                 </button>
               </div>
+              {chatImportId === t._id && (
+                <ChatImportManager topicId={t._id} topicName={t.topic} onClose={() => { setChatImportId(null); loadSubjects(); }} />
+              )}
               {organiseId === t._id && (
                 <SubtopicEditor topicId={t._id} topicName={t.topic} onClose={() => setOrganiseId(null)} />
               )}
