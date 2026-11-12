@@ -245,15 +245,28 @@ export default function PurchaseCourses({ user }) {
       });
   };
 
+  // courseIds this course unlocks along with itself: every course sharing its Shared Access ID
+  const linkedCourseIds = (course) => {
+    const group = (course.accessGroup || "").trim().toLowerCase();
+    if (!group) return [course.courseId];
+    return courses
+      .filter((c) => (c.accessGroup || "").trim().toLowerCase() === group)
+      .map((c) => c.courseId);
+  };
+
+  // A pending request covers this course if it is for this course or any course linked to it
+  const findPendingRequest = (course) => {
+    const ids = linkedCourseIds(course);
+    return purchaseRequests.find((r) => r.status === "pending" && ids.includes(r.courseId));
+  };
+
   // Determine course purchase status
   const getCourseStatus = (course) => {
     // 1. Check if the user already owns the course
     if (isOwned(course.courseId)) return { type: "purchased", label: "Purchased" };
 
-    // 2. Check if user has a paid purchase waiting for admin verification
-    const pendingRequest = purchaseRequests.find(
-      (r) => r.courseId === course.courseId && r.status === "pending",
-    );
+    // 2. Check if user has a paid purchase waiting for admin verification (for this course or a linked one)
+    const pendingRequest = findPendingRequest(course);
     if (pendingRequest)
       return { type: "pending", label: "Pending Verification" };
 
@@ -286,8 +299,7 @@ export default function PurchaseCourses({ user }) {
   const { optional, gsCore } = categorizeCourses(mains, featuredIds);
   const mmfStatus = mmfCourse ? getCourseStatus(mmfCourse) : null;
   const cacStatus = cacCourse ? getCourseStatus(cacCourse) : null;
-  const getPendingRequest = (course) =>
-    purchaseRequests.find((r) => r.courseId === course.courseId && r.status === "pending");
+  const getPendingRequest = findPendingRequest;
   const mmfPendingRequest = mmfCourse ? getPendingRequest(mmfCourse) : null;
   const cacPendingRequest = cacCourse ? getPendingRequest(cacCourse) : null;
 

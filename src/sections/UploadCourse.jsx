@@ -65,6 +65,8 @@ export default function UploadCourse() {
   const [useDiscount, setUseDiscount] = useState(false);
   const [discountLimitTag, setDiscountLimitTag] = useState(false);
   const [telegramGroupLink, setTelegramGroupLink] = useState('');
+  // Shared access ID: courses with the same value unlock together when any one of them is bought
+  const [accessGroup, setAccessGroup] = useState('');
   const [courseFiles, setCourseFiles] = useState([]);
 
   // Status states
@@ -507,6 +509,7 @@ export default function UploadCourse() {
     setUseDiscount(false);
     setDiscountLimitTag(false);
     setTelegramGroupLink('');
+    setAccessGroup('');
     setCourseFiles([{ id: Date.now(), type: 'new', name: '', file: null }]);
     setFormError('');
     setSuccessMsg('');
@@ -527,6 +530,7 @@ export default function UploadCourse() {
     setUseDiscount(!!course.useDiscount);
     setDiscountLimitTag(!!course.discountLimitTag);
     setTelegramGroupLink(course.telegramGroupLink || '');
+    setAccessGroup(course.accessGroup || '');
 
     if (course.fileUrls && course.fileUrls.length > 0) {
       setCourseFiles(course.fileUrls.map((url, idx) => ({
@@ -589,6 +593,7 @@ export default function UploadCourse() {
     formData.append('useDiscount', useDiscount);
     formData.append('discountLimitTag', discountLimitTag);
     formData.append('telegramGroupLink', telegramGroupLink.trim());
+    formData.append('accessGroup', accessGroup.trim());
 
     // Build the filesConfig array and append files
     const filesConfig = [];
@@ -633,7 +638,13 @@ export default function UploadCourse() {
         }
       });
 
-      setSuccessMsg(editCourse ? 'Course updated successfully!' : 'Course added successfully!');
+      const linkedStudents = response.data?.linkedStudents || 0;
+      setSuccessMsg(
+        (editCourse ? 'Course updated successfully!' : 'Course added successfully!') +
+          (linkedStudents > 0
+            ? ` ${linkedStudents} student${linkedStudents === 1 ? '' : 's'} who already owned a linked course now ${linkedStudents === 1 ? 'has' : 'have'} access too.`
+            : '')
+      );
       
       // Refresh course list
       await fetchCourses();
@@ -843,6 +854,11 @@ export default function UploadCourse() {
                         <span className="bg-accent-soft-bg border border-accent-soft-border rounded-lg px-2 py-1 text-[10px]">
                           {course.courseId}
                         </span>
+                        {course.accessGroup && (
+                          <span className="block mt-1.5 text-[9px] font-semibold text-text-tertiary" title="Unlocks together with every course that has this Shared Access ID">
+                            Shared: {course.accessGroup}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 font-semibold text-text-primary max-w-xs truncate">{course.name}</td>
                       <td className="px-6 py-4 text-text-secondary font-medium">{subDisplayName}</td>
@@ -1409,6 +1425,42 @@ export default function UploadCourse() {
                   className="w-full px-4.5 py-2.5 bg-sunken border border-border-default rounded-xl text-xs text-text-primary focus:outline-none focus:border-brand transition-all font-semibold"
                 />
                 <p className="text-[10px] text-text-tertiary mt-1.5 font-medium">Shown as a "Join Telegram Group" button to students once they purchase this course.</p>
+              </div>
+
+              {/* Shared access ID */}
+              <div>
+                <label htmlFor="modal-course-access-group" className="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1.5">Shared Access ID (optional)</label>
+                <input
+                  id="modal-course-access-group"
+                  type="text"
+                  list="course-access-group-options"
+                  placeholder="e.g., NCERT-SET"
+                  value={accessGroup}
+                  onChange={(e) => setAccessGroup(e.target.value)}
+                  className="w-full px-4.5 py-2.5 bg-sunken border border-border-default rounded-xl text-xs text-text-primary focus:outline-none focus:border-brand transition-all font-semibold"
+                />
+                <datalist id="course-access-group-options">
+                  {[...new Set(courses.map((c) => (c.accessGroup || '').trim()).filter(Boolean))].map((g) => (
+                    <option key={g} value={g} />
+                  ))}
+                </datalist>
+                <p className="text-[10px] text-text-tertiary mt-1.5 font-medium">
+                  Courses with the same Shared Access ID unlock together — buying any one gives the student all of them. Students who already own one of them get the others when you save.
+                </p>
+                {(() => {
+                  const group = accessGroup.trim().toLowerCase();
+                  if (!group) return null;
+                  const linked = courses.filter(
+                    (c) => (c.accessGroup || '').trim().toLowerCase() === group && c._id !== editCourse?._id
+                  );
+                  return (
+                    <p className="text-[10px] font-bold mt-1 text-brand">
+                      {linked.length > 0
+                        ? `Linked with: ${linked.map((c) => c.courseId).join(', ')}`
+                        : 'No other course uses this ID yet.'}
+                    </p>
+                  );
+                })()}
               </div>
 
               {/* Dynamic Course PDF Files Configuration */}
