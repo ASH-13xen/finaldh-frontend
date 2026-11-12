@@ -25,6 +25,7 @@ const qs = (params) => {
 export const SOURCE_LABEL = { forum: 'Forum', partB: 'Part B', vision: 'Vision' };
 
 export const listThemes = () => request('/themes');
+export const getPyqStats = () => request('/pyq-stats');
 export const getTheme = (key) => request(`/themes/${encodeURIComponent(key)}`);
 export const getTopic = (id) => request(`/topics/${id}`);
 export const getThemePyqs = (key) => request(`/themes/${encodeURIComponent(key)}/pyqs`);

@@ -10,8 +10,32 @@ const HL_CLASS = {
 
 const BULLETS = ['•', '◦', '▪', '·'];
 
+// The PDF import sometimes cuts a highlight mid-word ("same directi|on", "long-|term").
+// Grow every highlight to whole words by moving the cut-off letters into it.
+const WORD_END = /[\p{L}\p{N}'’-]+$/u;
+const WORD_START = /^[\p{L}\p{N}'’]+/u;
+function snapHighlights(spans) {
+  const out = spans.map((s) => ({ ...s }));
+  for (let i = 0; i < out.length - 1; i++) {
+    const a = out[i];
+    const b = out[i + 1];
+    if (a.m || b.m || !a.t || !b.t || !a.hl === !b.hl) continue;
+    if (!/[\p{L}\p{N}'’-]$/u.test(a.t) || !/^[\p{L}\p{N}'’]/u.test(b.t)) continue;
+    if (a.hl) {
+      const piece = b.t.match(WORD_START)[0];        // highlight ends mid-word: pull the rest of the word in
+      a.t += piece;
+      b.t = b.t.slice(piece.length);
+    } else {
+      const piece = a.t.match(WORD_END)[0];          // highlight starts mid-word: pull its beginning in
+      a.t = a.t.slice(0, -piece.length);
+      b.t = piece + b.t;
+    }
+  }
+  return out.filter((s) => s.m || s.t);
+}
+
 export function Spans({ spans, plain = false }) {
-  return spans.map((s, i) => {
+  return (plain ? spans : snapHighlights(spans)).map((s, i) => {
     if (s.m === 'ok') {
       return (
         <span key={i} title="Correct" className="inline-flex items-center justify-center w-4 h-4 mx-0.5 rounded-[4px] bg-emerald-500 text-white text-[10px] font-black align-[-2px]">✓</span>
