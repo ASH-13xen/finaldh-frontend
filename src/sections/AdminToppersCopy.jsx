@@ -1398,7 +1398,7 @@ function ManageTopics() {
                 <button
                   className={valueAddId === t._id ? btnPrimary : btnGhost}
                   onClick={() => setValueAddId((cur) => (cur === t._id ? null : t._id))}
-                  title="Value-addition notes and PDFs students open from the PYQs drawer"
+                  title="Best parts with images, notes and PDFs students open from the PYQs drawer"
                 >
                   {valueAddId === t._id ? 'Close value addition' : '➕ Value addition'}
                 </button>

@@ -29,7 +29,7 @@ function Hl({ text, terms }) {
   const parts = String(text ?? '').split(/\*([^*]+)\*/);
   const re = terms.length ? new RegExp(`(${terms.map(escapeRe).join('|')})`, 'gi') : null;
   const mark = (s, k) => (re
-    ? s.split(re).map((x, i) => (i % 2 ? <mark key={`${k}-${i}`} className="bg-status-warning-bg text-inherit rounded-sm px-px">{x}</mark> : x))
+    ? s.split(re).map((x, i) => (i % 2 ? <mark key={`${k}-${i}`} className="bg-amber-300 text-slate-900 font-semibold rounded-sm px-0.5">{x}</mark> : x))
     : s);
   return parts.map((p, i) => (i % 2 ? <em key={i}>{mark(p, i)}</em> : <span key={i}>{mark(p, i)}</span>));
 }

@@ -4,9 +4,10 @@ import PdfAnswerViewer from '../components/PdfAnswerViewer';
 
 // ---------------------------------------------------------------------------
 // Admin: "Value addition" for one topic (Manage / Publish → ➕ Value addition).
-// Each entry = a title + optional notes + optional PDF + optional Word file, which the
-// server turns into a searchable notes bank (data / facts / examples …). Students open
-// them from the "Value addition" tab of the Related PYQs drawer. Unpublished entries stay hidden.
+// Each entry = a title + optional notes + images + PDF + Word file, which the server turns
+// into a searchable notes bank (data / facts / examples …). Students open them from the
+// "Value addition" tab of the Related PYQs drawer; "Best part of answer" entries are listed
+// first, under their own heading. Unpublished entries stay hidden.
 // ---------------------------------------------------------------------------
 
 const token = () => localStorage.getItem('token');
@@ -26,13 +27,15 @@ const btnPrimary =
 const inputClass =
   'w-full bg-sunken border border-border-default focus:border-brand text-text-primary rounded-lg px-2 py-1 text-[11px] focus:outline-none';
 
+const MAX_IMAGES = 12;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const fmtSize = (b) => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 
 export default function ValueAdditionManager({ topicId, topicName, onClose }) {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [msg, setMsg] = useState('');
-  const [editing, setEditing] = useState(null); // entry id, or 'new'
+  const [editing, setEditing] = useState(null); // entry id, or 'new' / 'newBest'
   const [previewId, setPreviewId] = useState(null);
 
   const load = useCallback(async () => {
@@ -79,22 +82,25 @@ export default function ValueAdditionManager({ topicId, topicName, onClose }) {
           ➕ Value addition — {topicName}
           <span className="ml-2 font-semibold text-text-tertiary">{items.filter((x) => x.published).length}/{items.length} published</span>
         </p>
+        <button className={btnPrimary} disabled={editing === 'newBest'} onClick={() => setEditing('newBest')}>+ 📸 Best part of answer</button>
         <button className={btnPrimary} disabled={editing === 'new'} onClick={() => setEditing('new')}>+ Add</button>
         <button className={btnGhost} onClick={onClose}>Close</button>
       </div>
       {msg && <p className="text-[11px] font-semibold text-status-info-text mb-2">{msg}</p>}
 
-      {editing === 'new' && (
+      {(editing === 'new' || editing === 'newBest') && (
         <EntryForm
+          key={editing}
           topicId={topicId}
+          kind={editing === 'newBest' ? 'bestPart' : 'note'}
           onCancel={() => setEditing(null)}
           onSaved={(v) => { setItems((xs) => [...xs, v]); setEditing(null); setMsg('Added.'); }}
           onError={setMsg}
         />
       )}
 
-      {!items.length && editing !== 'new' && (
-        <p className="text-[11px] text-text-tertiary italic">No value addition for this topic yet. Add notes, a PDF or a Word file.</p>
+      {!items.length && !String(editing).startsWith('new') && (
+        <p className="text-[11px] text-text-tertiary italic">No value addition for this topic yet. Add a best part with images, or notes, a PDF or a Word file.</p>
       )}
 
       <div className="space-y-2">
@@ -106,8 +112,12 @@ export default function ValueAdditionManager({ topicId, topicName, onClose }) {
                 <button className="text-[10px] text-text-tertiary hover:text-text-primary cursor-pointer disabled:opacity-30" disabled={i === items.length - 1} onClick={() => move(i, 1)}>▼</button>
               </div>
               <div className="flex-grow min-w-[200px]">
-                <p className="text-[12px] font-bold text-text-primary">{item.title}</p>
+                <p className="text-[12px] font-bold text-text-primary">
+                  {item.kind === 'bestPart' && <span className="mr-1.5 px-1.5 py-0.5 rounded bg-accent-soft-bg text-brand text-[10px] font-bold">📸 Best part</span>}
+                  {item.title}
+                </p>
                 <p className="text-[10px] text-text-tertiary">
+                  {item.images?.length ? `🖼 ${item.images.length} image${item.images.length === 1 ? '' : 's'} · ` : ''}
                   {item.hasPdf ? `📄 ${item.pdfName || 'PDF'}${item.pdfSize ? ` · ${fmtSize(item.pdfSize)}` : ''}` : 'No PDF'}
                   {item.body?.trim() ? ' · has notes' : ''}
                   {item.hasBank ? ` · 📚 ${item.bankName || 'Word file'} → ${item.bankStats?.notes ?? 0} notes, ${item.bankStats?.pyqs ?? 0} PYQs, ${item.bankStats?.sections ?? 0} sections` : ''}
@@ -148,7 +158,8 @@ export default function ValueAdditionManager({ topicId, topicName, onClose }) {
 }
 
 // Create (no `item`) or edit an entry. Sent as multipart so the PDF rides along.
-function EntryForm({ topicId, item, onSaved, onCancel, onError }) {
+function EntryForm({ topicId, item, kind = 'note', onSaved, onCancel, onError }) {
+  const isBestPart = (item?.kind || kind) === 'bestPart';
   const [title, setTitle] = useState(item?.title || '');
   const [body, setBody] = useState(item?.body || '');
   const [published, setPublished] = useState(item ? item.published : true);
@@ -157,10 +168,25 @@ function EntryForm({ topicId, item, onSaved, onCancel, onError }) {
   const [docx, setDocx] = useState(null);
   const [removeBank, setRemoveBank] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedImages, setSavedImages] = useState(item?.images || []); // existing ones still kept
+  const [newImages, setNewImages] = useState([]); // [{ file, url, caption }]
+
+  useEffect(() => () => newImages.forEach((n) => URL.revokeObjectURL(n.url)), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const imageCount = savedImages.length + newImages.length;
+  const addImages = (files) => {
+    const room = MAX_IMAGES - imageCount;
+    if (files.length > room) onError(`Up to ${MAX_IMAGES} images per entry.`);
+    const big = files.filter((f) => f.size > MAX_IMAGE_BYTES);
+    if (big.length) onError(`Skipped (over 8 MB): ${big.map((f) => f.name).join(', ')}`);
+    const picked = files.filter((f) => f.size <= MAX_IMAGE_BYTES).slice(0, Math.max(0, room));
+    setNewImages((xs) => [...xs, ...picked.map((file) => ({ file, url: URL.createObjectURL(file), caption: '' }))]);
+  };
 
   const willHavePdf = !!file || (item?.hasPdf && !removePdf);
   const willHaveBank = !!docx || (item?.hasBank && !removeBank);
-  const canSave = title.trim() && (body.trim() || willHavePdf || willHaveBank) && !saving;
+  const canSave = title.trim() && (body.trim() || imageCount > 0 || willHavePdf || willHaveBank) && !saving;
+  const uploading = file || docx || newImages.length > 0;
 
   const save = async () => {
     setSaving(true);
@@ -172,6 +198,14 @@ function EntryForm({ topicId, item, onSaved, onCancel, onError }) {
     else if (removePdf) fd.append('removePdf', 'true');
     if (docx) fd.append('docx', docx);
     else if (removeBank) fd.append('removeBank', 'true');
+    if (!item) fd.append('kind', kind);
+    newImages.forEach((n) => fd.append('images', n.file));
+    fd.append('newImageCaptions', JSON.stringify(newImages.map((n) => n.caption)));
+    if (item) {
+      fd.append('imageCaptions', JSON.stringify(Object.fromEntries(savedImages.map((i) => [i._id, i.caption]))));
+      const keep = new Set(savedImages.map((i) => i._id));
+      fd.append('removeImages', JSON.stringify((item.images || []).filter((i) => !keep.has(i._id)).map((i) => i._id)));
+    }
     const url = item
       ? `/api/toppers-copy/admin/value-additions/${item._id}`
       : `/api/toppers-copy/admin/${topicId}/value-additions`;
@@ -183,13 +217,48 @@ function EntryForm({ topicId, item, onSaved, onCancel, onError }) {
 
   return (
     <div className="p-3 space-y-2 border-t border-border-default bg-surface">
-      <input className={inputClass} placeholder="Title, e.g. Latest data — NFHS-6 highlights" value={title} onChange={(e) => setTitle(e.target.value)} />
+      <input className={inputClass} placeholder={isBestPart ? 'Title, e.g. Strong introduction — Federalism answers' : 'Title, e.g. Latest data — NFHS-6 highlights'} value={title} onChange={(e) => setTitle(e.target.value)} />
       <textarea
         className={`${inputClass} min-h-[110px] font-reading`}
         placeholder="Notes (optional) — facts, data, reports, quotes, examples. Blank lines separate paragraphs; lines starting with - become bullets."
         value={body}
         onChange={(e) => setBody(e.target.value)}
       />
+      <div className="space-y-2">
+        <label className="block text-[11px] font-bold text-text-secondary">
+          Images ({imageCount}/{MAX_IMAGES}, up to 8 MB each):{' '}
+          <input
+            type="file"
+            multiple
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="text-[11px]"
+            disabled={imageCount >= MAX_IMAGES}
+            onChange={(e) => { addImages(Array.from(e.target.files || [])); e.target.value = ''; }}
+          />
+        </label>
+        {imageCount > 0 && (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {savedImages.map((img) => (
+              <ImageRow
+                key={img._id}
+                src={`/api/toppers-copy/value-additions/${item._id}/images/${img._id}?token=${encodeURIComponent(token() || '')}`}
+                caption={img.caption}
+                onCaption={(caption) => setSavedImages((xs) => xs.map((x) => (x._id === img._id ? { ...x, caption } : x)))}
+                onRemove={() => setSavedImages((xs) => xs.filter((x) => x._id !== img._id))}
+              />
+            ))}
+            {newImages.map((n) => (
+              <ImageRow
+                key={n.url}
+                src={n.url}
+                caption={n.caption}
+                onCaption={(caption) => setNewImages((xs) => xs.map((x) => (x.url === n.url ? { ...x, caption } : x)))}
+                onRemove={() => { URL.revokeObjectURL(n.url); setNewImages((xs) => xs.filter((x) => x.url !== n.url)); }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-3 text-[11px] text-text-secondary">
         <label className="font-bold">
           {item?.hasPdf ? 'Replace PDF: ' : 'PDF (optional): '}
@@ -223,8 +292,26 @@ function EntryForm({ topicId, item, onSaved, onCancel, onError }) {
         or Heading 1 = those types for a one-topic file. Each paragraph, bullet or table row becomes one note; "Year | Question" tables become the PYQs.
       </p>
       <div className="flex gap-2">
-        <button className={btnPrimary} disabled={!canSave} onClick={save}>{saving ? (file || docx ? 'Uploading…' : 'Saving…') : 'Save'}</button>
+        <button className={btnPrimary} disabled={!canSave} onClick={save}>{saving ? (uploading ? 'Uploading…' : 'Saving…') : 'Save'}</button>
         <button className={btnGhost} onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function ImageRow({ src, caption, onCaption, onRemove }) {
+  return (
+    <div className="flex gap-2 p-2 border border-border-default rounded-lg bg-sunken">
+      <img src={src} alt="" className="w-20 h-20 object-contain bg-white rounded flex-shrink-0" />
+      <div className="flex-grow min-w-0 space-y-1">
+        <textarea
+          className={`${inputClass} min-h-[52px]`}
+          placeholder="Caption (optional) — why this part is good"
+          maxLength={500}
+          value={caption}
+          onChange={(e) => onCaption(e.target.value)}
+        />
+        <button type="button" className="text-[11px] font-bold text-status-danger-text cursor-pointer" onClick={onRemove}>Remove image</button>
       </div>
     </div>
   );
