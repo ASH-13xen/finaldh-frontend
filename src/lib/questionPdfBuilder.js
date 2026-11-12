@@ -560,13 +560,12 @@ export async function buildQuestionPdf({ topic, question, answers, pagesPdf, pag
     labelled('Introduction', ma.introduction, { bg: C.sunken, border: C.border }, (c) => {
       if (ma.introduction.keywords?.length) c.gap(6).chips(ma.introduction.keywords, { bg: C.white });
     });
-    (ma.body || []).forEach((part, i) => {
+    (ma.body || []).forEach((part) => {
       if (!part?.part && !part?.points?.length) return;
-      flow.place(makeBox(COL_W).text([{ text: `Body ${i + 1} — `, font: F.b, color: C.tertiary }, { text: part.part || '', font: F.b, color: C.ink }], { size: 9.5 }).gap(4), { reserve: 30 });
+      if (part.part) flow.place(makeBox(COL_W).text([{ text: part.part, font: F.b, color: C.ink }], { size: 9.5 }).gap(4), { reserve: 30 });
       (part.points || []).forEach((p) => {
         if (!p?.text) return;
-        const b = makeBox(COL_W).bullet([p.text, ...(p.tag ? [{ text: `  [${String(p.tag).toUpperCase()}]`, font: F.b, color: C.tertiary }] : [])], { color: C.ink });
-        if (p.unconventionalBecause) b.text(`Why it stands out: ${p.unconventionalBecause}`, { size: 9.5, font: F.i, color: C.secondary, x: 11 });
+        const b = makeBox(COL_W).bullet([...(p.heading ? [{ text: `${p.heading}: `, font: F.b, color: C.ink }] : []), p.text], { color: C.ink });
         flow.place(b.gap(5));
       });
       flow.gap(5);
