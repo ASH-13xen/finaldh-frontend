@@ -5,7 +5,8 @@ import NoteModal from '../components/study/NoteModal';
 import SelectionToNote from '../components/study/SelectionToNote';
 import TopicBody from '../components/economy/TopicBody';
 import SourcePageModal from '../components/economy/SourcePageModal';
-import TopicPyqs from '../components/economy/TopicPyqs';
+import TopicPyqsModal, { PyqEdgeTab } from '../components/economy/TopicPyqs';
+import PyqTrends from '../components/economy/PyqTrends';
 import QuizRunner from './quiz/QuizRunner';
 import QuizSummary from './quiz/QuizSummary';
 import useBookmarks from '../lib/useBookmarks';
@@ -167,7 +168,7 @@ function HomeView({ onOpenTheme }) {
           <p className="text-[11px] font-bold uppercase tracking-widest text-brand">Prelims · Economy</p>
           <h1 className="font-display text-3xl sm:text-4xl font-semibold text-text-primary mt-1">Economy Master File</h1>
           <p className="text-sm text-text-secondary mt-1.5 max-w-xl">
-            {totals.topics} topics across {data.themes.length} themes. Forum, Part B and Vision notes merged theme by theme.
+            {totals.topics} topics across {data.themes.length} syllabus chapters. Forum, Part B and Vision notes merged chapter by chapter.
           </p>
         </div>
         <div className="flex items-center gap-4 bg-surface border border-border-default rounded-2xl px-4 py-3">
@@ -246,6 +247,8 @@ function HomeView({ onOpenTheme }) {
         </div>
       )}
 
+      <PyqTrends admin={data.admin} onOpenTheme={onOpenTheme} />
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {data.themes.map((t, i) => {
           const p = t.progress;
@@ -258,7 +261,7 @@ function HomeView({ onOpenTheme }) {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-bold text-text-tertiary tabular-nums">Theme {String(i + 1).padStart(2, '0')}</p>
+                  <p className="text-[11px] font-bold text-text-tertiary tabular-nums">Chapter {String(i + 1).padStart(2, '0')}</p>
                   <h2 className="font-display text-lg font-semibold text-text-primary leading-snug group-hover:text-brand transition-colors">{t.title}</h2>
                 </div>
                 {!t.isPublished && <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-status-warning-bg text-status-warning-text">Draft</span>}
@@ -381,7 +384,7 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
   if (error) {
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-3">
-        <button onClick={onBack} className="text-xs font-bold text-brand cursor-pointer">← All themes</button>
+        <button onClick={onBack} className="text-xs font-bold text-brand cursor-pointer">← All chapters</button>
         <p className="text-sm text-status-danger-text">{error}</p>
       </div>
     );
@@ -398,7 +401,7 @@ function ThemeView({ themeKey, initialTab, focus, onBack }) {
       <div className="sticky z-40 bg-page/95 backdrop-blur border-b border-border-default" style={{ top: navH }}>
         <div className="max-w-4xl lg:max-w-6xl xl:max-w-[1440px] mx-auto px-4 sm:px-6 pt-3">
           <div className="flex items-center gap-3">
-            <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border-default hover:bg-surface-raised cursor-pointer text-text-secondary flex-shrink-0" aria-label="All themes">←</button>
+            <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border-default hover:bg-surface-raised cursor-pointer text-text-secondary flex-shrink-0" aria-label="All chapters">←</button>
             <div className="min-w-0 flex-1">
               <h1 className="font-display text-lg sm:text-xl font-semibold text-text-primary truncate leading-tight">{data.theme.title}</h1>
               <div className="flex items-center gap-2 mt-1">
@@ -561,9 +564,14 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
   // "Mains angle" lines are no longer shown — older drafts still have them.
   const researchLines = (t.research || '').split('\n').filter((l) => l.trim() && !/^\s*mains angle\s*:/i.test(l));
   const hasExtras = t.facts?.length > 0 || researchLines.length > 0;
+  const hasPyqs = t.pyqCount > 0;
+  const [pyqsOpen, setPyqsOpen] = useState(false);
+  const closePyqs = useCallback(() => setPyqsOpen(false), []);
 
   return (
-    <article id={`em-topic-${t._id}`} className="bg-surface border border-border-default rounded-2xl transition-shadow scroll-mt-40">
+    <article id={`em-topic-${t._id}`} className={`relative bg-surface border border-border-default rounded-2xl transition-shadow scroll-mt-40 ${hasPyqs || t.pyqTags.length ? 'border-l-4 border-l-indigo-600 dark:border-l-indigo-400' : ''}`}>
+      {hasPyqs && <PyqEdgeTab count={t.pyqCount} onClick={() => setPyqsOpen(true)} />}
+      {pyqsOpen && <TopicPyqsModal topicId={t._id} count={t.pyqCount} title={t.title} onClose={closePyqs} />}
       <header
         className={`flex items-start gap-3 px-4 sm:px-5 pt-4 ${open ? 'pb-2' : 'pb-4'} ${collapsible ? 'cursor-pointer' : ''}`}
         onClick={collapsible ? onToggleOpen : undefined}
@@ -574,9 +582,9 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
           <div className="flex flex-wrap items-center gap-1.5 mt-1">
             <span className="text-[10px] font-bold uppercase tracking-wide text-text-tertiary">{SOURCE_LABEL[t.source]}</span>
             {t.pyqTags.map((tag) => (
-              <span key={tag} className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-accent-soft-bg text-brand border border-accent-soft-border">PYQ · {tag}</span>
+              <span key={tag} className="text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-400 text-indigo-950">🎯 Asked in {tag}</span>
             ))}
-            {t.pyqCount > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-accent-soft-bg text-brand border border-accent-soft-border">{t.pyqCount} PYQ{t.pyqCount > 1 ? 's' : ''}</span>}
+            {hasPyqs && <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-indigo-900 text-white dark:bg-indigo-500/30 dark:text-indigo-100">{t.pyqCount} PYQ{t.pyqCount > 1 ? 's' : ''}</span>}
             {status && <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${STATUS[status].cls}`}>{STATUS[status].label}</span>}
             {due && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-status-warning-bg text-status-warning-text">Revise today</span>}
           </div>
@@ -591,14 +599,14 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
         <>
           <div className={`px-4 sm:px-5 sm:pl-14 pb-3 ${hasExtras ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-5' : ''}`}>
             <SelectionToNote onAdd={(text) => onNote(text)}>
-              <TopicBody blocks={t.blocks} plain={plain} />
+              <TopicBody blocks={t.blocks} plain={plain} className={hasExtras ? '' : 'max-w-[75ch]'} />
             </SelectionToNote>
 
             {/* Value addition: below the notes on small screens; on wide ones green + blue sit side by side to the right */}
             {hasExtras && (
-              <aside className="mt-3 lg:mt-0 grid gap-2 sm:grid-cols-2 content-start items-start">
+              <aside className="mt-3 lg:mt-0 self-start rounded-xl bg-surface-raised border border-border-default overflow-hidden divide-y divide-border-default">
                 {t.facts?.length > 0 && (
-                  <div className="rounded-xl bg-status-success-bg border border-status-success-text/20 px-3.5 py-3">
+                  <div className="px-4 py-3 border-l-4 border-l-status-success-text">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-status-success-text mb-1.5">Conceptual depth</p>
                     <ul className="space-y-1.5 text-[13px] text-text-secondary leading-relaxed">
                       {t.facts.map((f, i) => <li key={i}>{f}</li>)}
@@ -606,7 +614,7 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
                   </div>
                 )}
                 {researchLines.length > 0 && (
-                  <div className="rounded-xl bg-status-info-bg border border-status-info-text/20 px-3.5 py-3">
+                  <div className="px-4 py-3 border-l-4 border-l-status-info-text">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-status-info-text mb-1.5">Additional facts &amp; peripheral knowledge</p>
                     <div className="space-y-1 text-[13px] text-text-secondary leading-relaxed">
                       {researchLines.map((line, i) => {
@@ -616,12 +624,11 @@ function TopicCard({ topic: t, progress: p, open = true, collapsible = false, on
                     </div>
                   </div>
                 )}
-                {t.extrasStatus === 'draft' && <p className="sm:col-span-2 text-[10px] font-bold text-status-warning-text">Admin preview — these add-ons are still a draft.</p>}
+                {t.extrasStatus === 'draft' && <p className="px-4 py-2 text-[10px] font-bold text-status-warning-text">Admin preview — these add-ons are still a draft.</p>}
               </aside>
             )}
           </div>
 
-          {t.pyqCount > 0 && <TopicPyqs topicId={t._id} count={t.pyqCount} />}
 
           <footer className="flex flex-wrap items-center gap-1.5 px-4 sm:pl-14 sm:pr-5 py-3 border-t border-border-default">
             <div className="flex rounded-lg border border-border-default overflow-hidden" role="group" aria-label="Progress">
