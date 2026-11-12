@@ -4,8 +4,9 @@ import PdfAnswerViewer from '../components/PdfAnswerViewer';
 
 // ---------------------------------------------------------------------------
 // Admin: "Value addition" for one topic (Manage / Publish → ➕ Value addition).
-// Each entry = a title + optional notes + optional PDF. Students open them from the
-// "Value addition" tab of the Related PYQs drawer. Unpublished entries stay hidden.
+// Each entry = a title + optional notes + optional PDF + optional Word file, which the
+// server turns into a searchable notes bank (data / facts / examples …). Students open
+// them from the "Value addition" tab of the Related PYQs drawer. Unpublished entries stay hidden.
 // ---------------------------------------------------------------------------
 
 const token = () => localStorage.getItem('token');
@@ -93,7 +94,7 @@ export default function ValueAdditionManager({ topicId, topicName, onClose }) {
       )}
 
       {!items.length && editing !== 'new' && (
-        <p className="text-[11px] text-text-tertiary italic">No value addition for this topic yet. Add notes, a PDF, or both.</p>
+        <p className="text-[11px] text-text-tertiary italic">No value addition for this topic yet. Add notes, a PDF or a Word file.</p>
       )}
 
       <div className="space-y-2">
@@ -109,6 +110,7 @@ export default function ValueAdditionManager({ topicId, topicName, onClose }) {
                 <p className="text-[10px] text-text-tertiary">
                   {item.hasPdf ? `📄 ${item.pdfName || 'PDF'}${item.pdfSize ? ` · ${fmtSize(item.pdfSize)}` : ''}` : 'No PDF'}
                   {item.body?.trim() ? ' · has notes' : ''}
+                  {item.hasBank ? ` · 📚 ${item.bankName || 'Word file'} → ${item.bankStats?.notes ?? 0} notes, ${item.bankStats?.pyqs ?? 0} PYQs, ${item.bankStats?.sections ?? 0} sections` : ''}
                 </p>
               </div>
               <label className="flex items-center gap-1 text-[11px] font-bold text-text-secondary cursor-pointer">
@@ -152,10 +154,13 @@ function EntryForm({ topicId, item, onSaved, onCancel, onError }) {
   const [published, setPublished] = useState(item ? item.published : true);
   const [file, setFile] = useState(null);
   const [removePdf, setRemovePdf] = useState(false);
+  const [docx, setDocx] = useState(null);
+  const [removeBank, setRemoveBank] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const willHavePdf = !!file || (item?.hasPdf && !removePdf);
-  const canSave = title.trim() && (body.trim() || willHavePdf) && !saving;
+  const willHaveBank = !!docx || (item?.hasBank && !removeBank);
+  const canSave = title.trim() && (body.trim() || willHavePdf || willHaveBank) && !saving;
 
   const save = async () => {
     setSaving(true);
@@ -165,6 +170,8 @@ function EntryForm({ topicId, item, onSaved, onCancel, onError }) {
     fd.append('published', String(published));
     if (file) fd.append('pdf', file);
     else if (removePdf) fd.append('removePdf', 'true');
+    if (docx) fd.append('docx', docx);
+    else if (removeBank) fd.append('removeBank', 'true');
     const url = item
       ? `/api/toppers-copy/admin/value-additions/${item._id}`
       : `/api/toppers-copy/admin/${topicId}/value-additions`;
@@ -199,8 +206,24 @@ function EntryForm({ topicId, item, onSaved, onCancel, onError }) {
           Published
         </label>
       </div>
+      <div className="flex flex-wrap items-center gap-3 text-[11px] text-text-secondary">
+        <label className="font-bold">
+          {item?.hasBank ? 'Replace Word file: ' : 'Word file → searchable notes (optional): '}
+          <input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="text-[11px]" onChange={(e) => { setDocx(e.target.files?.[0] || null); setRemoveBank(false); }} />
+        </label>
+        {item?.hasBank && !docx && (
+          <label className="flex items-center gap-1 font-bold text-status-danger-text cursor-pointer">
+            <input type="checkbox" checked={removeBank} onChange={(e) => setRemoveBank(e.target.checked)} />
+            Remove searchable notes ({item.bankName || 'Word file'})
+          </label>
+        )}
+      </div>
+      <p className="text-[10px] text-text-tertiary">
+        Word layout: Heading 1 per section (e.g. "1. Pallava, Chola &amp; Gupta Architecture") with Heading 2 "Introduction / Data / Facts / Examples / Case Study / Contemporary Relevance / Conclusion / Keywords",
+        or Heading 1 = those types for a one-topic file. Each paragraph, bullet or table row becomes one note; "Year | Question" tables become the PYQs.
+      </p>
       <div className="flex gap-2">
-        <button className={btnPrimary} disabled={!canSave} onClick={save}>{saving ? (file ? 'Uploading…' : 'Saving…') : 'Save'}</button>
+        <button className={btnPrimary} disabled={!canSave} onClick={save}>{saving ? (file || docx ? 'Uploading…' : 'Saving…') : 'Save'}</button>
         <button className={btnGhost} onClick={onCancel}>Cancel</button>
       </div>
     </div>

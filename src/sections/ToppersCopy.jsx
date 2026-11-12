@@ -5,6 +5,7 @@ import { TopperTakeaways } from '../components/AnswerEnhancementLayer';
 import BestPartsCard from '../components/BestPartsCard';
 import AnswerDiagram from '../components/AnswerDiagram';
 import PyqAnswerView from '../components/PyqAnswerView';
+import ValueAdditionBank from '../components/ValueAdditionBank';
 import { diagramIsRenderable } from '../lib/answerDiagram';
 import BookmarkButton from '../components/study/BookmarkButton';
 import NoteModal from '../components/study/NoteModal';
@@ -439,7 +440,7 @@ export default function ToppersCopy({ isAdmin = false }) {
         </div>
       </div>
 
-      {/* ---- reading panel (PYQ model answer / value addition), sits right of the drawer ---- */}
+      {/* ---- reading panel: PYQ model answer sits right of the drawer; a value addition covers the full page ---- */}
       {pyqOpen && (readingPyq || selectedVa) && (
         <>
           <div
@@ -447,10 +448,10 @@ export default function ToppersCopy({ isAdmin = false }) {
             onClick={closeReading}
           />
           <div
-            className="fixed top-[73px] bottom-0 right-0 left-0 sm:left-auto z-[45] w-full bg-surface border-l border-border-default shadow-2xl flex flex-col"
-            style={answerWide ? { width: answerW } : undefined}
+            className={`fixed top-[73px] bottom-0 right-0 left-0 z-[45] w-full bg-surface flex flex-col ${selectedVa ? '' : 'sm:left-auto border-l border-border-default shadow-2xl'}`}
+            style={answerWide && !selectedVa ? { width: answerW } : undefined}
           >
-            {answerWide && (
+            {answerWide && !selectedVa && (
               <div
                 onMouseDown={() => { answerDragRef.current = true; document.body.style.userSelect = 'none'; }}
                 onTouchStart={() => { answerDragRef.current = true; }}
@@ -462,7 +463,7 @@ export default function ToppersCopy({ isAdmin = false }) {
               </div>
             )}
             {selectedVa ? (
-              <ValueAdditionReader item={selectedVa} topicName={drawerTopicName} onClose={closeReading} />
+              <ValueAdditionReader key={selectedVa._id} item={selectedVa} topicName={drawerTopicName} onClose={closeReading} />
             ) : (
             <>
             <div className="px-5 py-3.5 border-b border-border-default flex-shrink-0 flex items-start gap-3">
@@ -1141,6 +1142,11 @@ function ValueAdditionList({ items, selectedId, onOpen }) {
             }`}
           >
             <div className="flex items-center gap-2 mb-1 flex-wrap">
+              {v.hasBank ? (
+                <span className="text-[11px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">
+                  Searchable notes{v.bankStats?.notes ? ` · ${v.bankStats.notes}` : ''}
+                </span>
+              ) : null}
               {v.hasPdf ? (
                 <span className="text-[11px] font-bold text-text-on-accent bg-brand px-1.5 py-0.5 rounded">PDF</span>
               ) : null}
@@ -1164,7 +1170,7 @@ function ValueAdditionList({ items, selectedId, onOpen }) {
 function ValueAdditionNotes({ text }) {
   const blocks = text.trim().split(/\n\s*\n/);
   return (
-    <div className="font-reading text-sm text-text-primary leading-relaxed space-y-3">
+    <div className="font-reading text-[18px] text-text-primary leading-relaxed space-y-4">
       {blocks.map((block, i) => {
         const lines = block.split('\n').filter((l) => l.trim());
         const bullets = lines.length && lines.every((l) => /^\s*[-•*]\s+/.test(l));
@@ -1182,29 +1188,55 @@ function ValueAdditionNotes({ text }) {
 
 function ValueAdditionReader({ item, topicName, onClose }) {
   const hasNotes = !!item.body?.trim();
+  // An entry with a Word-file notes bank opens on the bank; its notes / PDF (if any) sit behind a toggle.
+  const [view, setView] = useState('bank');
+  const [q, setQ] = useState('');
+  const showBank = item.hasBank && (view === 'bank' || (!hasNotes && !item.hasPdf));
   return (
     <>
-      <div className="px-5 py-3.5 border-b border-border-default flex-shrink-0 flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wide mb-1 truncate">
-            Value addition{topicName ? ` · ${topicName}` : ''}
-          </p>
-          <p className="font-reading text-sm font-semibold text-text-primary leading-snug">{item.title}</p>
+      <div className="border-b border-border-default flex-shrink-0">
+        <div className="sm:w-[80%] mx-auto px-5 sm:px-0 min-h-[52px] py-2 flex items-center gap-3">
+          <button
+            onClick={onClose}
+            className="-ml-2 px-2 py-1 rounded-lg hover:bg-sunken text-sm font-bold text-brand cursor-pointer flex-shrink-0"
+          >
+            ← Back
+          </button>
+          <p className={`font-reading text-base font-semibold text-text-primary truncate min-w-0 flex-1 ${showBank ? 'hidden sm:block' : ''}`} title={topicName}>{item.title}</p>
+          {showBank && (
+            <input
+              id="va-bank-search"
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search facts, data, examples…"
+              className="min-w-0 flex-1 sm:flex-none sm:w-72 bg-sunken border border-border-default focus:border-brand text-text-primary rounded-lg px-3 py-1.5 text-base focus:outline-none"
+            />
+          )}
         </div>
-        <button
-          onClick={onClose}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-sunken text-text-secondary cursor-pointer text-lg leading-none flex-shrink-0"
-          aria-label="Close value addition"
-        >
-          ✕
-        </button>
+        {item.hasBank && (hasNotes || item.hasPdf) && (
+          <div className="sm:w-[80%] mx-auto px-4 sm:px-0 flex gap-1 pb-2">
+            {[['bank', 'Searchable notes'], ['file', item.hasPdf ? 'PDF' : 'Notes']].map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setView(k)}
+                className={`px-2 py-0.5 rounded-lg text-sm font-bold cursor-pointer ${view === k ? 'bg-accent-soft-bg text-brand' : 'text-text-secondary hover:bg-sunken'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {hasNotes && (
-        <div className={`px-5 py-4 overflow-y-auto ${item.hasPdf ? 'max-h-[40%] flex-shrink-0 border-b border-border-default' : 'flex-1'}`}>
-          <ValueAdditionNotes text={item.body} />
+      {showBank && <ValueAdditionBank key={item._id} entryId={item._id} title={item.title} q={q} onSearch={setQ} />}
+      {!showBank && hasNotes && (
+        <div className={`py-5 overflow-y-auto ${item.hasPdf ? 'max-h-[40%] flex-shrink-0 border-b border-border-default' : 'flex-1'}`}>
+          <div className="sm:w-[80%] mx-auto px-5 sm:px-0">
+            <ValueAdditionNotes text={item.body} />
+          </div>
         </div>
       )}
-      {item.hasPdf && (
+      {!showBank && item.hasPdf && (
         <div className="relative flex-1 min-h-[260px]">
           <PdfAnswerViewer
             key={`${item._id}-${item.updatedAt}`}
