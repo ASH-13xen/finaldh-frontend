@@ -18,7 +18,17 @@ const SCREENS = ['home', 'profile', 'predictions', 'bank', 'setup', 'room', 'rep
 // The Mock Interview section: DAF -> predicted questions -> question bank -> mock interview -> report.
 // Like McqFlow, screens are local state pushed onto browser history so Back walks through them.
 function Flow({ user, initialScreen }) {
-  const [view, setView] = useState(() => ({ screen: SCREENS.includes(initialScreen) ? initialScreen : 'home' }));
+  // A page reload keeps the browser's history entry, so the screen the student was on (the interview room
+  // included) comes back. The session snapshot passed when the room was first opened is dropped: it is
+  // stale by now, and the room loads the interview afresh.
+  const [view, setView] = useState(() => {
+    const saved = window.history.state?.ivView;
+    if (saved && SCREENS.includes(saved.screen)) {
+      const { initial, ...rest } = saved; // eslint-disable-line no-unused-vars
+      return rest;
+    }
+    return { screen: SCREENS.includes(initialScreen) ? initialScreen : 'home' };
+  });
   const [status, setStatus] = useState(null);
   const [statusError, setStatusError] = useState('');
   const [reload, setReload] = useState(0);

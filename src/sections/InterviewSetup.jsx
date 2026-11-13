@@ -1,9 +1,24 @@
 import { useEffect, useState } from 'react';
 import Icon from '../components/mcq/Icon';
 import { ActionButton, ErrorBanner } from '../components/mcq/ui';
-import { Shell, PageHeader, Panel, Segmented, SeatAvatar } from '../components/interview/ui';
+import { Shell, PageHeader, Panel, SeatAvatar } from '../components/interview/ui';
 import { iv, errorMessage } from '../lib/interviewApi';
 import { useSpeaker, useBoardVoice, useMicLevel, speechRecognitionSupported, useRecorder } from '../lib/interviewSpeech';
+import { usePresence, isPhone } from '../lib/interviewPresence';
+
+// Used if the server does not send its list (it always should).
+const FORMATS = [
+  { key: 'quick', label: 'Quick drill', questions: 8, followUps: 4, about: 'about 10 minutes' },
+  { key: 'standard', label: 'Standard board', questions: 14, followUps: 7, about: 'about 20 minutes' },
+  { key: 'full', label: 'Full board', questions: 20, followUps: 10, about: 'about 30 minutes' }
+];
+const TEMPERAMENTS = [
+  { key: 'cordial', label: 'Cordial', blurb: 'Encouraging. Puts you at ease and corrects gently.' },
+  { key: 'standard', label: 'Standard', blurb: 'Business-like. Brief, firm when you are vague.' },
+  { key: 'strict', label: 'Strict', blurb: 'A stress board. Sceptical, exacting, quick to challenge.' }
+];
+const FORMAT_ICON = { quick: 'zap', standard: 'users', full: 'gavel' };
+const TEMPERAMENT_ICON = { cordial: 'heart', standard: 'user', strict: 'alert' };
 
 const PREF_KEY = 'interview:setup';
 const readPrefs = () => { try { return JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); } catch { return {}; } };
@@ -35,6 +50,35 @@ function OptionCard({ selected, onClick, icon, title, text, disabled, note }) {
   );
 }
 
+// The camera stays on for the whole interview: the board takes note of eye contact and posture.
+function CameraCheck() {
+  const [on, setOn] = useState(false);
+  const { status, live, attach } = usePresence(on);
+  const note = status === 'starting' ? 'Starting your camera…'
+    : status === 'ready' ? (live.face ? 'The board can see you. Sit like this.' : 'We can’t see your face. Face the screen, in good light.')
+      : status === 'camera-only' ? 'Camera works. Reading body language could not start in this browser; the board will go by your answers only.'
+        : status === 'denied' ? 'Camera access is blocked. Allow it from the camera icon in the address bar.'
+          : status === 'no-camera' ? 'No camera found. The interview needs one.'
+            : 'The camera stays on during the interview. Your video never leaves this device.';
+  const good = status === 'ready' && live.face;
+  return (
+    <div className="rounded-2xl border border-border-default bg-surface p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-text-primary"><Icon name="video" className="w-4 h-4" /> Camera</div>
+        <ActionButton size="sm" onClick={() => setOn((v) => !v)}>{on ? 'Stop test' : 'Test camera'}</ActionButton>
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        {on && (
+          <div className="w-24 h-[72px] rounded-xl overflow-hidden bg-sunken shrink-0">
+            <video ref={attach} autoPlay muted playsInline className="w-full h-full object-cover -scale-x-100" />
+          </div>
+        )}
+        <p className={`text-xs leading-relaxed ${good ? 'text-brand font-semibold' : status === 'denied' || status === 'no-camera' ? 'text-status-danger-text font-semibold' : 'text-text-tertiary'}`}>{note}</p>
+      </div>
+    </div>
+  );
+}
+
 function MicCheck() {
   const [on, setOn] = useState(false);
   const { level, denied } = useMicLevel(on);
@@ -58,7 +102,11 @@ export default function InterviewSetup({ status, go, onHome, focus: initialFocus
   const prefs = readPrefs();
   const [mode, setMode] = useState(prefs.mode || 'practice');
   const [inputMode, setInputMode] = useState(prefs.inputMode || 'voice');
-  const [minutes, setMinutes] = useState(prefs.minutes || 20);
+  const formats = status.formats?.length ? status.formats : FORMATS;
+  const temperaments = status.temperaments?.length ? status.temperaments : TEMPERAMENTS;
+  const [format, setFormat] = useState(() => (formats.some((f) => f.key === prefs.format) ? prefs.format : status.defaultFormat || 'standard'));
+  const [temperament, setTemperament] = useState(() => (temperaments.some((t) => t.key === prefs.temperament) ? prefs.temperament : status.defaultTemperament || 'standard'));
+  const [phone] = useState(isPhone);
   const [focus, setFocus] = useState(initialFocus || []);
   const [items, setItems] = useState(null);
   const [starting, setStarting] = useState(false);
@@ -90,9 +138,9 @@ export default function InterviewSetup({ status, go, onHome, focus: initialFocus
   const start = async () => {
     setStarting(true);
     setError('');
-    writePrefs({ mode, inputMode, minutes });
+    writePrefs({ mode, inputMode, format, temperament });
     try {
-      const { session } = await iv('/sessions', { method: 'POST', body: { mode, inputMode: effectiveInput, minutes, focus } });
+      const { session } = await iv('/sessions', { method: 'POST', body: { mode, inputMode: effectiveInput, format, temperament, focus } });
       go({ screen: 'room', sessionId: session.id, initial: session }, { replace: true });
     } catch (err) {
       setError(errorMessage(err));
@@ -101,6 +149,23 @@ export default function InterviewSetup({ status, go, onHome, focus: initialFocus
   };
 
   const toggleFocus = (key) => setFocus((f) => (f.includes(key) ? f.filter((x) => x !== key) : [...f, key].slice(0, 6)));
+  const chosen = formats.find((f) => f.key === format) || formats[1] || formats[0];
+  const board = temperaments.find((t) => t.key === temperament) || temperaments[1] || temperaments[0];
+
+  if (phone) {
+    return (
+      <Shell>
+        <PageHeader onBack={onHome} eyebrow="Mock interview" title="Use a laptop or tablet" subtitle="The interview room needs a bigger screen and a camera that can see you, as the real board does." />
+        <Panel className="p-6 text-sm text-text-secondary leading-relaxed">
+          <p>Sign in on a laptop or tablet to take a mock interview. Everything else works here: fill in your DAF, go through your predicted questions, search the question bank and read your reports.</p>
+          <div className="flex flex-wrap gap-2 mt-5">
+            <ActionButton icon="edit" onClick={() => go({ screen: 'profile' })}>Your DAF</ActionButton>
+            <ActionButton icon="sparkles" onClick={() => go({ screen: 'predictions' })}>Predicted questions</ActionButton>
+          </div>
+        </Panel>
+      </Shell>
+    );
+  }
 
   return (
     <Shell>
@@ -111,7 +176,7 @@ export default function InterviewSetup({ status, go, onHome, focus: initialFocus
           <h2 className="text-sm font-bold text-text-primary mb-3">Mode</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             <OptionCard selected={mode === 'practice'} onClick={() => setMode('practice')} icon="book" title="Practice" text="See where each question came from, and quick feedback after every answer." />
-            <OptionCard selected={mode === 'real'} onClick={() => setMode('real')} icon="gavel" title="Real interview" text="No hints, no feedback until the end. A clock runs, like the actual Personality Test." />
+            <OptionCard selected={mode === 'real'} onClick={() => setMode('real')} icon="gavel" title="Real interview" text="No hints and no feedback until the end, like the actual Personality Test." />
           </div>
         </section>
 
@@ -131,14 +196,30 @@ export default function InterviewSetup({ status, go, onHome, focus: initialFocus
           </div>
         </section>
 
-        <section className="grid md:grid-cols-2 gap-6">
-          <div>
-            <h2 className="text-sm font-bold text-text-primary mb-3">Length</h2>
-            <Segmented value={minutes} onChange={setMinutes} options={[{ value: 10, label: '10 min' }, { value: 20, label: '20 min' }, { value: 30, label: '30 min' }]} ariaLabel="Interview length" />
-            <p className="text-xs text-text-tertiary mt-2">The real Personality Test usually runs 25–35 minutes.</p>
+        <section>
+          <h2 className="text-sm font-bold text-text-primary mb-3">Interview</h2>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {formats.map((f) => (
+              <OptionCard key={f.key} selected={format === f.key} onClick={() => setFormat(f.key)} icon={FORMAT_ICON[f.key] || 'users'} title={f.label} text={`${f.questions} questions, and up to ${f.followUps} follow-ups when your answers invite them. ${f.about[0].toUpperCase()}${f.about.slice(1)}.`} />
+            ))}
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-text-primary mb-3">Check your setup</h2>
+          <p className="text-xs text-text-tertiary mt-2">The real Personality Test usually runs 25–35 minutes. The Full board is closest to it.</p>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-bold text-text-primary mb-3">The board</h2>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {temperaments.map((t) => (
+              <OptionCard key={t.key} selected={temperament === t.key} onClick={() => setTemperament(t.key)} icon={TEMPERAMENT_ICON[t.key] || 'user'} title={t.label} text={t.blurb} />
+            ))}
+          </div>
+          <p className="text-xs text-text-tertiary mt-2">The board’s manner changes how it speaks to you, not how it marks you.</p>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-bold text-text-primary mb-3">Check your setup</h2>
+          <div className="grid md:grid-cols-2 gap-3 items-start">
+            <CameraCheck />
             <div className="space-y-3">
               <div className="rounded-2xl border border-border-default bg-surface p-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-text-primary"><Icon name="volume" className="w-4 h-4" /> Board’s voice</div>
@@ -150,6 +231,10 @@ export default function InterviewSetup({ status, go, onHome, focus: initialFocus
               {!canPlayVoice && <p className="text-xs text-status-warning-text">This browser can’t speak the questions aloud; they will appear as text.</p>}
             </div>
           </div>
+          <p className="text-xs text-text-tertiary mt-2 flex items-start gap-1.5">
+            <Icon name="lock" className="w-3.5 h-3.5 mt-px shrink-0" />
+            Your camera stays on for the whole interview, and the board takes note when you look away, read from notes or slouch. The video never leaves your device: only numbers like “faced the board 85% of the time” are saved.
+          </p>
         </section>
 
         <section>
@@ -178,7 +263,7 @@ export default function InterviewSetup({ status, go, onHome, focus: initialFocus
           <div className="flex items-center gap-4">
             <div className="flex -space-x-2">{['chairman', 'm1', 'm2', 'm3', 'm4'].map((a) => <SeatAvatar key={a} asker={a} size="sm" />)}</div>
             <div>
-              <p className="text-sm font-bold text-text-primary">{mode === 'real' ? 'Real interview' : 'Practice'} · {minutes} minutes · {effectiveInput === 'voice' ? 'spoken answers' : 'typed answers'}</p>
+              <p className="text-sm font-bold text-text-primary">{chosen.label} · {chosen.questions} questions · {board.label.toLowerCase()} board · {mode === 'real' ? 'real interview' : 'practice'} · {effectiveInput === 'voice' ? 'spoken answers' : 'typed answers'}</p>
               <p className="text-xs text-text-tertiary mt-0.5">The Chairperson and four members are waiting{status.ai?.available ? '. AI will react to your answers and score them.' : '. Questions come from past transcripts; AI scoring is coming soon.'}</p>
             </div>
           </div>

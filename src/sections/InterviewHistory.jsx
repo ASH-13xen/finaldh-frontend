@@ -50,11 +50,11 @@ export default function InterviewHistory({ go, onHome }) {
         <Panel className="divide-y divide-border-subtle">
           {sessions.map((s) => (
             <div key={s.id} className="flex items-center gap-4 px-5 py-4">
-              <span className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg ${s.overall != null ? 'bg-accent-soft-bg text-brand' : 'bg-sunken text-text-tertiary'}`}>
-                {s.overall != null ? s.overall.toFixed(1) : <Icon name={s.inputMode === 'voice' ? 'mic' : 'keyboard'} className="w-5 h-5" />}
+              <span className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold ${s.marks != null || s.overall != null ? 'bg-accent-soft-bg text-brand' : 'bg-sunken text-text-tertiary'}`} title={s.marks != null ? `${s.marks} of ${s.marksOutOf} marks` : undefined}>
+                {s.marks != null ? s.marks : s.overall != null ? s.overall.toFixed(1) : <Icon name={s.inputMode === 'voice' ? 'mic' : 'keyboard'} className="w-5 h-5" />}
               </span>
               <button onClick={() => go(s.status === 'in-progress' ? { screen: 'room', sessionId: s.id } : { screen: 'report', sessionId: s.id })} className="flex-1 text-left cursor-pointer group">
-                <span className="block text-sm font-bold text-text-primary group-hover:text-brand">{s.mode === 'real' ? 'Real interview' : 'Practice'} · {s.durationMinutes} min · {s.inputMode === 'voice' ? 'Voice' : 'Text'}</span>
+                <span className="block text-sm font-bold text-text-primary group-hover:text-brand">{s.formatLabel || `${s.durationMinutes} min`} · {s.mode === 'real' ? 'Real interview' : 'Practice'} · {s.inputMode === 'voice' ? 'Voice' : 'Text'}</span>
                 <span className="block text-xs text-text-tertiary mt-0.5">{formatDate(s.startedAt)} · {s.status === 'in-progress' ? 'In progress — resume' : `${s.answered ?? 0} of ${s.questions} answered`}{s.aiUsed ? ' · AI feedback' : ''}</span>
               </button>
               <button onClick={() => setDeleting(s)} className="p-2 rounded-xl text-text-tertiary hover:text-status-danger-text hover:bg-status-danger-bg cursor-pointer" aria-label="Delete interview">

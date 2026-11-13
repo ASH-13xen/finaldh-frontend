@@ -102,6 +102,7 @@ export function useBoardVoice() {
   const sourcesRef = useRef([]);
   const token = useRef(0);
   const cache = useRef(new Map());
+  const inflightRef = useRef(new Map()); // clips being downloaded ahead of time, by key
   const [speaking, setSpeaking] = useState(false);
   const [level, setLevel] = useState(0);
 
@@ -150,6 +151,26 @@ export function useBoardVoice() {
     return () => cancelAnimationFrame(raf);
   }, [speaking]);
 
+  // Download a clip in full ahead of time, so the next line starts the moment the last one ends.
+  const prefetch = useCallback((key, url) => {
+    if (cache.current.has(key) || inflightRef.current.has(key)) return;
+    const job = (async () => {
+      const res = await fetch(url, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`voice unavailable (${res.status})`);
+      const rate = Number(res.headers.get('X-Sample-Rate')) || 24000;
+      const buf = new Uint8Array(await res.arrayBuffer());
+      const n = Math.floor(buf.length / 2);
+      if (!n) throw new Error('voice returned no audio');
+      const view = new DataView(buf.buffer, buf.byteOffset, n * 2);
+      const samples = new Float32Array(n);
+      for (let i = 0; i < n; i++) samples[i] = view.getInt16(i * 2, true) / 32768;
+      cache.current.set(key, { samples, rate });
+      if (cache.current.size > 60) cache.current.delete(cache.current.keys().next().value);
+    })().finally(() => inflightRef.current.delete(key));
+    job.catch(() => {});
+    inflightRef.current.set(key, job);
+  }, []);
+
   const play = useCallback(async (key, url) => {
     const ctx = audio();
     if (!ctx) throw new Error('Web Audio is not supported');
@@ -177,6 +198,13 @@ export function useBoardVoice() {
       setTimeout(resolve, Math.max(0, (at - ctx.currentTime) * 1000) + 800); // in case onended never fires
     });
 
+    // A clip already downloading is used if it arrives within 2.5 s; a slow one is not waited for (the
+    // voice service occasionally stalls), the clip is streamed afresh instead.
+    const inflight = inflightRef.current.get(key);
+    if (inflight) {
+      await Promise.race([inflight.catch(() => {}), new Promise((resolve) => { setTimeout(resolve, 2500); })]);
+      if (my !== token.current) return;
+    }
     const cached = cache.current.get(key);
     if (cached) {
       setSpeaking(true);
@@ -239,7 +267,7 @@ export function useBoardVoice() {
 
   useEffect(() => () => { token.current += 1; stopSources(); ctxRef.current?.close().catch(() => {}); }, []);
 
-  return { play, stop, unlock, speaking, level: speaking ? level : 0 };
+  return { play, prefetch, stop, unlock, speaking, level: speaking ? level : 0 };
 }
 
 // ------------------------------------------------------------------ listening (Web Speech API)

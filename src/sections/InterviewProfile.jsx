@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '../components/mcq/Icon';
 import { ActionButton, ErrorBanner, Modal } from '../components/mcq/ui';
 import { useToast } from '../components/Toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Shell, PageHeader, Panel, SectionTitle, ChipInput } from '../components/interview/ui';
-import { iv, upload, errorMessage } from '../lib/interviewApi';
+import { iv, errorMessage } from '../lib/interviewApi';
 
 const STATES = ['Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'];
 const OPTIONALS = ['PSIR', 'Sociology', 'Anthropology', 'Geography', 'Public Administration', 'History', 'Philosophy', 'Psychology', 'Economics', 'Law', 'Mathematics', 'Physics', 'Chemistry', 'Botany', 'Zoology', 'Geology', 'Statistics', 'Agriculture', 'Animal Husbandry and Veterinary Science', 'Medical Science', 'Management', 'Commerce and Accountancy', 'Civil Engineering', 'Mechanical Engineering', 'Electrical Engineering', 'Literature'];
@@ -58,12 +58,9 @@ export default function InterviewProfile({ status, go, onHome }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [reading, setReading] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [drag, setDrag] = useState(false);
-  const fileRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,29 +72,6 @@ export default function InterviewProfile({ status, go, onHome }) {
   }, []);
 
   const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setDirty(true); };
-
-  const readFile = async (file) => {
-    if (!file) return;
-    if (!/pdf|image\//.test(file.type)) { toast.error('Choose a PDF or a photo of your DAF.'); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error('That file is over 10 MB.'); return; }
-    setReading(true);
-    try {
-      const { fields } = await upload('/profile/extract', 'file', file, file.name);
-      // Keep anything already typed where the DAF had nothing.
-      setForm((f) => Object.fromEntries(Object.keys(EMPTY).map((k) => {
-        const v = fields[k];
-        const has = Array.isArray(v) ? v.length : !!v;
-        return [k, has ? v : f[k]];
-      })));
-      setDirty(true);
-      toast.success('Read your DAF. Check the details below, then save.');
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setReading(false);
-      if (fileRef.current) fileRef.current.value = '';
-    }
-  };
 
   const save = async () => {
     setSaving(true);
@@ -130,7 +104,6 @@ export default function InterviewProfile({ status, go, onHome }) {
   if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><LoadingSpinner text="Loading your DAF..." /></div>;
   if (loadError) return <Shell><div className="py-16"><ErrorBanner>{loadError}</ErrorBanner></div></Shell>;
 
-  const ai = status.ai?.available;
   const preview = [
     form.homeState && { icon: 'mapPin', text: [form.homeDistrict, form.homeState].filter(Boolean).join(', ') },
     ...form.education.filter((e) => e.degree || e.discipline || e.institution).map((e) => ({ icon: 'graduation', text: [e.degree, e.discipline, e.institution].filter(Boolean).join(' · ') })),
@@ -138,7 +111,9 @@ export default function InterviewProfile({ status, go, onHome }) {
     form.optional && { icon: 'book', text: `${form.optional} optional` },
     ...form.hobbies.map((h) => ({ icon: 'heart', text: h })),
     ...form.achievements.map((a) => ({ icon: 'award', text: a })),
-    form.servicePreference.length && { icon: 'target', text: form.servicePreference.slice(0, 4).join(' › ') }
+    form.servicePreference.length && { icon: 'target', text: form.servicePreference.slice(0, 4).join(' › ') },
+    form.familyBackground && { icon: 'users', text: form.familyBackground },
+    form.languages.some((l) => !/^(hindi|english)$/i.test(l.trim())) && { icon: 'message', text: `Languages: ${form.languages.join(', ')}` }
   ].filter(Boolean);
 
   return (
@@ -152,32 +127,10 @@ export default function InterviewProfile({ status, go, onHome }) {
 
       <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
         <div className="space-y-6">
-          {/* Upload */}
-          <Panel className="p-5 md:p-6">
-            <SectionTitle icon="upload" title="Fill it in from your DAF" subtitle={ai ? 'Upload your DAF (PDF or photo). We read the interview-relevant parts and fill the form for you to check.' : 'Reading a DAF automatically switches on with AI. For now, fill in the form below — it takes about two minutes.'} />
-            <div
-              onDragOver={(e) => { e.preventDefault(); if (ai) setDrag(true); }}
-              onDragLeave={() => setDrag(false)}
-              onDrop={(e) => { e.preventDefault(); setDrag(false); if (ai) readFile(e.dataTransfer.files?.[0]); }}
-              className={`rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors ${!ai ? 'border-border-default bg-sunken/50 opacity-70' : drag ? 'border-brand bg-accent-soft-bg' : 'border-border-default hover:border-brand'}`}
-            >
-              {reading ? (
-                <LoadingSpinner text="Reading your DAF..." />
-              ) : (
-                <>
-                  <Icon name="upload" className="w-8 h-8 mx-auto text-text-tertiary" />
-                  <p className="text-sm font-semibold text-text-primary mt-3">{ai ? 'Drop your DAF here' : 'DAF upload — coming soon'}</p>
-                  <p className="text-xs text-text-tertiary mt-1">PDF, JPG or PNG up to 10 MB</p>
-                  <input ref={fileRef} type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => readFile(e.target.files?.[0])} />
-                  <ActionButton className="mt-4" size="sm" icon="upload" disabled={!ai} onClick={() => fileRef.current?.click()}>Choose file</ActionButton>
-                </>
-              )}
-            </div>
-            <p className="text-xs text-text-tertiary mt-3 flex items-start gap-1.5">
-              <Icon name="lock" className="w-3.5 h-3.5 mt-px shrink-0" />
-              Your file is read once and never stored. Only the fields below are saved — never your name, roll number, address or phone — and you can delete them any time.
-            </p>
-          </Panel>
+          <p className="text-sm text-text-secondary flex items-start gap-2 -mt-2">
+            <Icon name="lock" className="w-4 h-4 mt-0.5 shrink-0 text-text-tertiary" />
+            Copy the details from your DAF — it takes about two minutes. Only these fields are saved, never your name, roll number, address or phone, and you can delete them any time.
+          </p>
 
           <Panel className="p-5 md:p-6">
             <SectionTitle icon="mapPin" title="Home" subtitle="Expect questions on your state and district: what they are famous for, their problems, and what you would do as DM there." />
@@ -254,14 +207,14 @@ export default function InterviewProfile({ status, go, onHome }) {
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Family background" hint="Parents' occupations — boards sometimes ask about these." htmlFor="familyBackground">
+                <Field label="Family background" hint="Parents' occupations. Boards often ask about them: a farmer parent brings questions on agriculture, a teacher on education." htmlFor="familyBackground">
                   <input id="familyBackground" value={form.familyBackground} onChange={(e) => set('familyBackground', e.target.value)} placeholder="e.g. Father: farmer; Mother: teacher" className={inputCls} />
                 </Field>
-                <Field label="Languages" htmlFor="languages">
+                <Field label="Languages" hint="Add your mother tongue and any regional language. Boards ask about these." htmlFor="languages">
                   <ChipInput id="languages" values={form.languages} onChange={(v) => set('languages', v)} placeholder="Hindi, English…" max={6} />
                 </Field>
               </div>
-              <Field label="Anything else in your DAF" htmlFor="otherNotes">
+              <Field label="Anything else in your DAF" hint="The board reads this too, and may ask about it." htmlFor="otherNotes">
                 <textarea id="otherNotes" rows={3} value={form.otherNotes} onChange={(e) => set('otherNotes', e.target.value)} placeholder="Internships, projects, places lived, unusual facts the board may pick up…" className={inputCls} />
               </Field>
             </div>

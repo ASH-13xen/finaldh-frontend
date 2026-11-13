@@ -4,6 +4,7 @@ import { ActionButton } from '../components/mcq/ui';
 import { Shell, PageHeader, Panel, StatTile, AiBadge, SeatAvatar, TimesAsked, SourcesCredit, Skeleton, YearBars } from '../components/interview/ui';
 import FamilyDrawer from '../components/interview/FamilyDrawer';
 import { iv, formatDate, yearsRange } from '../lib/interviewApi';
+import { isPhone } from '../lib/interviewPresence';
 
 const fmt = (n) => (n ?? 0).toLocaleString('en-IN');
 
@@ -54,6 +55,7 @@ export default function InterviewHome({ status, user, go }) {
   const hasDaf = profile && !profile.empty;
   const dafItems = (profile?.items || []).filter((i) => !['intro', 'motivation'].includes(i.type));
   const inProgress = sessions?.find((s) => s.status === 'in-progress');
+  const phone = isPhone();
 
   return (
     <Shell wide>
@@ -88,7 +90,11 @@ export default function InterviewHome({ status, user, go }) {
               The Chairperson opens, then each member takes a part of your DAF — home state, education and work, hobbies, current affairs. Speak your answers or type them; every question shows where it came from.
             </p>
             <div className="flex flex-wrap gap-3 mt-6">
-              {inProgress ? (
+              {phone ? (
+                <p className="w-full rounded-2xl border border-border-default bg-sunken/60 px-4 py-3 text-sm text-text-secondary flex items-start gap-2">
+                  <Icon name="video" className="w-4 h-4 mt-0.5 shrink-0" /> Mock interviews open on a laptop or tablet with a camera. Prepare your DAF and predicted questions here.
+                </p>
+              ) : inProgress ? (
                 <ActionButton tone="primary" size="lg" icon="play" onClick={() => go({ screen: 'room', sessionId: inProgress.id })}>Resume interview</ActionButton>
               ) : (
                 <ActionButton tone="primary" size="lg" icon="mic" onClick={() => go({ screen: 'setup' })}>Start a mock interview</ActionButton>
@@ -179,7 +185,7 @@ export default function InterviewHome({ status, user, go }) {
             <div className="rounded-2xl border border-dashed border-border-default p-8 text-center">
               <Icon name="mic" className="w-7 h-7 mx-auto text-text-tertiary" />
               <p className="text-sm font-semibold text-text-primary mt-3">No interviews yet</p>
-              <p className="text-sm text-text-tertiary mt-1">A 10-minute practice round is a good first step.</p>
+              <p className="text-sm text-text-tertiary mt-1">A Quick drill in practice mode is a good first step.</p>
             </div>
           ) : (
             <ul className="space-y-2">
@@ -189,11 +195,11 @@ export default function InterviewHome({ status, user, go }) {
                     onClick={() => go(s.status === 'in-progress' ? { screen: 'room', sessionId: s.id } : { screen: 'report', sessionId: s.id })}
                     className="w-full text-left flex items-center gap-4 rounded-2xl border border-border-subtle bg-surface hover:border-brand px-4 py-3 cursor-pointer"
                   >
-                    <span className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold ${s.overall != null ? 'bg-accent-soft-bg text-brand' : 'bg-sunken text-text-tertiary'}`}>
-                      {s.overall != null ? s.overall.toFixed(1) : <Icon name={s.inputMode === 'voice' ? 'mic' : 'keyboard'} className="w-5 h-5" />}
+                    <span className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm ${s.marks != null || s.overall != null ? 'bg-accent-soft-bg text-brand' : 'bg-sunken text-text-tertiary'}`} title={s.marks != null ? `${s.marks} of ${s.marksOutOf} marks` : undefined}>
+                      {s.marks != null ? s.marks : s.overall != null ? s.overall.toFixed(1) : <Icon name={s.inputMode === 'voice' ? 'mic' : 'keyboard'} className="w-5 h-5" />}
                     </span>
                     <span className="flex-1">
-                      <span className="block text-sm font-bold text-text-primary">{s.mode === 'real' ? 'Real interview' : 'Practice'} · {s.durationMinutes} min · {s.inputMode === 'voice' ? 'Voice' : 'Text'}</span>
+                      <span className="block text-sm font-bold text-text-primary">{s.formatLabel || `${s.durationMinutes} min`} · {s.mode === 'real' ? 'Real interview' : 'Practice'} · {s.inputMode === 'voice' ? 'Voice' : 'Text'}</span>
                       <span className="block text-xs text-text-tertiary mt-0.5">{formatDate(s.startedAt)} · {s.status === 'in-progress' ? 'In progress — tap to resume' : `${s.answered ?? 0} of ${s.questions} answered`}</span>
                     </span>
                     <Icon name="chevronRight" className="w-4 h-4 text-text-tertiary" />
