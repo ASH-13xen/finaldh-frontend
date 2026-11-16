@@ -120,7 +120,7 @@ export default function InterviewPredictions({ status, go, onHome }) {
             <AiBadge ai={status.ai} />
             {status.ai?.available && <ActionButton size="sm" icon="refresh" onClick={refresh} disabled={refreshing}>{refreshing ? 'Updating…' : 'Refresh'}</ActionButton>}
             <ActionButton size="sm" icon="edit" onClick={() => go({ screen: 'profile' })}>Edit DAF</ActionButton>
-            <ActionButton size="sm" tone="primary" icon="mic" onClick={() => go({ screen: 'setup' })}>Mock interview</ActionButton>
+            {status.features?.mockInterview && <ActionButton size="sm" tone="primary" icon="mic" onClick={() => go({ screen: 'setup' })}>Mock interview</ActionButton>}
           </>
         }
       />
@@ -162,7 +162,7 @@ export default function InterviewPredictions({ status, go, onHome }) {
                       <h2 className="text-lg font-bold text-text-primary leading-snug">{g.label}</h2>
                     </div>
                   </div>
-                  {!['intro', 'motivation'].includes(g.type) && (
+                  {status.features?.mockInterview && !['intro', 'motivation'].includes(g.type) && (
                     <ActionButton size="sm" icon="mic" onClick={() => go({ screen: 'setup', focus: [g.key] })} hint="Start a mock interview that drills this">Practise</ActionButton>
                   )}
                 </div>

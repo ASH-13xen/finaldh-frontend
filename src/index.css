@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400..800&family=Caveat:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400..800&family=Caveat:wght@500;700&family=Noto+Serif+Devanagari:wght@400..700&family=Mukta:wght@400;500;600;700;800&family=Kalam:wght@400;700&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -40,8 +40,11 @@
   --color-ink-400: #8a8175;
   --color-ink-200: #cfc6b6;
 
-  --font-display: "Fraunces", "Source Serif 4", Georgia, serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  /* Devanagari falls back to Noto Serif Devanagari (headlines), Mukta (text) and Kalam (handwriting):
+     Google Fonts serves them with a Devanagari unicode-range, so they only download when Hindi is shown. */
+  --font-display: "Fraunces", "Noto Serif Devanagari", "Source Serif 4", Georgia, serif;
+  --font-sans: "Inter", "Mukta", system-ui, sans-serif;
+  --font-hand: "Caveat", "Kalam", "Segoe Script", "Bradley Hand", cursive;
 }
 
 /* Semantic tokens — light mode (default) */
@@ -242,4 +245,100 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .iv-ring, .iv-bar, .iv-dot, .iv-rise, .iv-skeleton, .iv-sheet { animation: none !important; }
   .iv-flip-inner { transition: none; }
+}
+
+/* ---------- Interview Prep (the redesigned interview section) ---------- */
+
+:root {
+  --prep-ink: #14110d;
+  --prep-emerald: #0d7a56;
+  --prep-emerald-bright: #129b6e;
+  --prep-amber: #f2b33d;
+  --prep-hl-amber: rgba(250, 204, 21, 0.42);
+  --prep-hl-emerald: rgba(52, 211, 153, 0.32);
+  --prep-hl-rose: rgba(251, 113, 133, 0.28);
+  --prep-tier-certain: #0d7a56;
+  --prep-tier-certain-bg: #e7f6ee;
+  --prep-tier-likely: #b45309;
+  --prep-tier-likely-bg: #fdf3dc;
+  --prep-tier-worth: #57534e;
+  --prep-tier-worth-bg: #efe9de;
+  --prep-shadow: 0 1px 0 rgba(20, 17, 13, 0.04), 0 10px 30px -12px rgba(20, 17, 13, 0.18);
+  --prep-shadow-lift: 0 1px 0 rgba(20, 17, 13, 0.05), 0 22px 50px -18px rgba(20, 17, 13, 0.28);
+}
+.dark {
+  --prep-hl-amber: rgba(250, 204, 21, 0.28);
+  --prep-hl-emerald: rgba(52, 211, 153, 0.24);
+  --prep-hl-rose: rgba(251, 113, 133, 0.22);
+  --prep-tier-certain: #34d399;
+  --prep-tier-certain-bg: rgba(16, 185, 129, 0.14);
+  --prep-tier-likely: #fbbf24;
+  --prep-tier-likely-bg: rgba(245, 158, 11, 0.14);
+  --prep-tier-worth: #cfc6b6;
+  --prep-tier-worth-bg: rgba(207, 198, 182, 0.10);
+  --prep-shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+  --prep-shadow-lift: 0 1px 0 rgba(0, 0, 0, 0.4), 0 22px 50px -18px rgba(0, 0, 0, 0.75);
+}
+
+/* Warm paper with a faint grain, the section's backdrop. */
+.prep-paper {
+  background-color: var(--bg-page);
+  background-image:
+    radial-gradient(120% 70% at 50% -10%, color-mix(in oklab, var(--color-accent-200) 22%, transparent) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.08 0 0 0 0 0.07 0 0 0 0 0.05 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.dark .prep-paper {
+  background-image:
+    radial-gradient(120% 70% at 50% -10%, color-mix(in oklab, var(--color-accent-700) 24%, transparent) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* A highlighter stroke behind a phrase; GSAP sweeps background-size from 0% to 100%. */
+.prep-hl {
+  color: inherit;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-image: linear-gradient(104deg, transparent 0.5%, var(--prep-hl-amber) 2%, var(--prep-hl-amber) 97%, transparent 99%);
+  background-position: 0 88%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0 0.12em;
+  margin: 0 -0.04em;
+  border-radius: 0.2em 0.35em 0.25em 0.4em;
+}
+.prep-hl-emerald { background-image: linear-gradient(104deg, transparent 0.5%, var(--prep-hl-emerald) 2%, var(--prep-hl-emerald) 97%, transparent 99%); }
+.prep-hl-rose { background-image: linear-gradient(104deg, transparent 0.5%, var(--prep-hl-rose) 2%, var(--prep-hl-rose) 97%, transparent 99%); }
+.prep-hl-low { background-size: 100% 46%; }
+
+.prep-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1.75rem;
+  box-shadow: var(--prep-shadow);
+  transition: box-shadow 0.35s ease, border-color 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.prep-card-hover:hover { box-shadow: var(--prep-shadow-lift); border-color: var(--border-default); transform: translateY(-3px); }
+.prep-hand { font-family: var(--font-hand); }
+.prep-num { font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "lnum" 1, "tnum" 1; }
+.prep-eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; }
+.prep-rule { height: 1px; background: linear-gradient(90deg, transparent, var(--border-default) 12%, var(--border-default) 88%, transparent); }
+.prep-dots { background-image: radial-gradient(var(--border-default) 1px, transparent 1.2px); background-size: 14px 14px; }
+
+/* Hindi: Devanagari needs taller lines, and letter-spaced capitals don't exist in it. */
+.prep-hi { line-height: 1.7; }
+.prep-hi .prep-eyebrow { letter-spacing: 0.02em; text-transform: none; font-size: 0.82rem; }
+.prep-hi h1, .prep-hi h2, .prep-hi h3 { line-height: 1.3; }
+
+/* An endless strip of questions (the duplicated track slides by half its width). */
+.prep-marquee { mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+
+.prep-focus:focus-visible { outline: 3px solid color-mix(in oklab, var(--accent) 70%, transparent); outline-offset: 3px; }
+
+/* Room for the phone tab bar at the bottom of the section. */
+.prep-safe-bottom { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+@media (min-width: 768px) { .prep-safe-bottom { padding-bottom: 4rem; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .prep-card, .prep-card-hover:hover { transition: none; transform: none; }
 }

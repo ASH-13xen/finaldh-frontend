@@ -40,34 +40,39 @@ export default function InterviewHome({ status, user, go }) {
   const [trends, setTrends] = useState(null);
   const [familyId, setFamilyId] = useState(null);
 
+  const mockOn = !!status.features?.mockInterview;
   useEffect(() => {
     let cancelled = false;
-    Promise.allSettled([iv('/profile'), iv('/sessions'), iv('/bank/trends')]).then(([p, s, t]) => {
+    Promise.allSettled([iv('/profile'), mockOn ? iv('/sessions') : Promise.resolve({ sessions: [] }), iv('/bank/trends')]).then(([p, s, t]) => {
       if (cancelled) return;
       setProfile(p.status === 'fulfilled' ? p.value : { empty: true, items: [] });
       setSessions(s.status === 'fulfilled' ? s.value.sessions : []);
       if (t.status === 'fulfilled') setTrends(t.value);
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [mockOn]);
 
   const c = status.corpus;
   const hasDaf = profile && !profile.empty;
   const dafItems = (profile?.items || []).filter((i) => !['intro', 'motivation'].includes(i.type));
   const inProgress = sessions?.find((s) => s.status === 'in-progress');
   const phone = isPhone();
+  // The mock interview room is switched off for now (server: INTERVIEW_MOCK_ENABLED).
+  const mock = !!status.features?.mockInterview;
 
   return (
     <Shell wide>
       <PageHeader
         eyebrow="UPSC Personality Test"
-        title="Mock Interview"
-        subtitle={`Face a five-member board that asks what real boards asked. Built from ${fmt(c.transcripts)} interview transcripts, CSE ${yearsRange(c.years)}.`}
+        title={mock ? 'Mock Interview' : 'Interview Prep'}
+        subtitle={mock
+          ? `Face a five-member board that asks what real boards asked. Built from ${fmt(c.transcripts)} interview transcripts, CSE ${yearsRange(c.years)}.`
+          : `Your DAF, the questions you are likely to face, and every question asked in ${fmt(c.transcripts)} real interviews, CSE ${yearsRange(c.years)}.`}
         actions={
           <>
             <AiBadge ai={status.ai} />
             {user?.isAdmin && <ActionButton icon="edit" size="sm" onClick={() => { window.location.hash = 'admin_interview_data'; }} hint="Review the transcript library">Interview data</ActionButton>}
-            <ActionButton icon="history" size="sm" onClick={() => go({ screen: 'history' })}>My interviews</ActionButton>
+            {mock && <ActionButton icon="history" size="sm" onClick={() => go({ screen: 'history' })}>My interviews</ActionButton>}
           </>
         }
       />
@@ -81,7 +86,7 @@ export default function InterviewHome({ status, user, go }) {
       </div>
 
       {/* Start / resume */}
-      <Panel className="overflow-hidden mb-8">
+      {mock && <Panel className="overflow-hidden mb-8">
         <div className="grid lg:grid-cols-[1.2fr_1fr]">
           <div className="p-6 md:p-8 flex flex-col justify-center">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand mb-2">The interview room</p>
@@ -117,7 +122,7 @@ export default function InterviewHome({ status, user, go }) {
             </div>
           </div>
         </div>
-      </Panel>
+      </Panel>}
 
       {/* The path */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
@@ -174,7 +179,7 @@ export default function InterviewHome({ status, user, go }) {
           )}
         </Panel>
 
-        <Panel className="p-5 md:p-6">
+        {mock && <Panel className="p-5 md:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-text-primary">Your recent interviews</h2>
             {sessions?.length > 0 && <button onClick={() => go({ screen: 'history' })} className="text-sm font-bold text-brand hover:underline cursor-pointer">All</button>}
@@ -208,7 +213,7 @@ export default function InterviewHome({ status, user, go }) {
               ))}
             </ul>
           )}
-        </Panel>
+        </Panel>}
       </div>
 
       <SourcesCredit sources={status.sources} />

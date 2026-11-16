@@ -75,8 +75,13 @@ function Flow({ user, initialScreen }) {
   const home = () => go({ screen: 'home' });
   const common = { status, user, go, onHome: home };
 
+  // The mock interview room is switched off for now: its screens (reachable through browser history) fall back
+  // to the section's start.
+  const MOCK_SCREENS = ['setup', 'room', 'report', 'history'];
+  const screen = !status.features?.mockInterview && MOCK_SCREENS.includes(view.screen) ? 'home' : view.screen;
+
   let body;
-  switch (view.screen) {
+  switch (screen) {
     case 'profile':
       body = <InterviewProfile {...common} />;
       break;

@@ -103,9 +103,11 @@ export default function FamilyDrawer({ familyId, onClose, onPractice }) {
                         <span className="font-semibold">{ASKER_LABEL[a.asker] || 'The board'} followed up:</span> {a.followedBy}
                       </p>
                     )}
-                    <button onClick={() => setTranscriptId(a.transcriptId)} className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-brand hover:underline cursor-pointer">
-                      Read the whole interview <Icon name="arrowRight" className="w-3.5 h-3.5" />
-                    </button>
+                    {a.transcriptId && (
+                      <button onClick={() => setTranscriptId(a.transcriptId)} className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-brand hover:underline cursor-pointer">
+                        Read the whole interview (admins) <Icon name="arrowRight" className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ol>

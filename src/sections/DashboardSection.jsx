@@ -22,7 +22,7 @@ import AdminView from './AdminView';
 import AdminContactUsers from './AdminContactUsers';
 import PaymentRejectionNotice from '../components/PaymentRejectionNotice';
 import ComingSoon from './ComingSoon';
-import InterviewFlow from './InterviewFlow';
+import PrepFlow from '../prep/PrepFlow';
 import AdminInterviewData from './AdminInterviewData';
 import { MCQ_SECTION_LIVE, INTERVIEW_SECTION_LIVE } from '../lib/features';
 
@@ -159,8 +159,8 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
         {/* Admins only until INTERVIEW_SECTION_LIVE; students have no link to it and get Coming Soon from a direct URL. */}
         {activeTab?.startsWith('interview_') && (
           INTERVIEW_SECTION_LIVE || user.isAdmin
-            ? <InterviewFlow key={activeTab} user={user} activeTab={activeTab} />
-            : <ComingSoon title="Mock Interview" onBack={() => setActiveTab('student')} />
+            ? <PrepFlow key={activeTab} user={user} activeTab={activeTab} />
+            : <ComingSoon title="Interview Prep" onBack={() => setActiveTab('student')} />
         )}
 
         {activeTab === 'admin_interview_data' && (

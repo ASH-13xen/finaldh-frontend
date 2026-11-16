@@ -55,7 +55,7 @@ const getNavLinks = (user, pendingReports = 0) => {
       match: (t) => t?.startsWith('interview_'),
       label: (
         <>
-          <span className="hidden sm:inline">Mock </span>Interview
+          Interview<span className="hidden sm:inline"> Prep</span>
           {!INTERVIEW_SECTION_LIVE && (
             <span className="ml-1 sm:ml-1.5 inline-flex items-center px-1 sm:px-1.5 rounded-full bg-accent-soft-bg border border-accent-soft-border text-brand text-[7px] sm:text-[9px] font-extrabold uppercase tracking-wider align-middle">
               Admins
