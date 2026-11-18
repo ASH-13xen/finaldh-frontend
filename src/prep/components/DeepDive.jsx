@@ -7,6 +7,7 @@ import Sheet from './Sheet';
 import Button from './Button';
 import { YearSpark } from './badges';
 import { StatusPicker, SaveToggle, NoteEditor } from './PrepControls';
+import AnswerDraft from './AnswerDraft';
 import { useT, fmt, yearsRange } from '../lib/i18n';
 import { api } from '../lib/api';
 import { errorMessage } from '../../lib/interviewApi';
@@ -142,6 +143,7 @@ function Body({ familyId, onOpen, canBack, onBack, onClose }) {
           </div>
         </div>
         {notes && <NoteEditor qkey={f.key} info={info} autoFocus />}
+        <AnswerDraft className="mt-4" question={f.text} qkey={f.key} familyId={f.id} source="bank" />
       </header>
 
       {data.followUps?.length > 0 && (

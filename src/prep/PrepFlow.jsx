@@ -10,6 +10,8 @@ import { PrepContext, SCREEN_KEYS } from './lib/context';
 import Shell from './components/Shell';
 import Home from './screens/Home';
 import { usePrepStore } from './lib/usePrepStore';
+import { api } from './lib/api';
+import CreditsSheet from './components/credits/CreditsSheet';
 
 const Predictions = lazy(() => import('./screens/Predictions'));
 const Daf = lazy(() => import('./screens/Daf'));
@@ -41,7 +43,7 @@ function Loader() {
   );
 }
 
-function Flow({ user, initialScreen }) {
+function Flow({ user, initialScreen, onLogout, onExit }) {
   const { t } = useT();
   const [view, setView] = useState(() => {
     const saved = window.history.state?.prepView;
@@ -52,6 +54,17 @@ function Flow({ user, initialScreen }) {
   const [reload, setReload] = useState(0);
   const [profile, setProfile] = useState(null);
   const [profileTick, setProfileTick] = useState(0);
+  const [credits, setCredits] = useState(null);
+  const [creditsTick, setCreditsTick] = useState(0);
+  const [creditsOpen, setCreditsOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.credits().then((c) => { if (!cancelled) setCredits(c); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [creditsTick]);
+  const refreshCredits = useCallback(() => setCreditsTick((k) => k + 1), []);
+  const openCredits = useCallback(() => setCreditsOpen(true), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,9 +126,10 @@ function Flow({ user, initialScreen }) {
   ) : null), [showBanner, t]);
 
   const ctx = useMemo(() => ({
-    status, user, go, screen: view.screen, view, banner, prep,
+    status, user, go, screen: view.screen, view, banner, prep, onLogout, onExit,
+    credits, refreshCredits, openCredits,
     daf: { profile, refresh: refreshProfile }
-  }), [status, user, go, view, banner, prep, profile, refreshProfile]);
+  }), [status, user, go, view, banner, prep, profile, refreshProfile, onLogout, onExit, credits, refreshCredits, openCredits]);
 
   if (statusError) {
     return <div className="max-w-3xl mx-auto px-4 py-16"><ErrorBanner onRetry={() => setReload((k) => k + 1)}>{errorMessage(statusError, t('common.error'))}</ErrorBanner></div>;
@@ -143,7 +157,7 @@ function Flow({ user, initialScreen }) {
       body = <Notes key={view.note || ''} />;
       break;
     case 'bank':
-      body = <Bank key={view.q || ''} />;
+      body = <Bank key={`${view.q || ''}:${view.tab || ''}`} />;
       break;
     default:
       body = <Home />;
@@ -154,16 +168,19 @@ function Flow({ user, initialScreen }) {
       <Shell>
         <Suspense fallback={<div className="min-h-[50vh]" />}>{body}</Suspense>
       </Shell>
+      {creditsOpen && <CreditsSheet credits={credits} onClose={() => setCreditsOpen(false)} onPaid={refreshCredits} />}
     </PrepContext.Provider>
   );
 }
 
-export default function PrepFlow({ user, activeTab }) {
+// Interview Prep runs in its own window (the site's navbar opens it in a new tab): onExit goes to the main
+// website in this window, onLogout signs out.
+export default function PrepFlow({ user, activeTab, onLogout, onExit }) {
   const initialScreen = String(activeTab || '').replace(/^interview_/, '');
   return (
     <ToastProvider>
       <LangProvider>
-        <Flow user={user} initialScreen={initialScreen} />
+        <Flow user={user} initialScreen={initialScreen} onLogout={onLogout} onExit={onExit} />
       </LangProvider>
     </ToastProvider>
   );

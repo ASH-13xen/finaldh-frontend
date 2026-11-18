@@ -44,10 +44,15 @@ export function usePrepStore() {
     }
   }, []);
 
+  // Puts what the server already saved (an AI answer draft) into the store without saving again.
+  const merge = useCallback((key, patch) => {
+    setItems((m) => new Map(m).set(key, { key, status: 'todo', saved: false, note: '', ...m.get(key), ...patch }));
+  }, []);
+
   const setDate = useCallback(async (date) => {
     setInterviewDate(date);
     try { await api.prepSettings({ interviewDate: date }); } catch { /* keeps the local value for this visit */ }
   }, []);
 
-  return useMemo(() => ({ items, loaded, update, interviewDate, setDate }), [items, loaded, update, interviewDate, setDate]);
+  return useMemo(() => ({ items, loaded, update, merge, interviewDate, setDate }), [items, loaded, update, merge, interviewDate, setDate]);
 }

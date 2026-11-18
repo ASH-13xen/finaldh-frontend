@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import LoadingSpinner from "../components/LoadingSpinner";
 import DownloadProgressBar from "../components/DownloadProgressBar";
 import { ownsCourse } from "../lib/courseOwnership";
+import { detectInAppBrowser, externalBrowserLink } from "../lib/inAppBrowser";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   getAuth,
@@ -239,7 +240,33 @@ function CourseSkeleton() {
   );
 }
 
+// Apps' built-in browsers (Instagram, Telegram, ...) often can't save a PDF: the download silently fails
+// while the file's download allowance is still used up. Students there are sent to a real browser first.
+function InAppDownloadNotice({ app, onClose }) {
+  const link = externalBrowserLink();
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(window.location.href); setCopied(true); } catch { /* ignore */ }
+  };
+  return (
+    <div className="fixed inset-0 z-[120] bg-ink-950/70 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="bg-surface border border-border-default rounded-2xl max-w-md w-full p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="font-display text-xl font-semibold text-text-primary">Open in Chrome or Safari to download</h3>
+        <p className="mt-2 text-sm text-text-secondary leading-relaxed">
+          {app ? `${app}'s` : "This app's"} built-in browser can't save PDFs, so the download would fail and still count against your limit. Open this page in your phone's browser, sign in, and download from there.
+        </p>
+        <div className="mt-5 flex flex-col gap-2">
+          {link && <a href={link} className="w-full text-center px-4 py-2.5 bg-brand hover:bg-brand-hover text-text-on-accent rounded-xl text-sm font-bold">Open in browser</a>}
+          <button type="button" onClick={copy} className="w-full px-4 py-2.5 border border-border-default rounded-xl text-sm font-bold text-text-primary hover:bg-sunken cursor-pointer">{copied ? 'Link copied — paste it in Chrome or Safari' : 'Copy page link'}</button>
+          <button type="button" onClick={onClose} className="w-full px-4 py-2 text-sm font-semibold text-text-tertiary hover:text-text-primary cursor-pointer">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function StudentDashboard({ user, onUserUpdate }) {
+  const [inAppNotice, setInAppNotice] = useState(null);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -658,6 +685,13 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       `[handleDownload] Initiating download warning gate verification for composite course: ${courseId}_${fileIndex} (skipModal: ${skipModal}, skipWarning: ${skipWarning})`,
     );
 
+    // Downloads fail inside apps' built-in browsers but would still use up the allowance: stop here.
+    const inApp = detectInAppBrowser();
+    if (inApp.detected) {
+      setInAppNotice(inApp.label || '');
+      return;
+    }
+
     const targetCourse = courses.find(
       (c) => c.courseId && c.courseId.toLowerCase() === courseId.toLowerCase(),
     );
@@ -990,6 +1024,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-14 relative">
+      {inAppNotice !== null && <InAppDownloadNotice app={inAppNotice} onClose={() => setInAppNotice(null)} />}
       {/* Background watermark */}
       <img
         src="/logodh1.jpg"
@@ -1121,12 +1156,17 @@ export default function StudentDashboard({ user, onUserUpdate }) {
             </svg>
           </div>
           <h3 className="font-bold text-text-secondary text-xs md:text-sm">
-            No matched courses found
+            {interestedList.length ? "No study material for your courses yet" : "You haven't picked up a course yet"}
           </h3>
           <p className="text-[11px] md:text-xs text-text-tertiary mt-1 md:mt-1.5 max-w-md mx-auto font-medium">
-            There are currently no uploaded courses matching your profile's
-            taken courses ({interestedList.join(", ") || "none"}).
+            {interestedList.length
+              ? `Nothing has been uploaded for ${interestedList.join(", ")} yet — it will appear here as soon as it is.`
+              : "Browse the Prelims, Mains and Interview courses to get started."}
           </p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <a href="#purchase_courses" className="px-4 py-2 bg-brand hover:bg-brand-hover text-text-on-accent rounded-xl text-xs font-bold">Browse courses</a>
+            <button type="button" onClick={() => { const w = window.open(`${window.location.pathname}#interview_home`, '_blank'); if (!w) window.location.hash = 'interview_home'; }} className="px-4 py-2 border border-border-default rounded-xl text-xs font-bold text-text-primary hover:bg-sunken cursor-pointer">Interview Prep</button>
+          </div>
         </div>
       ) : (
         <div className="space-y-6">

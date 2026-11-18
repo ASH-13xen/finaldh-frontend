@@ -68,6 +68,19 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
     }
   }, [activeTab]);
 
+  // Interview Prep is its own window with its own header (prep/components/Shell.jsx), so it renders without
+  // the site navbar. Students only once INTERVIEW_SECTION_LIVE; admins always.
+  if (activeTab?.startsWith('interview_') && (INTERVIEW_SECTION_LIVE || user.isAdmin)) {
+    return (
+      <div className="min-h-screen bg-page text-text-primary">
+        {!user.isAdmin && <PaymentRejectionNotice />}
+        <ErrorBoundary key="interview">
+          <PrepFlow user={user} activeTab={activeTab} onLogout={onLogout} onExit={() => setActiveTab(user.isAdmin ? 'manage_courses' : 'student')} />
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-page text-text-primary flex flex-col">
       {/* Navbar Header */}
@@ -156,11 +169,9 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
           <AdminMcqData />
         )}
 
-        {/* Admins only until INTERVIEW_SECTION_LIVE; students have no link to it and get Coming Soon from a direct URL. */}
+        {/* Students before INTERVIEW_SECTION_LIVE (admins never get here: see the early return above). */}
         {activeTab?.startsWith('interview_') && (
-          INTERVIEW_SECTION_LIVE || user.isAdmin
-            ? <PrepFlow key={activeTab} user={user} activeTab={activeTab} />
-            : <ComingSoon title="Interview Prep" onBack={() => setActiveTab('student')} />
+          <ComingSoon title="Interview Prep" onBack={() => setActiveTab('student')} />
         )}
 
         {activeTab === 'admin_interview_data' && (

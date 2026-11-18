@@ -337,7 +337,7 @@ body {
 
 /* Room for the phone tab bar at the bottom of the section. */
 .prep-safe-bottom { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
-@media (min-width: 768px) { .prep-safe-bottom { padding-bottom: 4rem; } }
+@media (min-width: 1024px) { .prep-safe-bottom { padding-bottom: 4rem; } }
 
 @media (prefers-reduced-motion: reduce) {
   .prep-card, .prep-card-hover:hover { transition: none; transform: none; }

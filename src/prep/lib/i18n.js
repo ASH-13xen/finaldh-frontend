@@ -13,6 +13,10 @@ const STRINGS = {
   hi: { ...BASE.hi, ...STRINGS2.hi, ...STRINGS3.hi, ...STRINGS4.hi, ...STRINGS5.hi, ...STRINGS6.hi }
 };
 
+// Hindi is switched off for now (2026-11): the section shows English only and the language switch is
+// hidden. The Hindi text stays in strings*.js; set this to true to bring the switch back.
+export const HINDI_ENABLED = false;
+
 const KEY = 'prep.lang';
 const LangContext = createContext(null);
 
@@ -23,8 +27,9 @@ const readLang = () => {
 const fill = (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined && vars[k] !== null ? String(vars[k]) : m)) : s);
 
 export function LangProvider({ children }) {
-  const [lang, setLangState] = useState(readLang);
+  const [lang, setLangState] = useState(() => (HINDI_ENABLED ? readLang() : 'en'));
   const setLang = useCallback((next) => {
+    if (!HINDI_ENABLED) return;
     setLangState(next);
     try { localStorage.setItem(KEY, next); } catch { /* private mode: lasts for this visit */ }
   }, []);

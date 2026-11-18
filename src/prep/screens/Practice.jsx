@@ -1,5 +1,5 @@
 // Practice Studio (voice only): pick a question - predicted, most asked, a drill or your own - answer it
-// aloud, and see how it sounded. On-device numbers are free and unlimited; AI feedback on tone is capped
+// aloud, and see how it sounded. On-device numbers are free and unlimited; AI feedback on tone uses an AI credit
 // per day. Attempts are saved as numbers (never audio) for comparing and for progress.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../../components/mcq/Icon';
@@ -45,7 +45,7 @@ function Spark({ values, band, color = 'var(--prep-emerald)', label, last }) {
 }
 
 export default function Practice() {
-  const { status, view, go, prep, daf } = usePrep();
+  const { view, go, prep, daf, credits, refreshCredits, openCredits } = usePrep();
   const { t, lang, hi } = useT();
   const recorder = useRecorder();
   const { state, result, error } = recorder;
@@ -54,7 +54,8 @@ export default function Practice() {
   const [own, setOwn] = useState('');
   const [predicted, setPredicted] = useState(null);
   const [asked, setAsked] = useState(null);
-  const [history, setHistory] = useState({ attempts: [], aiLeft: 3, aiPerDay: status.limits?.practiceAIPerDay || 3 });
+  const [history, setHistory] = useState({ attempts: [] });
+  const aiLeft = credits?.admin ? Infinity : (credits?.total ?? 0);
   const [ai, setAi] = useState(null);
   const savedFor = useRef(null);
   const hasDaf = !!daf.profile && !daf.profile.empty;
@@ -86,14 +87,15 @@ export default function Practice() {
 
   const getAi = async () => {
     if (!result?.blob) return;
+    if (aiLeft < 1) { openCredits(); return; }
     setAi({ loading: true });
     try {
       const d = await api.analyzeAnswer(result.blob, { question: pick?.text || '', lang, device: result.metrics });
       setAi({ analysis: d.analysis });
-      setHistory((h) => ({ ...h, aiLeft: d.left }));
+      refreshCredits();
     } catch (err) {
+      if (err?.status === 402) { setAi(null); openCredits(); return; }
       setAi({ error: errorMessage(err) });
-      if (err?.data?.limited) setHistory((h) => ({ ...h, aiLeft: 0 }));
     }
   };
 
@@ -107,7 +109,7 @@ export default function Practice() {
     <div className="max-w-6xl mx-auto px-4 md:px-8 pt-10 md:pt-16">
       <p className="prep-eyebrow text-brand mb-5">{t('pr.eyebrow')}</p>
       <SplitHeading className={titleCls}>{t('pr.titleA')}<Highlight still>{t('pr.titleHl')}</Highlight></SplitHeading>
-      <p className="mt-6 text-lg md:text-xl text-text-secondary leading-relaxed max-w-3xl">{t('pr.sub', { n: history.aiPerDay })}</p>
+      <p className="mt-6 text-lg md:text-xl text-text-secondary leading-relaxed max-w-3xl">{t('pr.sub', { n: credits?.freeTotal || 15 })}</p>
       <p className="mt-3 text-sm text-text-tertiary flex gap-2"><Icon name="lock" className="w-4 h-4 mt-0.5 shrink-0" />{t('pr.privacy')}</p>
 
       {/* Question picker */}
@@ -183,8 +185,7 @@ export default function Practice() {
               result={result}
               lang={lang}
               ai={ai}
-              aiLeft={history.aiLeft}
-              aiPerDay={history.aiPerDay}
+              aiLeft={aiLeft}
               onAi={getAi}
               onAgain={() => { recorder.reset(); setAi(null); toStage(); }}
               onNext={() => { recorder.reset(); setAi(null); setPick(null); }}

@@ -5,6 +5,7 @@ import MmfHeroBanner from "../components/courses/MmfHeroBanner";
 import ComboOffersSection from "../components/courses/ComboOffersSection";
 import CategorizedCourseGrid from "../components/courses/CategorizedCourseGrid";
 import SamplePreviewSection from "../components/courses/SamplePreviewSection";
+import InterviewStagePanel from "../components/courses/InterviewStagePanel";
 import CourseCategoryNav from "../components/courses/CourseCategoryNav";
 import ExamStageToggle from "../components/courses/ExamStageToggle";
 import { ownsCourse } from "../lib/courseOwnership";
@@ -287,7 +288,7 @@ export default function PurchaseCourses({ user }) {
 
   // Top-level split: Prelims courses get their own section entirely separate from every
   // Mains course/subject below, so the page never implies "Mains-only" to a new visitor.
-  const { prelims, mains } = splitByExamStage(courses);
+  const { prelims, mains, interview } = splitByExamStage(courses);
 
   // Mains Master File and Current Affairs Compass are identified by their fixed courseId
   // rather than by "oldest/second-oldest All GS course" - a position-based guess breaks the
@@ -345,6 +346,20 @@ export default function PurchaseCourses({ user }) {
           <h3 className="font-bold text-text-primary">Failed to load courses</h3>
           <p className="text-xs text-text-secondary mt-1">{error}</p>
         </div>
+      ) : examStageView === "Interview" ? (
+        <InterviewStagePanel guest={false} onOpen={() => { const w = window.open(`${window.location.pathname}#interview_home`, '_blank'); if (!w) window.location.hash = 'interview_home'; }}>
+          {interview.length > 0 && (
+            <CategorizedCourseGrid
+              courses={interview}
+              excludedCourseIds={[]}
+              getCourseStatus={getCourseStatus}
+              getPendingRequest={getPendingRequest}
+              onPurchase={handleStartCheckout}
+              onTelegramNotify={handleTelegramNotify}
+              onSeeSample={handleSeeSample}
+            />
+          )}
+        </InterviewStagePanel>
       ) : examStageView === "Prelims" ? (
         prelims.length === 0 ? (
           <div className="py-16 text-center border border-dashed border-border-default rounded-2xl bg-surface-raised">
@@ -438,8 +453,10 @@ export default function PurchaseCourses({ user }) {
       )}
 
       <SamplePreviewSection
+        key={activeSampleCourse?._id || 'none'}
         activeSampleCourse={activeSampleCourse}
         sectionRef={sampleSectionRef}
+        onClose={() => setActiveSampleCourse(null)}
         status={sampleStatus}
         pendingRequest={sampleStatusPendingRequest}
         onPurchase={handleStartCheckout}

@@ -4,6 +4,7 @@ import MmfHeroBanner from "../components/courses/MmfHeroBanner";
 import ComboOffersSection from "../components/courses/ComboOffersSection";
 import CategorizedCourseGrid from "../components/courses/CategorizedCourseGrid";
 import SamplePreviewSection from "../components/courses/SamplePreviewSection";
+import InterviewStagePanel from "../components/courses/InterviewStagePanel";
 import CourseCategoryNav from "../components/courses/CourseCategoryNav";
 import ExamStageToggle from "../components/courses/ExamStageToggle";
 import {
@@ -61,7 +62,7 @@ export default function BuyCourses({ onRedirectToLogin }) {
 
   // Top-level split: Prelims courses get their own section entirely separate from every
   // Mains course/subject below, so the page never implies "Mains-only" to a new visitor.
-  const { prelims, mains } = splitByExamStage(courses);
+  const { prelims, mains, interview } = splitByExamStage(courses);
 
   // Mains Master File and Current Affairs Compass are identified by their fixed courseId
   // rather than by "oldest/second-oldest All GS course" - a position-based guess breaks the
@@ -126,6 +127,20 @@ export default function BuyCourses({ onRedirectToLogin }) {
         <div className="py-16 text-center bg-surface-raised border border-border-default rounded-2xl">
           <LoadingSpinner text="Loading courses..." />
         </div>
+      ) : examStageView === "Interview" ? (
+        <InterviewStagePanel guest={true} onOpen={onRedirectToLogin}>
+          {interview.length > 0 && (
+            <CategorizedCourseGrid
+              courses={interview}
+              excludedCourseIds={[]}
+              getCourseStatus={() => GUEST_STATUS}
+              getPendingRequest={() => null}
+              onPurchase={onRedirectToLogin}
+              onTelegramNotify={onRedirectToLogin}
+              onSeeSample={handleSeeSample}
+            />
+          )}
+        </InterviewStagePanel>
       ) : examStageView === "Prelims" ? (
         prelims.length === 0 ? (
           <div className="py-16 text-center border border-dashed border-border-default rounded-2xl bg-surface-raised">
@@ -219,8 +234,10 @@ export default function BuyCourses({ onRedirectToLogin }) {
       )}
 
       <SamplePreviewSection
+        key={activeSampleCourse?._id || 'none'}
         activeSampleCourse={activeSampleCourse}
         sectionRef={sampleSectionRef}
+        onClose={() => setActiveSampleCourse(null)}
         status={GUEST_STATUS}
         pendingRequest={null}
         onPurchase={onRedirectToLogin}

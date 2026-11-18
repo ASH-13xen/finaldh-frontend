@@ -37,9 +37,16 @@ export const isOptionalSubject = (subject) => subject?.startsWith('OptionalSubje
 export const isGsCoreSubject = (subject) =>
   subject?.startsWith('GS-') || subject === 'Essay' || subject === 'All GS';
 
+// GS papers in paper order (GS-1 ... GS-4), then Essay, then the combined ones.
+const gsRank = (subject) => {
+  const m = /^GS-(\d)/.exec(subject || '');
+  if (m) return Number(m[1]);
+  return subject === 'Essay' ? 5 : 6;
+};
+
 export const categorizeCourses = (courses, excludedIds = []) => ({
   optional: courses.filter((c) => isOptionalSubject(c.subject)),
-  gsCore: courses.filter((c) => isGsCoreSubject(c.subject) && !excludedIds.includes(c._id)),
+  gsCore: courses.filter((c) => isGsCoreSubject(c.subject) && !excludedIds.includes(c._id)).sort((a, b) => gsRank(a.subject) - gsRank(b.subject)),
   other: courses.filter((c) => !isGsCoreSubject(c.subject) && !isOptionalSubject(c.subject)),
 });
 
@@ -47,9 +54,11 @@ export const categorizeCourses = (courses, excludedIds = []) => ({
 // 'Mains' server-side, but we also treat any missing/unrecognized value as Mains here so the
 // UI never silently drops a course if that default is ever bypassed (e.g. a raw DB write).
 export const isPrelimsCourse = (course) => course?.examStage === 'Prelims';
+export const isInterviewCourse = (course) => course?.examStage === 'Interview';
 export const splitByExamStage = (courses) => ({
   prelims: courses.filter((c) => isPrelimsCourse(c)),
-  mains: courses.filter((c) => !isPrelimsCourse(c)),
+  interview: courses.filter((c) => isInterviewCourse(c)),
+  mains: courses.filter((c) => !isPrelimsCourse(c) && !isInterviewCourse(c)),
 });
 
 export const subjectDisplayName = (subject) =>

@@ -5,6 +5,7 @@ import Icon from '../../components/mcq/Icon';
 import Button from './Button';
 import { TierBadge, SourceBadge, AskedLine } from './badges';
 import { StatusPicker, SaveToggle, NoteEditor } from './PrepControls';
+import AnswerDraft from './AnswerDraft';
 import { useT } from '../lib/i18n';
 import { usePrep } from '../lib/context';
 
@@ -40,6 +41,7 @@ export default function QuestionCard({ p, itemLabel, onOpen, className = '' }) {
         </div>
       </div>
       {notes && <NoteEditor qkey={p.key} info={info} autoFocus />}
+      <AnswerDraft className="mt-4" question={p.questionEn || p.question} qkey={p.key} familyId={ev?.familyId || ''} source={p.source} />
     </article>
   );
 }

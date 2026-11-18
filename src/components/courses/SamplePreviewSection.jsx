@@ -11,18 +11,16 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 const apiBaseUrl = import.meta.env.VITE_API_URL || window.location.origin;
 
-export default function SamplePreviewSection({ activeSampleCourse, sectionRef, status, pendingRequest, onPurchase, onTelegramNotify }) {
+// Opens as a pop-up over the page when a course's "See Sample" is clicked (it used to sit at the bottom of the
+// page, thousands of pixels below the button on a phone). Escape, the backdrop or Close shuts it.
+export default function SamplePreviewSection({ activeSampleCourse, sectionRef, status, pendingRequest, onPurchase, onTelegramNotify, onClose }) {
   const [pageNumber, setPageNumber] = useState(1);
   const [numPages, setNumPages] = useState(null);
   const [pdfError, setPdfError] = useState(false);
   const [pdfWidth, setPdfWidth] = useState(700);
   const containerRef = useRef(null);
 
-  useEffect(() => {
-    setPageNumber(1);
-    setNumPages(null);
-    setPdfError(false);
-  }, [activeSampleCourse]);
+  // Parents key this component by course, so page/state reset when a different sample opens.
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -33,27 +31,28 @@ export default function SamplePreviewSection({ activeSampleCourse, sectionRef, s
     return () => observer.disconnect();
   }, [activeSampleCourse]);
 
+  useEffect(() => {
+    if (!activeSampleCourse) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
+  }, [activeSampleCourse, onClose]);
+
   const subjectDisplay = activeSampleCourse ? subjectDisplayName(activeSampleCourse.subject) : '';
+  if (!activeSampleCourse) return null;
 
   return (
-    <div ref={sectionRef} className="mt-12 md:mt-16 pt-10 border-t border-border-default">
-      <div className="mb-6">
-        <h2 className="text-xl md:text-2xl font-display font-semibold text-text-primary tracking-tight">
-          Course Sample Preview
-        </h2>
-        <p className="text-text-secondary text-xs md:text-sm mt-1 font-medium">
-          {activeSampleCourse
-            ? `Previewing a free sample of ${activeSampleCourse.name}.`
-            : 'Click "See Sample" on any course above to preview it here.'}
-        </p>
-      </div>
-
-      {!activeSampleCourse ? (
-        <div className="py-16 text-center border border-dashed border-border-default rounded-2xl bg-surface-raised">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-10 h-10 mx-auto mb-3 text-text-tertiary"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <p className="text-sm text-text-tertiary font-semibold">No sample selected yet.</p>
+    <div className="fixed inset-0 z-[100] bg-ink-950/70 backdrop-blur-sm overflow-y-auto p-3 md:p-8" onClick={onClose} role="dialog" aria-modal="true" aria-label={`${activeSampleCourse.name} sample`}>
+      <div ref={sectionRef} className="relative max-w-6xl mx-auto bg-page rounded-2xl p-4 md:p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 md:right-5 md:top-5 w-10 h-10 rounded-full bg-surface border border-border-default flex items-center justify-center text-text-secondary hover:text-text-primary hover:border-text-primary cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+        <div className="mb-5 pr-14">
+          <h2 className="text-xl md:text-2xl font-display font-semibold text-text-primary tracking-tight">Course sample</h2>
+          <p className="text-text-secondary text-xs md:text-sm mt-1 font-medium">{`Previewing a free sample of ${activeSampleCourse.name}.`}</p>
         </div>
-      ) : (
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left: PDF Viewer */}
           <div className="lg:w-[65%] border border-border-default rounded-2xl overflow-hidden">
@@ -194,7 +193,7 @@ export default function SamplePreviewSection({ activeSampleCourse, sectionRef, s
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

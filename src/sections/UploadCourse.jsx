@@ -524,7 +524,7 @@ export default function UploadCourse() {
     setCourseId(course.courseId || '');
     setName(course.name || '');
     setSubject(course.subject || '');
-    setExamStage(course.examStage === 'Prelims' ? 'Prelims' : 'Mains');
+    setExamStage(['Prelims', 'Interview'].includes(course.examStage) ? course.examStage : 'Mains');
     setPrice(String(course.price || 499));
     setDiscountedPrice(String(course.discountedPrice !== undefined ? course.discountedPrice : (course.price || 499)));
     setUseDiscount(!!course.useDiscount);
@@ -864,7 +864,7 @@ export default function UploadCourse() {
                       <td className="px-6 py-4 text-text-secondary font-medium">{subDisplayName}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-lg text-[10px] font-bold border ${course.examStage === 'Prelims' ? 'bg-accent-soft-bg border-accent-soft-border text-brand' : 'bg-sunken border-border-default text-text-secondary'}`}>
-                          {course.examStage === 'Prelims' ? 'Prelims' : 'Mains'}
+                          {course.examStage === 'Prelims' ? 'Prelims' : course.examStage === 'Interview' ? 'Interview' : 'Mains'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -1349,6 +1349,7 @@ export default function UploadCourse() {
                 >
                   <option value="Mains">Mains</option>
                   <option value="Prelims">Prelims</option>
+                  <option value="Interview">Interview (PT)</option>
                 </select>
               </div>
 

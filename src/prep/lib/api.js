@@ -31,6 +31,8 @@ export const api = {
     generateGuide: () => iv('/admin/guide/generate', { method: 'POST' }),
     updateGuide: (body) => iv('/admin/guide', { method: 'PATCH', body })
   },
+  credits: () => iv('/credits'),
+  draftAnswer: (body) => iv('/answers/draft', { method: 'POST', body }),
   attempts: (key) => iv(`/practice/attempts${qs({ key })}`),
   saveAttempt: (body) => iv('/practice/attempts', { method: 'POST', body }),
   analyzeAnswer: async (blob, fields) => {

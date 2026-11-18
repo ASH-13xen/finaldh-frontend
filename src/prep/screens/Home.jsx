@@ -2,7 +2,8 @@
 // keep asking, the six tools, and a question of the day.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../../components/mcq/Icon';
-import FamilyDrawer from '../../components/interview/FamilyDrawer';
+import DeepDive from '../components/DeepDive';
+import { BoardStrip } from '../components/Boards';
 import Button from '../components/Button';
 import { SplitHeading, CountUp, Highlight } from '../components/motion';
 import { gsap, useGSAP, useReveal, prefersReducedMotion } from '../lib/motion';
@@ -45,7 +46,9 @@ function DafSlip({ profile }) {
       .from('[data-bar]', { scaleX: 0, transformOrigin: 'left center', stagger: 0.12, duration: 0.9, ease: 'power2.inOut' }, '-=0.5')
       .from('[data-note]', { autoAlpha: 0, y: 8, duration: 0.6 }, '-=0.3')
       .from('[data-arrow]', { drawSVG: 0, duration: 0.8, ease: 'power1.inOut' }, '<');
-  }, { scope: root, dependencies: [rows.length] });
+  // revertOnUpdate: when the student's DAF arrives the timeline runs again; without reverting first, the
+  // second from() would start at the first run's hidden state and leave the card invisible.
+  }, { scope: root, dependencies: [rows.length], revertOnUpdate: true });
 
   return (
     <div ref={root} className="relative rotate-[-1.5deg] md:rotate-[-2.5deg]">
@@ -265,6 +268,7 @@ export default function Home() {
   const { t, hi } = useT();
   const corpus = status.corpus || {};
   const [trends, setTrends] = useState(null);
+  const [kw, setKw] = useState(null);
   const [familyId, setFamilyId] = useState(null);
   const root = useRef(null);
   const hasDaf = !!daf.profile && !daf.profile.empty;
@@ -272,6 +276,7 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
     iv('/bank/trends').then((d) => { if (!cancelled) setTrends(d); }).catch(() => {});
+    iv('/bank/keywords').then((d) => { if (!cancelled) setKw(d); }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
@@ -281,7 +286,7 @@ export default function Home() {
   return (
     <div ref={root}>
       {/* Hero */}
-      <section className="max-w-7xl mx-auto px-4 md:px-8 pt-10 md:pt-16 pb-12 md:pb-20 grid lg:grid-cols-[1.35fr_0.85fr] gap-12 lg:gap-14 items-center">
+      <section className="max-w-7xl mx-auto px-4 md:px-8 pt-10 md:pt-16 pb-12 md:pb-20 grid grid-cols-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)] gap-12 lg:gap-14 items-center">
         <div>
           <p className="prep-eyebrow text-brand mb-5 md:mb-7">{t('home.eyebrow', { years: yearsRange(corpus.years) })}</p>
           <SplitHeading className={`font-display font-semibold text-text-primary ${hi
@@ -306,6 +311,20 @@ export default function Home() {
 
       {/* Numbers */}
       <section className="max-w-7xl mx-auto px-4 md:px-8"><Stats corpus={corpus} /></section>
+
+      {/* The boards, with their photos and how candidates found them */}
+      {kw?.boards?.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 md:px-8 pt-14 md:pt-20">
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="font-display text-2xl md:text-4xl font-semibold tracking-tight">{t('home.boards')}</h2>
+              <p className="mt-2 text-text-secondary max-w-2xl">{t('home.boardsSub')}</p>
+            </div>
+            <Button tone="plain" size="sm" iconRight="arrowRight" onClick={() => go({ screen: 'bank', tab: 'boards' })}>{t('home.boardsAll')}</Button>
+          </div>
+          <BoardStrip boards={kw.boards} onOpenQuestion={setFamilyId} onSeeAll={() => go({ screen: 'bank', tab: 'boards' })} />
+        </section>
+      )}
 
       {/* Asked again and again */}
       {mostAsked.length > 0 && (
@@ -336,7 +355,7 @@ export default function Home() {
         </p>
       )}
 
-      {familyId && <FamilyDrawer key={familyId} familyId={familyId} onClose={() => setFamilyId(null)} />}
+      {familyId && <DeepDive key={familyId} familyId={familyId} onClose={() => setFamilyId(null)} />}
     </div>
   );
 }

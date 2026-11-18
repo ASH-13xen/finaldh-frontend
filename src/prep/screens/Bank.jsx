@@ -29,10 +29,10 @@ function useDebounced(value, ms = 300) {
 const KIND_LABEL = { hobby: 'browse.kind.hobby', college: 'browse.kind.college', discipline: 'browse.kind.discipline', job: 'browse.kind.job', state: 'browse.kind.state', optional: 'browse.kind.optional' };
 
 export default function Bank() {
-  const { status, view, daf } = usePrep();
+  const { status, view, daf, go } = usePrep();
   const { t, hi } = useT();
   const corpus = status.corpus || {};
-  const [tab, setTab] = useState('questions');
+  const [tab, setTab] = useState(() => (['browse', 'boards'].includes(view.tab) ? view.tab : 'questions'));
   const [q, setQ] = useState(view.q || '');
   const dq = useDebounced(q.trim());
   const [filters, setFilters] = useState({});
@@ -144,6 +144,10 @@ export default function Bank() {
               {t(`bank.tab.${k}`)}
             </button>
           ))}
+          <button type="button" onClick={() => go({ screen: 'insights' })}
+            className="prep-focus ml-auto h-12 px-4 -mb-px border-b-2 border-transparent text-[15px] font-semibold whitespace-nowrap cursor-pointer text-brand hover:text-text-primary flex items-center gap-1.5">
+            <Icon name="chart" className="w-4 h-4" />{t('bank.insightsLink')}
+          </button>
         </div>
       </section>
 

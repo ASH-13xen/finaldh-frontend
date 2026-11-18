@@ -56,6 +56,7 @@ const getNavLinks = (user, pendingReports = 0) => {
       label: (
         <>
           Interview<span className="hidden sm:inline"> Prep</span>
+          <svg viewBox="0 0 24 24" aria-label="opens in a new window" className="inline-block ml-1 w-3 h-3 -mt-0.5 opacity-70" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
           {!INTERVIEW_SECTION_LIVE && (
             <span className="ml-1 sm:ml-1.5 inline-flex items-center px-1 sm:px-1.5 rounded-full bg-accent-soft-bg border border-accent-soft-border text-brand text-[7px] sm:text-[9px] font-extrabold uppercase tracking-wider align-middle">
               Admins
@@ -201,7 +202,11 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
   // and otherwise ignores a click on its own nav link).
   const goToLink = (link) => {
     if (link.key === 'mcq' && link.key === activeKey) window.dispatchEvent(new CustomEvent('mcq:home'));
-    if (link.key === 'interview' && link.key === activeKey) window.dispatchEvent(new CustomEvent('interview:home'));
+    // Interview Prep opens in its own window; if the browser blocks that, it opens here instead.
+    if (link.key === 'interview') {
+      const win = window.open(`${window.location.pathname}${window.location.search}#${link.target}`, '_blank');
+      if (win) return;
+    }
     setActiveTab(link.target);
   };
   const navRef = useRef(null);
@@ -233,8 +238,8 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
   return (
     <nav ref={navRef} className="w-full bg-surface border-b border-border-default px-4 md:px-6 py-3 md:py-4 flex items-center justify-between sticky top-0 z-50">
       {/* Brand logo & title */}
-      <div className="flex items-center gap-1.5 sm:gap-4 md:gap-6">
-        <div onClick={handleLogoClick} className="flex items-center gap-1.5 md:gap-3 cursor-pointer">
+      <div className="flex items-center gap-1.5 sm:gap-4 md:gap-6 min-w-0 flex-1">
+        <div onClick={handleLogoClick} className="flex items-center gap-1.5 md:gap-3 cursor-pointer shrink-0">
           <img src="/logodh1.jpg" alt="Dark Horse UPSC" className="w-7 h-7 md:w-9 md:h-9 rounded-full object-cover border border-border-default shrink-0" />
           <span className="font-display font-semibold text-text-primary tracking-tight text-sm md:text-lg whitespace-nowrap hidden sm:inline">The Dark Horse UPSC</span>
           <span className="font-display font-semibold text-text-primary tracking-tight text-sm md:text-lg whitespace-nowrap sm:hidden">Dark Horse</span>
@@ -242,7 +247,8 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
 
         {/* Navigation Links - Desktop Only */}
         {user && (
-          <div className="hidden md:flex items-center gap-2 border-l border-border-default pl-6">
+          // Scrolls sideways instead of pushing the controls off-screen when there are many (admin) links.
+          <div className="hidden md:flex items-center gap-2 border-l border-border-default pl-6 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {links.map((link) => (
               <button
                 key={link.key}
@@ -257,7 +263,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
       </div>
 
       {/* Profile details, theme toggle & Logout / Sign In */}
-      <div ref={mobileMenuRef} className="flex items-center gap-1.5 sm:gap-3 relative">
+      <div ref={mobileMenuRef} className="flex items-center gap-1.5 sm:gap-3 relative shrink-0 ml-3">
         <ThemeToggle />
         {user && <InboxBell user={user} />}
         {user ? (

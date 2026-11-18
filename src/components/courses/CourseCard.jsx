@@ -9,9 +9,10 @@ export default function CourseCard({
   onSeeSample,
 }) {
   const subjectDisplay = subjectDisplayName(course.subject);
-  const pdfNames = course.fileNames && course.fileNames.length > 0
-    ? course.fileNames
-    : [course.fileName || course.name];
+  // In natural order ("Paper 1(A)" before "Paper 2(B)"), not upload order.
+  const pdfNames = (course.fileNames && course.fileNames.length > 0
+    ? [...course.fileNames]
+    : [course.fileName || course.name]).sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' }));
 
   return (
     <div className="bg-surface border border-border-default hover:border-brand/40 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden flex flex-col justify-between group">
@@ -22,8 +23,8 @@ export default function CourseCard({
         </span>
 
         {/* Course Name + See Sample on the same line */}
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-xs md:text-base font-sans font-bold text-text-primary group-hover:text-brand line-clamp-2 leading-relaxed transition-colors">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="flex-1 min-w-0 text-xs md:text-base font-sans font-bold text-text-primary group-hover:text-brand leading-relaxed transition-colors break-words">
             {course.name || course.fileName}
           </h3>
           {course.sampleFileUrl && (
@@ -39,20 +40,20 @@ export default function CourseCard({
         </div>
 
         {course.discountLimitTag && (
-          <div className="flex items-center gap-1 bg-status-warning-bg border border-status-warning-text/25 rounded px-2 py-1 text-[9px] font-sans font-bold text-status-warning-text w-fit tracking-wide animate-pulse">
+          <div className="flex items-center gap-1 bg-status-warning-bg border border-status-warning-text/25 rounded px-2 py-1 text-[9px] font-sans font-bold text-status-warning-text w-fit tracking-wide">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
             Discount valid only for first 50 students!
           </div>
         )}
 
-        {/* Guests see the per-file breakdown with locked affordance, mirroring what a logged-in student will get */}
-        {status.type === 'guest' && (
+        {/* What's inside, with a locked affordance, for everyone who doesn't own the course yet */}
+        {status.type !== 'purchased' && (
           <div className="space-y-2">
             {pdfNames.map((name, idx) => (
               <div key={idx} className="bg-sunken border border-border-subtle rounded-xl px-3 py-2.5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-text-tertiary shrink-0"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                  <span className="text-[11px] font-sans font-semibold text-text-secondary truncate">{name}</span>
+                  <span className="text-[11px] font-sans font-semibold text-text-secondary break-words">{name}</span>
                 </div>
                 <button
                   onClick={() => onPurchase(course)}

@@ -129,7 +129,7 @@ export default function CategorizedCourseGrid({ courses, excludedCourseIds, getC
               GS Core Papers
             </h2>
             <p className="text-text-secondary text-xs md:text-sm mt-1 font-medium">
-              GS-1 through GS-4, Essay, and the all-in-one Mains Master File.
+              GS-1 through GS-4 and Essay.
             </p>
           </div>
 
