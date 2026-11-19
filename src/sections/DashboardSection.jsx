@@ -24,6 +24,7 @@ import PaymentRejectionNotice from '../components/PaymentRejectionNotice';
 import ComingSoon from './ComingSoon';
 import PrepFlow from '../prep/PrepFlow';
 import AdminInterviewData from './AdminInterviewData';
+import AdminDafVerification from './AdminDafVerification';
 import { MCQ_SECTION_LIVE, INTERVIEW_SECTION_LIVE } from '../lib/features';
 
 export default function DashboardSection({ user, onLogout, activeTab, setActiveTab, onUserUpdate }) {
@@ -176,6 +177,10 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'admin_interview_data' && (
           <AdminInterviewData />
+        )}
+
+        {activeTab === 'admin_daf' && user.isAdmin && (
+          <AdminDafVerification />
         )}
       </ErrorBoundary>
       </main>

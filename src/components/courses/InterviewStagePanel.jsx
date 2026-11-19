@@ -2,7 +2,7 @@
 // its own window), followed by any interview courses an admin has uploaded with the "Interview" stage.
 const FEATURES = [
   ['Your DAF, read for you', 'Upload your DAF and see the questions boards actually ask people like you — ranked, with how often each was asked.'],
-  ['3,147 real interviews', 'Every question from CSE 2020–2025, searchable by meaning, by DAF keyword and by board.'],
+  ['3,147 real interviews', 'Every question, searchable by meaning, by DAF keyword and by board.'],
   ['Meet the boards', 'Each board’s habits: how much it asks from the DAF, how hard it follows up, and how candidates found it.'],
   ['Practice Studio', 'Answer aloud and see your pace, pauses and filler words; get AI feedback on tone and confidence.'],
   ['Write my answer', 'AI drafts answers from your own DAF, with the follow-ups to expect.'],
@@ -17,13 +17,13 @@ export default function InterviewStagePanel({ guest, onOpen, children }) {
         <div className="relative max-w-3xl">
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-300">Interview · Personality Test</p>
           <h2 className="mt-4 font-display text-4xl md:text-6xl font-semibold leading-[1.04] tracking-tight">Walk into the board room knowing what they’ll ask.</h2>
-          <p className="mt-5 text-lg text-white/75 leading-relaxed">Interview Prep turns six years of real UPSC interviews into your own preparation — from your DAF to the last practice round.</p>
+          <p className="mt-5 text-lg text-white/75 leading-relaxed">Interview Prep turns thousands of real UPSC interviews into your own preparation — from your DAF to the last practice round.</p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <button type="button" onClick={onOpen} className="h-14 px-7 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white text-base font-semibold inline-flex items-center gap-2 cursor-pointer">
               {guest ? 'Sign in to start free' : 'Open Interview Prep'}
               <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
             </button>
-            <span className="text-sm text-white/65">Free to start · 15 AI uses included · more from ₹299</span>
+            <span className="text-sm text-white/65">Free to start · 15 AI uses once your DAF is verified · more from ₹199</span>
           </div>
         </div>
       </section>

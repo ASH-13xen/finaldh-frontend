@@ -9,6 +9,7 @@ import { gsap, useGSAP, useReveal, prefersReducedMotion } from '../lib/motion';
 import { useT, fmt } from '../lib/i18n';
 import { usePrep } from '../lib/context';
 import { api } from '../lib/api';
+import { DafCheckCard } from '../components/DafCheck';
 import { EMPTY_DAF } from '../lib/india';
 import { errorMessage } from '../../lib/interviewApi';
 import { useToast } from '../../components/Toast';
@@ -134,7 +135,7 @@ function Start({ onFile, onFill, n }) {
 }
 
 export default function Daf() {
-  const { status, daf, go } = usePrep();
+  const { status, daf, go, refreshCredits } = usePrep();
   const { t, lang, hi } = useT();
   const toast = useToast();
   const profile = daf.profile;
@@ -164,6 +165,11 @@ export default function Daf() {
 
   const onFile = async (file) => {
     setMode('reading');
+    // The file goes to our team for verification (practice and AI unlock once it's verified) while AI reads it
+    // to fill in the form.
+    api.dafSubmit(file)
+      .then((d) => { if (d?.stored) toast.success(t('dv.sent')); refreshCredits(); })
+      .catch((err) => toast.error(errorMessage(err)));
     try {
       const d = await api.extractDaf(file);
       setDraft({ fields: { ...EMPTY_DAF, ...d.fields }, unsure: d.unsure || [] });
@@ -204,6 +210,7 @@ export default function Daf() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 pt-10 md:pt-16">
+      <DafCheckCard className="mb-10" showVerified onUpload={() => setMode('start')} />
       {view === 'view' && (
         <>
           <p className="prep-eyebrow text-brand mb-5">{t('daf.eyebrow')}</p>

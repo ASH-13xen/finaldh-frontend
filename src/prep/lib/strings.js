@@ -29,12 +29,12 @@ export const STRINGS = {
     'common.adminOnly': 'Admins only — students can’t see this section until it is switched on (INTERVIEW_SECTION_LIVE in lib/features.js and on the server).',
     'common.askedTimes': 'Asked in {n} interviews',
     'common.askedOnce': 'Asked in 1 interview',
-    'common.years': 'CSE {years}',
+    'common.years': '{years}',
     'common.sources': 'Questions come from candidates’ own accounts of their interviews, shared by {sources}. They are recollections, not official UPSC records.',
     'common.back': 'Back',
 
     // home
-    'home.eyebrow': 'The Interview Edition · CSE {years}',
+    'home.eyebrow': 'The Interview Edition',
     'home.titleA': 'Walk into the board room knowing ',
     'home.titleHl': 'what they’ll ask.',
     'home.titleB': '',
@@ -103,11 +103,11 @@ export const STRINGS = {
     'common.adminOnly': 'सिर्फ़ एडमिन — जब तक यह सेक्शन चालू नहीं किया जाता, छात्र इसे नहीं देख सकते।',
     'common.askedTimes': '{n} इंटरव्यू में पूछा गया',
     'common.askedOnce': '1 इंटरव्यू में पूछा गया',
-    'common.years': 'CSE {years}',
+    'common.years': '{years}',
     'common.sources': 'प्रश्न उम्मीदवारों द्वारा साझा किए गए उनके इंटरव्यू के विवरण से लिए गए हैं ({sources})। ये याद के आधार पर लिखे गए हैं, UPSC के आधिकारिक रिकॉर्ड नहीं।',
     'common.back': 'वापस',
 
-    'home.eyebrow': 'इंटरव्यू संस्करण · CSE {years}',
+    'home.eyebrow': 'इंटरव्यू संस्करण',
     'home.titleA': 'बोर्ड रूम में जाइए, यह जानते हुए कि ',
     'home.titleHl': 'वे क्या पूछेंगे।',
     'home.titleB': '',

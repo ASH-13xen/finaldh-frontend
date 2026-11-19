@@ -10,6 +10,7 @@ import { SplitHeading, Highlight } from '../components/motion';
 import { useT, fmt } from '../lib/i18n';
 import { usePrep } from '../lib/context';
 import { api } from '../lib/api';
+import { DafGate } from '../components/DafCheck';
 import { useRecorder, speechRecognitionSupported } from '../lib/voice';
 import { errorMessage } from '../../lib/interviewApi';
 
@@ -111,6 +112,8 @@ export default function Practice() {
       <SplitHeading className={titleCls}>{t('pr.titleA')}<Highlight still>{t('pr.titleHl')}</Highlight></SplitHeading>
       <p className="mt-6 text-lg md:text-xl text-text-secondary leading-relaxed max-w-3xl">{t('pr.sub', { n: credits?.freeTotal || 15 })}</p>
       <p className="mt-3 text-sm text-text-tertiary flex gap-2"><Icon name="lock" className="w-4 h-4 mt-0.5 shrink-0" />{t('pr.privacy')}</p>
+
+      <DafGate>
 
       {/* Question picker */}
       {!pick && (
@@ -231,6 +234,7 @@ export default function Practice() {
           </>
         ) : <p className="mt-2 text-text-tertiary">{t('pr.noProgress')}</p>}
       </section>
+      </DafGate>
     </div>
   );
 }

@@ -195,7 +195,7 @@ export function YearBars({ yearCounts = {}, allYears = [2020, 2021, 2022, 2023, 
         return (
           <span
             key={y}
-            title={`CSE ${y}: ${n}`}
+            title={`${y}: ${n}`}
             className={`w-[6px] rounded-t-[2px] ${n ? 'bg-brand' : 'bg-border-default'}`}
             style={{ height: `${n ? Math.max(25, (n / max) * 100) : 12}%` }}
           />

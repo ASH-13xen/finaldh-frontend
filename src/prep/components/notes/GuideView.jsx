@@ -32,7 +32,7 @@ function GuideItem({ e, n, open, onToggle, onHide }) {
         <span className="flex-1 min-w-0">
           <span className="block font-display text-xl md:text-[1.65rem] leading-snug text-text-primary">{e.text}</span>
           <span className="mt-2 block text-sm text-text-tertiary">
-            {tn('common.askedTimes', e.timesAsked)}{e.years?.length ? ` · ${t('common.years', { years: yearsRange(e.years) })}` : ''}
+            {tn('common.askedTimes', e.timesAsked)}
             {e.hidden && <span className="ml-2 font-semibold text-amber-700 dark:text-amber-300">· {t('guide.admin.hidden')}</span>}
           </span>
         </span>

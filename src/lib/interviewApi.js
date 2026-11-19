@@ -50,8 +50,8 @@ export const qs = (params) => {
 
 export const errorMessage = (err, fallback = 'Something went wrong. Please try again.') => err?.message || fallback;
 
-// The compilations are named by exam year ("2023" = CSE 2023, interviewed in early 2024).
-export const cseLabel = (year) => `CSE ${year}`;
+// The compilations are named by exam year ("2023" = interviewed in early 2024). Shown as the plain year.
+export const cseLabel = (year) => `${year}`;
 
 export const yearsRange = (years = []) => {
   const ys = [...new Set(years)].sort();

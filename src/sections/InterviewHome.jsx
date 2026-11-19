@@ -66,8 +66,8 @@ export default function InterviewHome({ status, user, go }) {
         eyebrow="UPSC Personality Test"
         title={mock ? 'Mock Interview' : 'Interview Prep'}
         subtitle={mock
-          ? `Face a five-member board that asks what real boards asked. Built from ${fmt(c.transcripts)} interview transcripts, CSE ${yearsRange(c.years)}.`
-          : `Your DAF, the questions you are likely to face, and every question asked in ${fmt(c.transcripts)} real interviews, CSE ${yearsRange(c.years)}.`}
+          ? `Face a five-member board that asks what real boards asked. Built from ${fmt(c.transcripts)} interview transcripts, ${yearsRange(c.years)}.`
+          : `Your DAF, the questions you are likely to face, and every question asked in ${fmt(c.transcripts)} real interviews, ${yearsRange(c.years)}.`}
         actions={
           <>
             <AiBadge ai={status.ai} />
@@ -79,7 +79,7 @@ export default function InterviewHome({ status, user, go }) {
 
       {/* Corpus at a glance */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-        <StatTile icon="book" label="Transcripts" value={fmt(c.transcripts)} hint={`CSE ${yearsRange(c.years)}`} />
+        <StatTile icon="book" label="Transcripts" value={fmt(c.transcripts)} hint={yearsRange(c.years)} />
         <StatTile icon="message" label="Questions" value={fmt(c.questions)} hint="with who asked them" />
         <StatTile icon="repeat" label="Asked again" value={fmt(c.repeatedFamilies)} hint="asked in 2+ interviews" />
         <StatTile icon="users" label="Boards" value={fmt(c.boards)} hint="chairpersons covered" />

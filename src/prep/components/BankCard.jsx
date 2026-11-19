@@ -2,7 +2,7 @@
 // about, and a save toggle. The whole card opens the deep dive.
 import { YearSpark } from './badges';
 import { SaveToggle } from './PrepControls';
-import { useT, fmt, yearsRange } from '../lib/i18n';
+import { useT, fmt } from '../lib/i18n';
 import { usePrep } from '../lib/context';
 
 export default function BankCard({ f, onOpen }) {
@@ -24,7 +24,7 @@ export default function BankCard({ f, onOpen }) {
           <span className="relative z-10 shrink-0"><SaveToggle qkey={f.key} info={{ text: f.text, familyId: f.id, source: 'bank' }} /></span>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-text-tertiary">
-          <span className="flex items-center gap-2"><YearSpark yearCounts={f.yearCounts} />CSE {yearsRange(f.years)}</span>
+          <span className="flex items-center gap-2"><YearSpark yearCounts={f.yearCounts} /></span>
           {(f.boardCount || f.boards?.length) > 0 && <span>{t('dd.boards', { n: f.boardCount || f.boards.length })}</span>}
           {(f.topics || []).slice(0, 2).map((x) => <span key={x} className="rounded-full border border-border-default px-2.5 py-0.5 text-xs font-semibold text-text-secondary">{t(`topic.${x}`)}</span>)}
           {labels.map((x) => <span key={x} className="rounded-full bg-amber-100 dark:bg-amber-400/15 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-300">{x}</span>)}

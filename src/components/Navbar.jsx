@@ -14,7 +14,7 @@ const mobileButtonClass = (active) =>
     active ? 'bg-brand text-text-on-accent border-brand shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised border-border-default'
   }`;
 
-const getNavLinks = (user, pendingReports = 0) => {
+const getNavLinks = (user, pendingReports = 0, pendingDafs = 0) => {
   if (!user) return [];
 
   const links = [
@@ -78,6 +78,21 @@ const getNavLinks = (user, pendingReports = 0) => {
 
   if (user.isAdmin) {
     links.push(
+      {
+        key: 'daf_checks',
+        target: 'admin_daf',
+        match: (t) => t === 'admin_daf',
+        label: (
+          <>
+            DAF<span className="hidden sm:inline"> Checks</span>
+            {pendingDafs > 0 && (
+              <span className="ml-1.5 inline-flex min-w-4 h-4 px-1 items-center justify-center rounded-full bg-status-danger-text text-white text-[9px] font-extrabold" title={`${pendingDafs} DAF(s) waiting for verification`}>
+                {pendingDafs}
+              </span>
+            )}
+          </>
+        )
+      },
       {
         key: 'manage',
         target: 'manage_courses',
@@ -195,7 +210,24 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
     return () => { cancelled = true; clearInterval(id); };
   }, [user?.isAdmin, activeTab]);
 
-  const links = getNavLinks(user, pendingReports);
+  // ...and how many uploaded DAFs are waiting for verification, on "DAF Checks".
+  const [pendingDafs, setPendingDafs] = useState(0);
+  useEffect(() => {
+    if (!user?.isAdmin) return undefined;
+    let cancelled = false;
+    const load = () => fetch('/api/interview/admin/daf?status=pending', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d) setPendingDafs(d.counts?.pending || 0); })
+      .catch(() => {});
+    load();
+    const id = setInterval(load, 120000);
+    // The DAF Checks page announces the new count whenever it reloads its list.
+    const onCount = (e) => setPendingDafs(Number(e.detail) || 0);
+    window.addEventListener('daf-pending', onCount);
+    return () => { cancelled = true; clearInterval(id); window.removeEventListener('daf-pending', onCount); };
+  }, [user?.isAdmin, activeTab]);
+
+  const links = getNavLinks(user, pendingReports, pendingDafs);
   const activeKey = links.find((l) => l.match(activeTab))?.key;
 
   // Clicking the section you are already in returns to its start (the MCQ area is several screens deep

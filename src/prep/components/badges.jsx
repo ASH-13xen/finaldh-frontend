@@ -1,6 +1,6 @@
 // Small labels used across the section: how likely a question is, where it comes from, and when it was asked.
 import Icon from '../../components/mcq/Icon';
-import { useT, yearsRange } from '../lib/i18n';
+import { useT } from '../lib/i18n';
 
 const TIER_STYLE = {
   certain: { color: 'var(--prep-tier-certain)', bg: 'var(--prep-tier-certain-bg)' },
@@ -52,12 +52,12 @@ export function YearSpark({ yearCounts = {}, years = [2020, 2021, 2022, 2023, 20
   );
 }
 
-export function AskedLine({ n, years, className = '' }) {
+export function AskedLine({ n, className = '' }) {
   const { tn } = useT();
   if (!n) return null;
   return (
     <span className={`text-sm text-text-secondary ${className}`}>
-      {tn('common.askedTimes', n)}{years?.length ? ` · CSE ${yearsRange(years)}` : ''}
+      {tn('common.askedTimes', n)}
     </span>
   );
 }

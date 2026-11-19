@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Icon from '../../../components/mcq/Icon';
 import { detectInAppBrowser, externalBrowserLink } from '../../../lib/inAppBrowser';
-import { useT, fmt, yearsRange } from '../../lib/i18n';
+import { useT, fmt } from '../../lib/i18n';
 import { BRAND, TELEGRAM_URL, TELEGRAM_LABEL, LOGO } from '../../lib/notes';
 import QR from './QR';
 
@@ -233,7 +233,6 @@ export function NoteDoc({ note, categoryLabel, date }) {
 export function GuideDoc({ entries, corpus }) {
   const { t, tn, lang } = useT();
   const s = site();
-  const years = yearsRange(corpus?.years || []);
   return (
     <>
       <section className="pp-cover">
@@ -242,7 +241,7 @@ export function GuideDoc({ entries, corpus }) {
         <div>
           <p className="pp-cover-num">{fmt(entries.length)}</p>
           <h1>{t('guide.title', { n: fmt(entries.length) })}</h1>
-          {corpus?.interviews > 0 && <p className="pp-cover-sub">{t('print.cover.built', { n: fmt(corpus.interviews), years })}</p>}
+          {corpus?.interviews > 0 && <p className="pp-cover-sub">{t('print.cover.built', { n: fmt(corpus.interviews) })}</p>}
         </div>
         <div className="pp-cover-foot">
           <p><b>{t('print.cover.by')}</b><br />{s.label} · {TELEGRAM_LABEL}<br />{t('print.downloaded', { date: today(lang) })}</p>
@@ -263,7 +262,7 @@ export function GuideDoc({ entries, corpus }) {
                 <span className="pp-n">{String(i + 1).padStart(2, '0')}</span>
                 <div>
                   <h3>{e.text}</h3>
-                  <p className="pp-meta">{tn('common.askedTimes', e.timesAsked)}{e.years?.length ? ` · ${t('common.years', { years: yearsRange(e.years) })}` : ''}</p>
+                  <p className="pp-meta">{tn('common.askedTimes', e.timesAsked)}</p>
                 </div>
               </div>
               {e.guide.tests && <p className="pp-tests"><b>{t('guide.tests')}: </b>{e.guide.tests}</p>}

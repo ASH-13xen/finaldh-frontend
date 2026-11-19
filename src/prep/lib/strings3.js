@@ -1,7 +1,7 @@
 // Phase 3 text: the question bank, browsing by DAF keyword, and boards.
 export const STRINGS3 = {
   en: {
-    'bank.eyebrow': '{q} questions · {n} real interviews · CSE {years}',
+    'bank.eyebrow': '{q} questions · {n} real interviews',
     'bank.titleA': 'Every question boards ',
     'bank.titleHl': 'actually asked.',
     'bank.titleB': '',
@@ -25,7 +25,7 @@ export const STRINGS3 = {
     'bank.f.about': 'Asked about',
     'bank.f.type': 'Kind of question',
     'bank.f.topic': 'Topic',
-    'bank.f.year': 'Year (CSE)',
+    'bank.f.year': 'Year',
     'bank.f.board': 'Board',
     'bank.f.asker': 'Asked by',
     'bank.asker.chairman': 'Chairperson',
@@ -65,7 +65,7 @@ export const STRINGS3 = {
     'col.situational.sub': '“What would you do if…”',
     'col.current': 'Current affairs',
     'col.current.sub': 'Tied to the news of the year',
-    'col.2025': 'CSE 2025 trends',
+    'col.2025': 'Latest trends',
     'col.2025.sub': 'What the latest boards asked',
     'col.hobby': 'Hobby questions',
     'col.hobby.sub': 'Boards love these',
@@ -98,7 +98,7 @@ export const STRINGS3 = {
     'boards.note': 'Board names as reported by candidates. Boards change over time — read these as tendencies, not rules.'
   },
   hi: {
-    'bank.eyebrow': '{q} प्रश्न · {n} असली इंटरव्यू · CSE {years}',
+    'bank.eyebrow': '{q} प्रश्न · {n} असली इंटरव्यू',
     'bank.titleA': 'बोर्ड ने जो भी ',
     'bank.titleHl': 'असल में पूछा',
     'bank.titleB': ' — सब यहाँ।',
@@ -122,7 +122,7 @@ export const STRINGS3 = {
     'bank.f.about': 'किस बारे में',
     'bank.f.type': 'प्रश्न का प्रकार',
     'bank.f.topic': 'विषय',
-    'bank.f.year': 'वर्ष (CSE)',
+    'bank.f.year': 'वर्ष',
     'bank.f.board': 'बोर्ड',
     'bank.f.asker': 'किसने पूछा',
     'bank.asker.chairman': 'अध्यक्ष',
@@ -162,7 +162,7 @@ export const STRINGS3 = {
     'col.situational.sub': '“अगर ऐसा हो तो आप क्या करेंगे…”',
     'col.current': 'समसामयिक मामले',
     'col.current.sub': 'उस साल की ख़बरों से जुड़े',
-    'col.2025': 'CSE 2025 के रुझान',
+    'col.2025': 'नए रुझान',
     'col.2025.sub': 'हाल के बोर्ड ने क्या पूछा',
     'col.hobby': 'शौक से जुड़े प्रश्न',
     'col.hobby.sub': 'बोर्ड को ये पसंद हैं',

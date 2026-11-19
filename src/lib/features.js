@@ -5,8 +5,7 @@
 // Set to true to launch it.
 export const MCQ_SECTION_LIVE = false;
 
-// Mock Interview (DAF, predicted questions, question bank, voice/text mock interviews). While false, only
-// admins see it (navbar link and pages); a student who opens an interview_* link gets "Coming Soon".
-// To launch, set this to true AND set INTERVIEW_SECTION_LIVE=true in the backend's environment (Render) -
-// the API refuses students until then.
-export const INTERVIEW_SECTION_LIVE = false;
+// Interview Prep (DAF, predicted questions, question bank, practice, notes). Launched 2026-11-20: open to every
+// signed-in student. Set to false to hide it from students again (admins keep it); the backend closes its API
+// to students when INTERVIEW_SECTION_LIVE=false is set in its environment.
+export const INTERVIEW_SECTION_LIVE = true;

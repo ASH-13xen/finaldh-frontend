@@ -7,6 +7,7 @@ import { payWithRazorpay } from '../../../lib/razorpay';
 import Sheet from '../Sheet';
 import Button from '../Button';
 import { useT } from '../../lib/i18n';
+import { DafCheckCard } from '../DafCheck';
 
 export default function CreditsSheet({ credits, onClose, onPaid }) {
   const { t } = useT();
@@ -14,6 +15,7 @@ export default function CreditsSheet({ credits, onClose, onPaid }) {
   const [busy, setBusy] = useState(null); // pack id being bought
   const [stage, setStage] = useState('');
   const packs = credits?.packs || [];
+  const verified = !!credits?.admin || credits?.daf?.status === 'verified';
 
   const buy = async (pack) => {
     setBusy(pack.id);
@@ -57,10 +59,11 @@ export default function CreditsSheet({ credits, onClose, onPaid }) {
           </div>
         )}
 
+        {!verified && <DafCheckCard className="mt-6" />}
         <h3 className="mt-8 prep-eyebrow text-text-tertiary">{t('cr.usesTitle')}</h3>
         <ul className="mt-3 space-y-2.5">
-          {['answer', 'feedback'].map((k) => (
-            <li key={k} className="flex gap-3 text-[15px] leading-relaxed"><Icon name={k === 'answer' ? 'edit' : 'mic'} className="w-5 h-5 mt-0.5 text-brand shrink-0" />{t(`cr.use.${k}`)}</li>
+          {[['answer', 'edit'], ['approach', 'target'], ['feedback', 'mic']].map(([k, icon]) => (
+            <li key={k} className="flex gap-3 text-[15px] leading-relaxed"><Icon name={icon} className="w-5 h-5 mt-0.5 text-brand shrink-0" />{t(`cr.use.${k}`)}</li>
           ))}
           <li className="flex gap-3 text-[15px] leading-relaxed text-text-secondary"><Icon name="check" className="w-5 h-5 mt-0.5 text-brand shrink-0" />{t('cr.freeAlways')}</li>
         </ul>
@@ -74,8 +77,8 @@ export default function CreditsSheet({ credits, onClose, onPaid }) {
                   {i === packs.length - 1 && <span className="absolute -top-3 left-5 rounded-full bg-brand text-text-on-accent text-[11px] font-bold px-2.5 py-1">{t('cr.best')}</span>}
                   <p className="prep-num font-display text-4xl font-semibold">₹{p.price}</p>
                   <p className="mt-1 text-text-secondary">{t('cr.packUses', { n: p.credits })}</p>
-                  <p className="mt-0.5 text-xs text-text-tertiary">{t('cr.perUse', { v: (p.price / p.credits).toFixed(1) })}</p>
-                  <Button tone={i === packs.length - 1 ? 'primary' : 'ink'} size="md" className="mt-4 w-full" disabled={!!busy} onClick={() => buy(p)}>
+                  <p className="mt-0.5 text-xs text-text-tertiary">{t('cr.perUse', { v: Math.round((p.price / p.credits) * 10) / 10 })}</p>
+                  <Button tone={i === packs.length - 1 ? 'primary' : 'ink'} size="md" className="mt-4 w-full" disabled={!!busy || !verified} onClick={() => buy(p)}>
                     {busy === p.id ? t(`cr.stage.${stage || 'starting'}`) : t('cr.buy')}
                   </Button>
                 </div>

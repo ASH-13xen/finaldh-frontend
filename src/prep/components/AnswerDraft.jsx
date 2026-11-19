@@ -9,11 +9,13 @@ import Button from './Button';
 import { useT } from '../lib/i18n';
 import { usePrep } from '../lib/context';
 import { api } from '../lib/api';
+import { useDafCheck } from '../lib/useDafCheck';
 
 export default function AnswerDraft({ question, qkey, familyId = '', source = 'bank', className = '' }) {
   const { t } = useT();
   const toast = useToast();
-  const { prep, credits, refreshCredits, openCredits, daf } = usePrep();
+  const { prep, credits, refreshCredits, openCredits, daf, go } = usePrep();
+  const check = useDafCheck();
   const saved = qkey ? prep.items.get(qkey)?.draft : null;
   const [draft, setDraft] = useState(null);
   const [open, setOpen] = useState(false);
@@ -45,6 +47,15 @@ export default function AnswerDraft({ question, qkey, familyId = '', source = 'b
     if (ok) toast.success(t('ad.copied'));
   };
 
+  if (!shown && !check.loading && !check.verified) {
+    return (
+      <div className={className}>
+        <button type="button" onClick={() => go({ screen: 'daf' })} className="prep-focus inline-flex items-center gap-2 h-9 px-4 rounded-full border border-dashed border-border-default text-sm font-semibold text-text-secondary hover:text-text-primary hover:border-text-primary cursor-pointer">
+          <Icon name="lock" className="w-4 h-4" />{t(check.status === 'pending' ? 'ad.lockedPending' : 'ad.locked')}
+        </button>
+      </div>
+    );
+  }
   if (!shown) {
     return (
       <div className={className}>

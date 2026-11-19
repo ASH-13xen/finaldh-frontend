@@ -8,7 +8,8 @@ import Button from './Button';
 import { YearSpark } from './badges';
 import { StatusPicker, SaveToggle, NoteEditor } from './PrepControls';
 import AnswerDraft from './AnswerDraft';
-import { useT, fmt, yearsRange } from '../lib/i18n';
+import { useDafCheck } from '../lib/useDafCheck';
+import { useT, fmt } from '../lib/i18n';
 import { api } from '../lib/api';
 import { errorMessage } from '../../lib/interviewApi';
 import { usePrep } from '../lib/context';
@@ -25,17 +26,29 @@ function Section({ title, sub, children }) {
   );
 }
 
-function Approach({ familyId }) {
+function Approach({ familyId, onLeave }) {
   const { t, lang } = useT();
+  const { refreshCredits, openCredits, go } = usePrep();
+  const check = useDafCheck();
   const [state, setState] = useState({ status: 'idle' });
   const [reveal, setReveal] = useState(false);
   const load = useCallback(() => {
     setState({ status: 'loading' });
     api.approach(familyId, lang)
-      .then((d) => setState({ status: 'ready', data: d.approach }))
-      .catch((err) => setState({ status: 'error', message: err?.data?.aiUnavailable ? t('dd.aiOff') : errorMessage(err) }));
-  }, [familyId, lang, t]);
+      .then((d) => { setState({ status: 'ready', data: d.approach }); refreshCredits(); })
+      .catch((err) => {
+        if (err?.status === 402) { setState({ status: 'idle' }); openCredits(); return; }
+        setState({ status: 'error', message: err?.data?.aiUnavailable ? t('dd.aiOff') : errorMessage(err) });
+      });
+  }, [familyId, lang, t, refreshCredits, openCredits]);
 
+  if (state.status === 'idle' && !check.loading && !check.verified) {
+    return (
+      <button type="button" onClick={() => { onLeave?.(); go({ screen: 'daf' }); }} className="prep-focus inline-flex items-center gap-2 h-12 px-5 rounded-full border border-dashed border-border-default text-[15px] font-semibold text-text-secondary hover:text-text-primary hover:border-text-primary cursor-pointer">
+        <Icon name="lock" className="w-4 h-4" />{t(check.status === 'pending' ? 'dd.approachPending' : 'dd.approachLocked')}
+      </button>
+    );
+  }
   if (state.status === 'idle') return <Button tone="soft" size="lg" icon="sparkles" onClick={load}>{t('dd.loadApproach')}</Button>;
   if (state.status === 'loading') return <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="iv-skeleton h-5 rounded-full" style={{ width: `${90 - i * 18}%` }} />)}</div>;
   if (state.status === 'error') return <p className="text-sm text-text-secondary">{state.message}</p>;
@@ -128,7 +141,7 @@ function Body({ familyId, onOpen, canBack, onBack, onClose }) {
             <Icon name="arrowLeft" className="w-4 h-4" /> {t('common.back')}
           </button>
         )}
-        <p className="prep-eyebrow text-brand">{tn('common.askedTimes', f.timesAsked)} · CSE {yearsRange(f.years)}{(f.boardCount || f.boards?.length) ? ` · ${t('dd.boards', { n: f.boardCount || f.boards.length })}` : ''}</p>
+        <p className="prep-eyebrow text-brand">{tn('common.askedTimes', f.timesAsked)}{(f.boardCount || f.boards?.length) ? ` · ${t('dd.boards', { n: f.boardCount || f.boards.length })}` : ''}</p>
         <h2 className="mt-4 font-display text-[1.9rem] leading-[1.18] md:text-[2.5rem] md:leading-[1.12] font-semibold tracking-tight">{f.text}</h2>
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
           <span className="flex items-center gap-3 text-sm text-text-tertiary"><YearSpark yearCounts={f.yearCounts} className="h-6" /> {t('dd.timeline')}</span>
@@ -168,7 +181,7 @@ function Body({ familyId, onOpen, canBack, onBack, onClose }) {
       )}
 
       <Section title={t('dd.approach')}>
-        <Approach familyId={f.id} />
+        <Approach familyId={f.id} onLeave={onClose} />
       </Section>
 
       <Section title={t('dd.where')}>
@@ -176,7 +189,7 @@ function Body({ familyId, onOpen, canBack, onBack, onClose }) {
           {asked.map((a) => (
             <li key={a.id} className="rounded-2xl border border-border-subtle bg-surface p-4 md:p-5">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                <span className="prep-num rounded-full bg-text-primary text-page px-2.5 py-1">CSE {a.year}</span>
+                <span className="prep-num rounded-full bg-text-primary text-page px-2.5 py-1">{a.year}</span>
                 <span className="rounded-full border border-border-default px-2.5 py-1 text-text-secondary">{a.board ? t('dd.byBoard', { board: a.board }) : t('dd.noBoard')}</span>
                 <span className="text-text-tertiary">{askerLabel(t, a.asker)}</span>
               </div>

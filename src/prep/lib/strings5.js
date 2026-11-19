@@ -37,7 +37,7 @@ export const STRINGS5 = {
     'me.lastConfidence': 'last confidence',
     'me.toPractice': 'Open the Practice Studio',
 
-    'in.eyebrow': 'Insights · CSE {years}',
+    'in.eyebrow': 'Insights',
     'in.titleA': 'Six years of UPSC interviews, ',
     'in.titleHl': 'in numbers.',
     'in.sub': 'Everything here is counted from {n} real interviews.',
@@ -54,7 +54,7 @@ export const STRINGS5 = {
     'in.boardsSub': 'How much each board drew from the DAF, and how hard it followed up.',
     'in.axisDaf': 'From the DAF →',
     'in.axisFollow': 'Follow-ups →',
-    'in.new': 'New in CSE {year}',
+    'in.new': 'New in the latest interviews',
     'in.newSub': 'First asked in {year} — and already asked again.',
     'in.interviews': '{n} interviews',
 
@@ -110,7 +110,7 @@ export const STRINGS5 = {
     'guide.admin.working': 'Preparing the guide… this takes a few minutes.',
     'guide.admin.publish': 'Publish the guide',
     'print.cover.by': 'by The Dark Horse UPSC',
-    'print.cover.built': 'Built from {n} real UPSC interviews · CSE {years}',
+    'print.cover.built': 'Built from {n} real UPSC interviews',
     'print.footer': 'The Dark Horse UPSC · Free interview prep: {site}',
     'print.about': 'About The Dark Horse UPSC',
     'print.aboutText': 'The Dark Horse UPSC helps aspirants prepare for every stage of the Civil Services Examination. Our Interview Prep reads thousands of real interviews to predict what your board will ask — and lets you practise your answers aloud.',
@@ -157,7 +157,7 @@ export const STRINGS5 = {
     'me.lastConfidence': 'पिछला आत्मविश्वास',
     'me.toPractice': 'अभ्यास स्टूडियो खोलें',
 
-    'in.eyebrow': 'रुझान · CSE {years}',
+    'in.eyebrow': 'रुझान',
     'in.titleA': 'UPSC इंटरव्यू के छह साल, ',
     'in.titleHl': 'आँकड़ों में।',
     'in.sub': 'यहाँ सब कुछ {n} असली इंटरव्यू से गिना गया है।',
@@ -174,7 +174,7 @@ export const STRINGS5 = {
     'in.boardsSub': 'किस बोर्ड ने DAF से कितना पूछा, और फ़ॉलो-अप में कितना गहराई से गया।',
     'in.axisDaf': 'DAF से →',
     'in.axisFollow': 'फ़ॉलो-अप →',
-    'in.new': 'CSE {year} में नया',
+    'in.new': 'नए इंटरव्यू में नया',
     'in.newSub': '{year} में पहली बार पूछा गया — और फिर से भी पूछा गया।',
     'in.interviews': '{n} इंटरव्यू',
 
@@ -230,7 +230,7 @@ export const STRINGS5 = {
     'guide.admin.working': 'गाइड तैयार हो रही है… इसमें कुछ मिनट लगते हैं।',
     'guide.admin.publish': 'गाइड प्रकाशित करें',
     'print.cover.by': 'The Dark Horse UPSC द्वारा',
-    'print.cover.built': '{n} असली UPSC इंटरव्यू पर आधारित · CSE {years}',
+    'print.cover.built': '{n} असली UPSC इंटरव्यू पर आधारित',
     'print.footer': 'The Dark Horse UPSC · मुफ़्त इंटरव्यू तैयारी: {site}',
     'print.about': 'The Dark Horse UPSC के बारे में',
     'print.aboutText': 'The Dark Horse UPSC सिविल सेवा परीक्षा के हर चरण की तैयारी में अभ्यर्थियों की मदद करता है। हमारा इंटरव्यू प्रेप हज़ारों असली इंटरव्यू पढ़कर अनुमान लगाता है कि आपका बोर्ड क्या पूछेगा — और आपको बोलकर अभ्यास करने देता है।',

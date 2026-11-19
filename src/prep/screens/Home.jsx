@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../../components/mcq/Icon';
 import DeepDive from '../components/DeepDive';
 import { BoardStrip } from '../components/Boards';
+import { DafCheckCard } from '../components/DafCheck';
 import Button from '../components/Button';
 import { SplitHeading, CountUp, Highlight } from '../components/motion';
 import { gsap, useGSAP, useReveal, prefersReducedMotion } from '../lib/motion';
@@ -254,7 +255,7 @@ function QuestionOfTheDay({ list, onOpen }) {
       <div className="relative">
         <p className="prep-eyebrow text-brand">{t('home.qotd')} · {today.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}</p>
         <p className="mt-5 font-display text-3xl md:text-5xl leading-[1.12] tracking-tight text-text-primary max-w-4xl">{f.text}</p>
-        <p className="mt-5 text-text-secondary">{tn('common.askedTimes', f.timesAsked)} · {t('common.years', { years: yearsRange(f.years) })}</p>
+        <p className="mt-5 text-text-secondary">{tn('common.askedTimes', f.timesAsked)}</p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Button tone="ink" size="lg" icon="eye" onClick={() => onOpen(f.id)}>{t('home.qotdSee')}</Button>
         </div>
@@ -308,6 +309,8 @@ export default function Home() {
           <DafSlip profile={daf.profile} />
         </div>
       </section>
+
+      <section className="max-w-7xl mx-auto px-4 md:px-8 -mt-4 mb-10"><DafCheckCard /></section>
 
       {/* Numbers */}
       <section className="max-w-7xl mx-auto px-4 md:px-8"><Stats corpus={corpus} /></section>

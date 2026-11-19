@@ -114,7 +114,7 @@ export default function InterviewPredictions({ status, go, onHome }) {
         onBack={onHome}
         eyebrow="Step 2"
         title="Predicted questions"
-        subtitle={`For each item in your DAF: what boards asked candidates who had the same thing in theirs${data ? `, across ${data.corpus.transcripts.toLocaleString('en-IN')} interviews (CSE ${yearsRange(data.corpus.years)})` : ''}.`}
+        subtitle={`For each item in your DAF: what boards asked candidates who had the same thing in theirs${data ? `, across ${data.corpus.transcripts.toLocaleString('en-IN')} interviews (${yearsRange(data.corpus.years)})` : ''}.`}
         actions={
           <>
             <AiBadge ai={status.ai} />

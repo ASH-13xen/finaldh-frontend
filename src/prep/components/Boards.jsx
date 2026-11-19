@@ -7,7 +7,7 @@ import Icon from '../../components/mcq/Icon';
 import Sheet from './Sheet';
 import Button from './Button';
 import { useReveal } from '../lib/motion';
-import { useT, fmt, yearsRange } from '../lib/i18n';
+import { useT, fmt } from '../lib/i18n';
 import { photoOf, moodOf, MOOD_KINDS, MOOD_STYLE } from '../lib/boards';
 
 const MIX_COLOR = { personal: '#0d7a56', situational: '#b45309', opinion: '#6366f1', factual: '#0ea5e9', other: '#a8a29e' };
@@ -87,7 +87,7 @@ export function BoardSheet({ b, onClose, onOpenQuestion, onFilterBoard }) {
           <BoardAvatar b={b} size="lg" />
           <div className="min-w-0">
             <h2 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">{b.name}</h2>
-            <p className="mt-1 text-text-tertiary">{t('boards.interviews', { n: fmt(b.interviews) })} · CSE {yearsRange(b.years)}</p>
+            <p className="mt-1 text-text-tertiary">{t('boards.interviews', { n: fmt(b.interviews) })}</p>
             <div className="mt-2"><MoodChip b={b} /></div>
           </div>
         </div>
@@ -159,7 +159,7 @@ export default function Boards({ boards, onOpenQuestion, onFilterBoard }) {
                 <BoardAvatar b={b} />
                 <div className="min-w-0">
                   <p className="font-display text-xl md:text-2xl font-semibold tracking-tight truncate group-hover:text-brand transition-colors">{b.name}</p>
-                  <p className="text-sm text-text-tertiary">{t('boards.interviews', { n: fmt(b.interviews) })} · CSE {yearsRange(b.years)}</p>
+                  <p className="text-sm text-text-tertiary">{t('boards.interviews', { n: fmt(b.interviews) })}</p>
                   <div className="mt-1.5"><MoodChip b={b} /></div>
                 </div>
               </div>
