@@ -15,6 +15,8 @@ import { usePrep } from '../lib/context';
 import { api } from '../lib/api';
 import { errorMessage } from '../../lib/interviewApi';
 import { useToast } from '../../components/Toast';
+import { DafGate } from '../components/DafCheck';
+import { useDafCheck } from '../lib/useDafCheck';
 
 const TYPE_ICON = { intro: 'user', motivation: 'target', home: 'mapPin', education: 'graduation', work: 'briefcase', optional: 'book', hobby: 'heart', eca: 'award', service: 'layers', family: 'users', language: 'languages', name: 'user' };
 const TIERS = ['certain', 'likely', 'worth'];
@@ -93,7 +95,25 @@ function HowWePredict({ corpus }) {
   );
 }
 
+// Predicted questions open once an admin has verified the student's DAF; until then the screen shows where
+// the verification stands (the server refuses them too).
 export default function Predictions() {
+  const { status } = usePrep();
+  const { t, hi } = useT();
+  const check = useDafCheck();
+  if (check.verified) return <PredictedQuestions />;
+  return (
+    <section className="max-w-6xl mx-auto px-4 md:px-8 pt-10 md:pt-16 pb-16">
+      <p className="prep-eyebrow text-brand mb-5">{t('pred.eyebrow', { n: fmt(status?.corpus?.transcripts || 0) })}</p>
+      <SplitHeading className={`font-display font-semibold text-text-primary ${hi ? 'text-[2.2rem] leading-[1.3] md:text-6xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.6rem] leading-[1.04] md:text-7xl md:leading-[1]'}`}>
+        {t('pred.titleA')}<Highlight still>{t('pred.titleHl')}</Highlight>
+      </SplitHeading>
+      <DafGate />
+    </section>
+  );
+}
+
+function PredictedQuestions() {
   const { go, prep, daf, status } = usePrep();
   const { t, lang, hi } = useT();
   const toast = useToast();
