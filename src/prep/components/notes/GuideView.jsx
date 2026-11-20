@@ -1,6 +1,6 @@
 // The 100-question guide: a hero with the branded PDF, search and type filters, and every question with what
 // it tests, a structure, do's and don'ts. Admins prepare it with AI, hide questions, and publish it here;
-// students only ever see the published copy.
+// students only ever see the published copy. Visitors who haven't signed in see its first questions.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../../../components/mcq/Icon';
 import { ErrorBanner } from '../../../components/mcq/ui';
@@ -14,6 +14,7 @@ import { usePrep } from '../../lib/context';
 import { api } from '../../lib/api';
 import { BRAND, GUIDE_TYPES, noteDate } from '../../lib/notes';
 import PrintView, { GuideDoc } from './Print';
+import { PreviewEnd } from '../Gate';
 
 function GuideItem({ e, n, open, onToggle, onHide }) {
   const { t, tn } = useT();
@@ -116,7 +117,7 @@ function AdminBar({ adm, onPrepare, onPublish, onUnpublish, busy }) {
 
 export default function GuideView() {
   const { t, lang, hi } = useT();
-  const { user } = usePrep();
+  const { user, signIn, askSignIn } = usePrep();
   const toast = useToast();
   const admin = !!user?.isAdmin;
   const [res, setRes] = useState({ key: null, data: null, error: null });
@@ -186,7 +187,10 @@ export default function GuideView() {
   const unpublish = () => act(() => api.admin.updateGuide({ publish: false }));
   const toggleHidden = (e) => act(() => api.admin.updateGuide({ entries: [{ key: e.key, hidden: !e.hidden }] }));
 
-  const title = t('guide.title', { n: fmt(visible.length || 100) });
+  // Visitors get the guide's first questions; the hero still counts them all.
+  const preview = !working && !!res.data?.preview;
+  const count = preview ? res.data.total || visible.length : visible.length;
+  const title = t('guide.title', { n: fmt(count || 100) });
 
   return (
     <div ref={root}>
@@ -207,20 +211,20 @@ export default function GuideView() {
         <>
           <section data-reveal className="mt-10 relative overflow-hidden rounded-[2rem] bg-[#14110d] text-[#f3ede2] px-6 py-10 md:px-14 md:py-16">
             <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(55% 80% at 100% 0%, rgba(18,155,110,0.42), transparent 70%), radial-gradient(45% 60% at 0% 100%, rgba(242,179,61,0.16), transparent 70%)' }} aria-hidden="true" />
-            <span className="absolute -right-4 md:right-6 -bottom-10 md:-bottom-16 prep-num font-display font-semibold leading-none text-[10rem] md:text-[17rem] text-emerald-300/10 select-none pointer-events-none" aria-hidden="true">{visible.length}</span>
+            <span className="absolute -right-4 md:right-6 -bottom-10 md:-bottom-16 prep-num font-display font-semibold leading-none text-[10rem] md:text-[17rem] text-emerald-300/10 select-none pointer-events-none" aria-hidden="true">{count}</span>
             <div className="relative max-w-3xl">
               <p className="prep-eyebrow text-emerald-300">{t('nt.tab.guide')}</p>
               <h2 className={`mt-4 font-display font-semibold ${hi ? 'text-3xl md:text-5xl leading-[1.3]' : 'text-4xl md:text-6xl leading-[1.02] tracking-tight'}`}>{title}</h2>
               <p className="mt-5 text-lg md:text-xl text-white/75 leading-relaxed">{t('guide.sub')}</p>
               {corpus?.interviews > 0 && <p className="mt-3 text-sm text-white/55">{t('guide.built', { n: fmt(corpus.interviews), years: yearsRange(corpus.years || []) })}</p>}
               <div className="mt-8 flex flex-wrap items-center gap-4">
-                <Button tone="primary" size="xl" icon="download" magnetic onClick={() => setPrinting(true)}>{t('guide.download')}</Button>
+                <Button tone="primary" size="xl" icon="download" magnetic onClick={() => (preview ? askSignIn('guide', { n: fmt(count) }) : setPrinting(true))}>{t('guide.download')}</Button>
                 <span className="text-sm text-white/60">{BRAND} · PDF</span>
               </div>
             </div>
           </section>
 
-          <div className="mt-10 flex flex-col md:flex-row md:items-center gap-4">
+          {!preview && <div className="mt-10 flex flex-col md:flex-row md:items-center gap-4">
             <label className="relative flex-1">
               <span className="sr-only">{t('guide.search')}</span>
               <Icon name="search" className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
@@ -234,7 +238,7 @@ export default function GuideView() {
                 </button>
               ))}
             </div>
-          </div>
+          </div>}
 
           {shown.length === 0
             ? <p className="mt-10 text-lg text-text-secondary">{t('guide.empty')}</p>
@@ -245,6 +249,11 @@ export default function GuideView() {
                 ))}
               </ol>
             )}
+          {preview && (
+            <PreviewEnd title={t('gate.title')} body={t('gate.guide', { n: fmt(count) })}>
+              <Button tone="primary" size="lg" iconRight="arrowRight" onClick={signIn}>{t('acct.signIn')}</Button>
+            </PreviewEnd>
+          )}
         </>
       )}
 

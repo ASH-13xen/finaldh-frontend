@@ -265,8 +265,18 @@ body {
   --prep-tier-worth-bg: #efe9de;
   --prep-shadow: 0 1px 0 rgba(20, 17, 13, 0.04), 0 10px 30px -12px rgba(20, 17, 13, 0.18);
   --prep-shadow-lift: 0 1px 0 rgba(20, 17, 13, 0.05), 0 22px 50px -18px rgba(20, 17, 13, 0.28);
+  /* Board charts: how candidates found a board (cordial / neutral / tough, a diverging scale with a gray
+     middle) and the one-hue bars of its question mix. Checked for colour blindness with the parts labelled. */
+  --prep-chart-pos: #0d7a56;
+  --prep-chart-mid: #a8a29e;
+  --prep-chart-neg: #b91c1c;
+  --prep-chart-bar: #0d7a56;
 }
 .dark {
+  --prep-chart-pos: #22a06b;
+  --prep-chart-mid: #78716c;
+  --prep-chart-neg: #f05252;
+  --prep-chart-bar: #22a06b;
   --prep-hl-amber: rgba(250, 204, 21, 0.28);
   --prep-hl-emerald: rgba(52, 211, 153, 0.24);
   --prep-hl-rose: rgba(251, 113, 133, 0.22);

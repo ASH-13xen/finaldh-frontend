@@ -128,7 +128,11 @@ export default function BuyCourses({ onRedirectToLogin }) {
           <LoadingSpinner text="Loading courses..." />
         </div>
       ) : examStageView === "Interview" ? (
-        <InterviewStagePanel guest={true} onOpen={onRedirectToLogin}>
+        <InterviewStagePanel
+          guest={true}
+          onSignIn={onRedirectToLogin}
+          onOpen={() => { const w = window.open(`${window.location.pathname}#interview_home`, '_blank'); if (!w) window.location.hash = 'interview_home'; }}
+        >
           {interview.length > 0 && (
             <CategorizedCourseGrid
               courses={interview}

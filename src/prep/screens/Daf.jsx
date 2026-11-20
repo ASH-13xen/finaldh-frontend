@@ -1,6 +1,7 @@
 // My DAF: add it (upload a PDF/photo that AI reads for the student to check, or a seven-step form), then see
 // it the way a board reads it - each line highlighted as deeply as boards dig into it.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { DAF_FILL_IN_OPTION } from '../../lib/features';
 import Icon from '../../components/mcq/Icon';
 import Button from '../components/Button';
 import DafForm from '../components/DafForm';
@@ -102,7 +103,7 @@ function Start({ onFile, onFill, n }) {
   const [over, setOver] = useState(false);
   const pick = (files) => { const f = files?.[0]; if (f) onFile(f); };
   return (
-    <div className="grid md:grid-cols-[1.2fr_1fr] gap-4 md:gap-6">
+    <div className={DAF_FILL_IN_OPTION ? 'grid md:grid-cols-[1.2fr_1fr] gap-4 md:gap-6' : 'grid max-w-3xl'}>
       <div
         onDragOver={(e) => { e.preventDefault(); setOver(true); }}
         onDragLeave={() => setOver(false)}
@@ -121,7 +122,7 @@ function Start({ onFile, onFill, n }) {
         <input ref={input} type="file" accept="application/pdf,image/png,image/jpeg,image/webp,image/heic" className="sr-only" onChange={(e) => pick(e.target.files)} />
         <p className="mt-5 text-sm text-text-tertiary flex gap-2"><Icon name="lock" className="w-4 h-4 mt-0.5 shrink-0" />{t('daf.uploadPrivacy')}</p>
       </div>
-      <button type="button" onClick={onFill} className="prep-focus prep-card prep-card-hover group text-left p-6 md:p-10 flex flex-col cursor-pointer">
+      {DAF_FILL_IN_OPTION && <button type="button" onClick={onFill} className="prep-focus prep-card prep-card-hover group text-left p-6 md:p-10 flex flex-col cursor-pointer">
         <span className="w-14 h-14 rounded-2xl bg-text-primary text-page flex items-center justify-center"><Icon name="edit" className="w-7 h-7" /></span>
         <h2 className="mt-6 font-display text-3xl md:text-4xl font-semibold tracking-tight">{t('daf.fill')}</h2>
         <p className="mt-2 text-lg text-text-secondary">{t('daf.fillSub')}</p>
@@ -129,7 +130,7 @@ function Start({ onFile, onFill, n }) {
           {[0, 1, 2, 3, 4, 5, 6].map((i) => <span key={i} className={`h-1.5 flex-1 rounded-full ${i < 2 ? 'bg-brand' : 'bg-border-default'}`} />)}
         </div>
         <span className="mt-6 inline-flex items-center gap-2 font-semibold text-brand">{t('daf.startSub', { n: fmt(n) })} <Icon name="arrowRight" className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></span>
-      </button>
+      </button>}
     </div>
   );
 }

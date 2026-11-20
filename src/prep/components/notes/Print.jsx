@@ -3,6 +3,7 @@
 // watermark repeat on every page - the header and footer as a table's header/footer groups, the watermark
 // as a fixed-position layer, plus a faint tiled brand pattern behind the text.
 import { useEffect, useRef, useState } from 'react';
+import { CURRENT_TOPICS_LIVE } from '../../../lib/features';
 import { createPortal } from 'react-dom';
 import Icon from '../../../components/mcq/Icon';
 import { detectInAppBrowser, externalBrowserLink } from '../../../lib/inAppBrowser';
@@ -183,7 +184,7 @@ function About({ interviews }) {
       <h3>{t('print.about')}</h3>
       <p>{t('print.aboutText')}</p>
       <ul className="pp-features">
-        {[1, 2, 3, 4].map((i) => <li key={i}>{t(`print.feature${i}`, { n: fmt(interviews) })}</li>)}
+        {[1, 2, 3, CURRENT_TOPICS_LIVE ? 4 : 5].map((i) => <li key={i}>{t(`print.feature${i}`, { n: fmt(interviews) })}</li>)}
       </ul>
     </div>
   );

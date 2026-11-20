@@ -1,6 +1,7 @@
 // The Interview Prep front page: what the section is, the student's DAF at a glance, the questions boards
 // keep asking, the six tools, and a question of the day.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { CURRENT_TOPICS_LIVE, DAF_FILL_IN_OPTION } from '../../lib/features';
 import Icon from '../../components/mcq/Icon';
 import DeepDive from '../components/DeepDive';
 import { BoardStrip } from '../components/Boards';
@@ -201,11 +202,11 @@ const TILE_ART = {
 function PathTiles({ corpus, go }) {
   const { t } = useT();
   const tiles = [
-    { key: 'daf', span: 'md:col-span-3', desc: t('home.tile.daf') },
+    { key: 'daf', span: 'md:col-span-3', desc: t(DAF_FILL_IN_OPTION ? 'home.tile.daf' : 'home.tile.dafUpload') },
     { key: 'predictions', span: 'md:col-span-3', desc: t('home.tile.predictions') },
     { key: 'bank', span: 'md:col-span-2', desc: t('home.tile.bank', { n: fmt(corpus.transcripts) }) },
     { key: 'practice', span: 'md:col-span-2', desc: t('home.tile.practice') },
-    { key: 'notes', span: 'md:col-span-2', desc: t('home.tile.notes') },
+    { key: 'notes', span: 'md:col-span-2', desc: t(CURRENT_TOPICS_LIVE ? 'home.tile.notes' : 'home.tile.guide') },
     { key: 'insights', span: 'md:col-span-6', desc: t('home.tile.insights') }
   ];
   return (
@@ -351,12 +352,6 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-4 md:px-8 pt-16 md:pt-24">
         <QuestionOfTheDay list={mostAsked} onOpen={setFamilyId} />
       </section>
-
-      {status.sources?.length > 0 && (
-        <p className="max-w-3xl mx-auto px-4 md:px-8 pt-14 text-center text-xs text-text-tertiary leading-relaxed">
-          {t('common.sources', { sources: status.sources.map((s) => s.name).join(', ') })}
-        </p>
-      )}
 
       {familyId && <DeepDive key={familyId} familyId={familyId} onClose={() => setFamilyId(null)} />}
     </div>

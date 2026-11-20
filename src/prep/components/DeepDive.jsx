@@ -13,6 +13,7 @@ import { useT, fmt } from '../lib/i18n';
 import { api } from '../lib/api';
 import { errorMessage } from '../../lib/interviewApi';
 import { usePrep } from '../lib/context';
+import { SignInSheet } from './Gate';
 
 const askerLabel = (t, a) => (a === 'chairman' ? t('asker.chairman') : /^m(\d)$/.test(a || '') ? t('asker.m', { n: a.slice(1) }) : t('asker.member'));
 
@@ -237,7 +238,14 @@ function Body({ familyId, onOpen, canBack, onBack, onClose }) {
   );
 }
 
-export default function DeepDive({ familyId, onClose }) {
+// A visitor who hasn't signed in is asked to sign in instead of opening the question.
+export default function DeepDive(props) {
+  const { guest } = usePrep();
+  if (guest) return <SignInSheet reason="deepDive" onClose={props.onClose} />;
+  return <QuestionDeepDive {...props} />;
+}
+
+function QuestionDeepDive({ familyId, onClose }) {
   const { t } = useT();
   const [stack, setStack] = useState([familyId]);
   const current = stack[stack.length - 1];

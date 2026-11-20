@@ -12,6 +12,7 @@ import Home from './screens/Home';
 import { usePrepStore } from './lib/usePrepStore';
 import { api } from './lib/api';
 import CreditsSheet from './components/credits/CreditsSheet';
+import { GuestGate, SignInSheet } from './components/Gate';
 
 const Predictions = lazy(() => import('./screens/Predictions'));
 const Daf = lazy(() => import('./screens/Daf'));
@@ -43,8 +44,12 @@ function Loader() {
   );
 }
 
-function Flow({ user, initialScreen, onLogout, onExit }) {
+// Screens a visitor who hasn't signed in sees as a "sign in" page; the rest they can look around.
+const GUEST_GATED = ['predictions', 'daf', 'me', 'practice'];
+
+function Flow({ user, initialScreen, onLogout, onExit, onSignIn }) {
   const { t } = useT();
+  const guest = !user;
   const [view, setView] = useState(() => {
     const saved = window.history.state?.prepView;
     return saved && SCREEN_KEYS.includes(saved.screen) ? saved : { screen: toScreen(initialScreen) };
@@ -52,17 +57,19 @@ function Flow({ user, initialScreen, onLogout, onExit }) {
   const [status, setStatus] = useState(null);
   const [statusError, setStatusError] = useState(null);
   const [reload, setReload] = useState(0);
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() => (guest ? { empty: true, items: [] } : null));
   const [profileTick, setProfileTick] = useState(0);
-  const [credits, setCredits] = useState(null);
+  const [credits, setCredits] = useState(() => (guest ? { guest: true, daf: { status: 'guest' }, total: 0 } : null));
   const [creditsTick, setCreditsTick] = useState(0);
   const [creditsOpen, setCreditsOpen] = useState(false);
+  const [ask, setAsk] = useState(null); // why a visitor is being asked to sign in: { reason, vars }
 
   useEffect(() => {
+    if (guest) return undefined;
     let cancelled = false;
     api.credits().then((c) => { if (!cancelled) setCredits(c); }).catch(() => {});
     return () => { cancelled = true; };
-  }, [creditsTick]);
+  }, [creditsTick, guest]);
   const refreshCredits = useCallback(() => setCreditsTick((k) => k + 1), []);
   const openCredits = useCallback(() => setCreditsOpen(true), []);
 
@@ -75,12 +82,13 @@ function Flow({ user, initialScreen, onLogout, onExit }) {
   }, [reload]);
 
   useEffect(() => {
+    if (guest) return undefined;
     let cancelled = false;
     iv('/profile')
       .then((p) => { if (!cancelled) setProfile(p); })
       .catch(() => { if (!cancelled) setProfile({ empty: true, items: [] }); });
     return () => { cancelled = true; };
-  }, [profileTick]);
+  }, [profileTick, guest]);
 
   // Leaving the DAF screen reloads the DAF, so every other screen sees what was just saved.
   const current = useRef(view);
@@ -116,7 +124,11 @@ function Flow({ user, initialScreen, onLogout, onExit }) {
   }, [go]);
 
   const refreshProfile = useCallback(() => setProfileTick((k) => k + 1), []);
-  const prep = usePrepStore();
+  const askSignIn = useCallback((reason = 'save', vars) => setAsk({ reason, vars }), []);
+  const prep = usePrepStore({ guest, onGuest: askSignIn });
+  // Signing in comes back to the screen the visitor was on.
+  const screenNow = view.screen;
+  const signIn = useCallback(() => onSignIn?.(screenNow), [onSignIn, screenNow]);
 
   const showBanner = !INTERVIEW_SECTION_LIVE && !!user?.isAdmin;
   const banner = useMemo(() => (showBanner ? (
@@ -127,9 +139,9 @@ function Flow({ user, initialScreen, onLogout, onExit }) {
 
   const ctx = useMemo(() => ({
     status, user, go, screen: view.screen, view, banner, prep, onLogout, onExit,
-    credits, refreshCredits, openCredits,
+    credits, refreshCredits, openCredits, guest, signIn, askSignIn,
     daf: { profile, refresh: refreshProfile }
-  }), [status, user, go, view, banner, prep, profile, refreshProfile, onLogout, onExit, credits, refreshCredits, openCredits]);
+  }), [status, user, go, view, banner, prep, profile, refreshProfile, onLogout, onExit, credits, refreshCredits, openCredits, guest, signIn, askSignIn]);
 
   if (statusError) {
     return <div className="max-w-3xl mx-auto px-4 py-16"><ErrorBanner onRetry={() => setReload((k) => k + 1)}>{errorMessage(statusError, t('common.error'))}</ErrorBanner></div>;
@@ -137,7 +149,10 @@ function Flow({ user, initialScreen, onLogout, onExit }) {
   if (!status) return <Loader />;
 
   let body;
-  switch (view.screen) {
+  switch (guest && GUEST_GATED.includes(view.screen) ? 'gated' : view.screen) {
+    case 'gated':
+      body = <GuestGate screen={view.screen} />;
+      break;
     case 'daf':
       body = <Daf />;
       break;
@@ -168,19 +183,21 @@ function Flow({ user, initialScreen, onLogout, onExit }) {
       <Shell>
         <Suspense fallback={<div className="min-h-[50vh]" />}>{body}</Suspense>
       </Shell>
-      {creditsOpen && <CreditsSheet credits={credits} onClose={() => setCreditsOpen(false)} onPaid={refreshCredits} />}
+      {creditsOpen && !guest && <CreditsSheet credits={credits} onClose={() => setCreditsOpen(false)} onPaid={refreshCredits} />}
+      {ask && <SignInSheet reason={ask.reason} vars={ask.vars} onClose={() => setAsk(null)} />}
     </PrepContext.Provider>
   );
 }
 
 // Interview Prep runs in its own window (the site's navbar opens it in a new tab): onExit goes to the main
-// website in this window, onLogout signs out.
-export default function PrepFlow({ user, activeTab, onLogout, onExit }) {
+// website in this window, onLogout signs out. Without a user it's a visitor's look around (from the course
+// pages' Interview (PT) tab): onSignIn(screen) goes to sign-in and back to that screen.
+export default function PrepFlow({ user, activeTab, onLogout, onExit, onSignIn }) {
   const initialScreen = String(activeTab || '').replace(/^interview_/, '');
   return (
     <ToastProvider>
       <LangProvider>
-        <Flow user={user} initialScreen={initialScreen} onLogout={onLogout} onExit={onExit} />
+        <Flow user={user} initialScreen={initialScreen} onLogout={onLogout} onExit={onExit} onSignIn={onSignIn} />
       </LangProvider>
     </ToastProvider>
   );

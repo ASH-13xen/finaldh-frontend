@@ -80,7 +80,7 @@ export default function AdminDafVerification() {
       const reason = window.prompt(`Why can't ${item.userName || item.userEmail}'s DAF be verified? (The student sees this.)`, 'This file is not a DAF.');
       if (!reason) return;
       body = { reason };
-    } else if (!window.confirm(`Verify ${item.userName || item.userEmail}'s DAF? Their practice and 15 free AI uses unlock.`)) {
+    } else if (!window.confirm(`Verify ${item.userName || item.userEmail}'s DAF? Their practice, the full question bank and 15 free credits unlock.`)) {
       return;
     }
     setBusy(item.id);
@@ -98,7 +98,7 @@ export default function AdminDafVerification() {
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-12">
       <h1 className="font-display text-3xl md:text-4xl font-semibold text-text-primary tracking-tight">DAF Checks</h1>
-      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Interview Prep. Verify a genuine DAF to unlock their practice, 15 free AI uses and credit purchases; reject anything else with a reason. The file is deleted once you decide.</p>
+      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Interview Prep. Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide.</p>
 
       <div className="mt-6 flex flex-wrap gap-2">
         {['pending', 'verified', 'rejected'].map((s) => (

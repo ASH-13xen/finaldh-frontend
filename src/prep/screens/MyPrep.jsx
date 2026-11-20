@@ -1,6 +1,7 @@
 // My Prep: the interview countdown, readiness, a day-by-day plan built from the DAF (tasks tick themselves
 // as the student prepares), saved questions, answer notes and practice so far.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { CURRENT_TOPICS_LIVE } from '../../lib/features';
 import Icon from '../../components/mcq/Icon';
 import Button from '../components/Button';
 import DeepDive from '../components/DeepDive';
@@ -38,7 +39,7 @@ const buildPlan = (t, groups, prepItems, attempts, days) => {
     if (i === 0) tasks.push({ id: 'intro', label: t('me.task.intro'), done: introDone, screen: 'practice' });
     if (i % 3 === 2) tasks.push({ id: `practice-${i}`, label: t('me.task.practice'), done: spoke >= 3 * Math.ceil((i + 1) / 3), screen: 'practice' });
   });
-  tasks.push({ id: 'notes', label: t('me.task.notes'), done: false, screen: 'notes' });
+  tasks.push({ id: 'notes', label: t(CURRENT_TOPICS_LIVE ? 'me.task.notes' : 'me.task.guide'), done: false, screen: 'notes' });
   const perDay = Math.max(1, Math.ceil(tasks.length / Math.max(1, days - 2)));
   const plan = [];
   for (let d = 0; d < days; d++) {

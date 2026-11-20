@@ -187,7 +187,7 @@ function AccountMenu() {
 }
 
 export default function Shell({ children }) {
-  const { screen, go, banner } = usePrep();
+  const { screen, go, banner, user } = usePrep();
   const { t, lang, hi } = useT();
   const body = useRef(null);
 
@@ -211,7 +211,7 @@ export default function Shell({ children }) {
           <div className="flex-1 min-w-0"><DesktopTabs screen={screen} go={go} /></div>
           <CreditsPill />
           <ThemeButton />
-          <AccountMenu />
+          {user && <AccountMenu />}{/* visitors get "Sign in" (CreditsPill) instead */}
         </div>
       </header>
       <div ref={body} className="prep-safe-bottom">{children}</div>

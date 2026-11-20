@@ -10,8 +10,6 @@ import { useReveal } from '../lib/motion';
 import { useT, fmt } from '../lib/i18n';
 import { photoOf, moodOf, MOOD_KINDS, MOOD_STYLE } from '../lib/boards';
 
-const MIX_COLOR = { personal: '#0d7a56', situational: '#b45309', opinion: '#6366f1', factual: '#0ea5e9', other: '#a8a29e' };
-
 export function BoardAvatar({ b, size = 'md' }) {
   const s = size === 'lg' ? 'w-24 h-24 text-3xl' : size === 'xl' ? 'w-28 h-28 md:w-32 md:h-32 text-4xl' : 'w-16 h-16 text-xl';
   const photo = photoOf(b.name);
@@ -36,36 +34,63 @@ export function MoodChip({ b }) {
   );
 }
 
-function MoodBar({ b }) {
+// How candidates found the board: one tall segmented bar on a diverging scale (cordial | neutral | tough), each
+// block printing its share when there is room; a block too narrow for it gives its share in the legend.
+const MOOD_PARTS = [
+  { k: 'cordial', color: 'var(--prep-chart-pos)', ink: '#fff' },
+  { k: 'neutral', color: 'var(--prep-chart-mid)', ink: '#14110d' },
+  { k: 'tough', color: 'var(--prep-chart-neg)', ink: '#fff' }
+];
+const FITS = 9; // % of the bar below which a block's label doesn't fit inside it
+
+function MoodChart({ b }) {
   const { t } = useT();
   const m = moodOf(b);
   if (!m) return <p className="text-sm text-text-tertiary">{t('boards.moodFew')}</p>;
-  const parts = [['cordial', m.cordial, '#0d7a56'], ['neutral', m.neutral, '#a8a29e'], ['tough', m.tough, '#b91c1c']];
+  const parts = MOOD_PARTS.map((p) => ({ ...p, v: m[p.k] || 0, name: t(`boards.moodPart.${p.k}`) }));
+  const shown = parts.filter((p) => p.v > 0);
   return (
     <div>
-      <div className="flex h-2.5 rounded-full overflow-hidden bg-sunken" role="img" aria-label={parts.map(([k, v]) => `${t(`boards.moodPart.${k}`)} ${v}%`).join(', ')}>
-        {parts.map(([k, v, c]) => <span key={k} style={{ width: `${v}%`, background: c }} />)}
+      <div className="flex h-7 gap-[2px]" role="img" aria-label={parts.map((p) => `${p.name} ${p.v}%`).join(', ')}>
+        {shown.map((p) => (
+          <div key={p.k} title={`${p.name}: ${p.v}%`} className="h-full rounded-[4px] flex items-center px-2 min-w-[4px] overflow-hidden" style={{ flexGrow: p.v, flexBasis: 0, background: p.color }}>
+            {p.v >= FITS && <span className="prep-num text-xs font-bold leading-none" style={{ color: p.ink }}>{p.v}%</span>}
+          </div>
+        ))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-        {parts.map(([k, v, c]) => <span key={k} className="flex items-center gap-1.5 text-xs text-text-tertiary"><span className="w-2 h-2 rounded-full" style={{ background: c }} />{t(`boards.moodPart.${k}`)} {v}%</span>)}
+      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
+        {parts.map((p) => (
+          <span key={p.k} className="flex items-center gap-1.5 text-xs text-text-secondary">
+            <span className="w-2.5 h-2.5 rounded-[3px]" style={{ background: p.color }} aria-hidden="true" />
+            {p.name}{p.v < FITS ? ` ${p.v}%` : ''}
+          </span>
+        ))}
       </div>
       <p className="mt-1.5 text-xs text-text-tertiary">{t('boards.moodN', { n: fmt(m.n) })}</p>
     </div>
   );
 }
 
-function MixBar({ qtypes }) {
+// The question mix as ranked horizontal bars in one hue: the biggest type first, "other" last, the share at
+// the end of each row. `top` shows only the first few (the board cards).
+function MixBars({ qtypes, top = 0 }) {
   const { t } = useT();
-  const entries = Object.entries(qtypes || {}).filter(([, v]) => v > 0);
+  let rows = Object.entries(qtypes || {}).filter(([, v]) => v > 0)
+    .sort(([ka, a], [kb, bv]) => (ka === 'other') - (kb === 'other') || bv - a);
+  if (top) rows = rows.filter(([k]) => k !== 'other').slice(0, top);
+  const max = Math.max(1, ...rows.map(([, v]) => v));
   return (
-    <div>
-      <div className="flex h-2.5 rounded-full overflow-hidden bg-sunken" role="img" aria-label={entries.map(([k, v]) => `${t(`qtype.${k}`)} ${v}%`).join(', ')}>
-        {entries.map(([k, v]) => <span key={k} style={{ width: `${v}%`, background: MIX_COLOR[k] || '#a8a29e' }} />)}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-        {entries.map(([k, v]) => <span key={k} className="flex items-center gap-1.5 text-xs text-text-tertiary"><span className="w-2 h-2 rounded-full" style={{ background: MIX_COLOR[k] || '#a8a29e' }} />{t(`qtype.${k}`)} {v}%</span>)}
-      </div>
-    </div>
+    <ul className={top ? 'space-y-1.5' : 'space-y-2.5'} aria-label={t('boards.mix')}>
+      {rows.map(([k, v]) => (
+        <li key={k} title={`${t(`qtype.${k}`)}: ${v}%`} className={`grid items-center gap-3 ${top ? 'grid-cols-[6.5rem_1fr_2.5rem] text-xs' : 'grid-cols-[7.5rem_1fr_3rem] text-sm'}`}>
+          <span className="text-text-secondary truncate">{t(`qtype.${k}`)}</span>
+          <span className="block">
+            <span className={`block rounded-r-[4px] ${top ? 'h-2' : 'h-3'}`} style={{ width: `${(v / max) * 100}%`, background: 'var(--prep-chart-bar)' }} />
+          </span>
+          <span className="text-right font-semibold text-text-primary tabular-nums">{v}%</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -97,9 +122,9 @@ export function BoardSheet({ b, onClose, onOpenQuestion, onFilterBoard }) {
           <Stat value={b.avgQuestions} label={t('boards.avgQ')} />
         </div>
         <h3 className="mt-8 prep-eyebrow text-text-tertiary">{t('boards.mood')}</h3>
-        <div className="mt-3"><MoodBar b={b} /></div>
+        <div className="mt-3"><MoodChart b={b} /></div>
         <h3 className="mt-8 prep-eyebrow text-text-tertiary">{t('boards.mix')}</h3>
-        <div className="mt-3"><MixBar qtypes={b.qtypes} /></div>
+        <div className="mt-3"><MixBars qtypes={b.qtypes} /></div>
         {b.topics?.length > 0 && (
           <>
             <h3 className="mt-8 prep-eyebrow text-text-tertiary">{t('boards.topics')}</h3>
@@ -168,7 +193,7 @@ export default function Boards({ boards, onOpenQuestion, onFilterBoard }) {
                 <Stat value={`${b.followUpPct}%`} label={t('boards.followUps')} />
                 <Stat value={b.avgQuestions} label={t('boards.avgQ')} />
               </div>
-              <div className="mt-6"><MixBar qtypes={b.qtypes} /></div>
+              <div className="mt-6"><MixBars qtypes={b.qtypes} top={3} /></div>
               <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand">{t('action.deepDive')} <Icon name="arrowRight" className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></span>
             </button>
           </li>

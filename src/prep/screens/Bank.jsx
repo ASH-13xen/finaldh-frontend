@@ -1,5 +1,7 @@
 // The question bank: search by meaning, one-tap collections, plain-language filters with live counts,
-// browsing by DAF keyword, and each board's habits.
+// browsing by DAF keyword, and each board's habits. Until the student's DAF is verified (and for visitors who
+// haven't signed in) it is a preview: the server sends the most-asked questions only, the list fades out
+// under a card saying how to see the rest, and search, filters and collections lead to that card.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../../components/mcq/Icon';
 import Button from '../components/Button';
@@ -16,6 +18,8 @@ import { useT, fmt, yearsRange } from '../lib/i18n';
 import { usePrep } from '../lib/context';
 import { api } from '../lib/api';
 import { errorMessage } from '../../lib/interviewApi';
+import { useDafCheck } from '../lib/useDafCheck';
+import { PreviewEnd } from '../components/Gate';
 
 const EXAMPLES = ['why civil services', 'net neutrality', 'cricket', 'women safety', 'artificial intelligence', 'federalism'];
 const PAGE = 20;
@@ -29,7 +33,8 @@ function useDebounced(value, ms = 300) {
 const KIND_LABEL = { hobby: 'browse.kind.hobby', college: 'browse.kind.college', discipline: 'browse.kind.discipline', job: 'browse.kind.job', state: 'browse.kind.state', optional: 'browse.kind.optional' };
 
 export default function Bank() {
-  const { status, view, daf, go } = usePrep();
+  const { status, view, daf, go, guest, signIn } = usePrep();
+  const check = useDafCheck();
   const { t, hi } = useT();
   const corpus = status.corpus || {};
   const [tab, setTab] = useState(() => (['browse', 'boards'].includes(view.tab) ? view.tab : 'questions'));
@@ -37,7 +42,7 @@ export default function Bank() {
   const dq = useDebounced(q.trim());
   const [filters, setFilters] = useState({});
   const [sort, setSort] = useState('');
-  const [res, setRes] = useState({ key: null, items: [], total: 0, facets: null, semantic: false, page: 1, error: null });
+  const [res, setRes] = useState({ key: null, items: [], total: 0, facets: null, semantic: false, page: 1, error: null, preview: false });
   const [more, setMore] = useState(false);
   const [familyId, setFamilyId] = useState(null);
   const [sheet, setSheet] = useState(false);
@@ -51,8 +56,8 @@ export default function Bank() {
   useEffect(() => {
     let cancelled = false;
     api.search({ q: dq, ...filters, sort: effSort, page: 1, limit: PAGE, facets: 1 })
-      .then((d) => { if (!cancelled) setRes({ key: reqKey, items: d.items, total: d.total, facets: d.facets, semantic: d.semantic, page: 1, error: null }); })
-      .catch((err) => { if (!cancelled) setRes({ key: reqKey, items: [], total: 0, facets: null, semantic: false, page: 1, error: err }); });
+      .then((d) => { if (!cancelled) setRes({ key: reqKey, items: d.items, total: d.total, facets: d.facets, semantic: d.semantic, page: 1, error: null, preview: !!d.preview }); })
+      .catch((err) => { if (!cancelled) setRes({ key: reqKey, items: [], total: 0, facets: null, semantic: false, page: 1, error: err, preview: false }); });
     return () => { cancelled = true; };
     // reqKey covers dq, filters and the sort
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,6 +82,15 @@ export default function Bank() {
     } catch { /* the button stays; try again */ }
     setMore(false);
   };
+
+  // The server decides; until its first answer, go by what we know of the DAF.
+  const preview = res.key ? res.preview : (guest || (!check.loading && !check.verified));
+  const gate = useRef(null);
+  const toGate = () => {
+    setTab('questions');
+    requestAnimationFrame(() => gate.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' }));
+  };
+  const gateKind = guest ? 'guest' : check.status === 'pending' ? 'pending' : check.status === 'rejected' ? 'rejected' : 'none';
 
   const setFilter = (k, v) => setFilters((f) => { const n = { ...f }; if (v) n[k] = v; else delete n[k]; return n; });
   const clearAll = () => { setFilters({}); setQ(''); setSort(''); };
@@ -117,22 +131,24 @@ export default function Bank() {
         <div className="mt-8 md:mt-10 relative max-w-3xl">
           <Icon name="search" className="w-6 h-6 absolute left-5 md:left-7 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
           <input
-            value={q}
+            value={preview ? '' : q}
+            readOnly={preview}
+            onFocus={preview ? toGate : undefined}
             onChange={(e) => { setQ(e.target.value); setTab('questions'); }}
-            placeholder={t('bank.search')}
+            placeholder={preview ? t(guest ? 'bank.searchLockedGuest' : 'bank.searchLocked', { n: fmt(corpus.questions) }) : t('bank.search')}
             aria-label={t('bank.search')}
             className="prep-focus w-full h-16 md:h-20 rounded-full border-2 border-border-default bg-surface pl-14 md:pl-[4.5rem] pr-14 text-lg md:text-2xl font-display text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-primary shadow-[0_18px_40px_-24px_rgba(20,17,13,0.35)] transition-colors"
           />
-          {q && (
+          {q && !preview && (
             <button type="button" onClick={() => setQ('')} aria-label={t('bank.clear')} className="prep-focus absolute right-4 md:right-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center text-text-tertiary hover:text-text-primary cursor-pointer">
               <Icon name="x" className="w-5 h-5" />
             </button>
           )}
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        {!preview && <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-text-tertiary mr-1">{t('bank.try')}</span>
           {EXAMPLES.map((e) => <button key={e} type="button" onClick={() => { setQ(e); setTab('questions'); }} className="prep-focus h-9 px-4 rounded-full border border-dashed border-border-default text-sm text-text-secondary hover:border-text-primary hover:text-text-primary cursor-pointer">{e}</button>)}
-        </div>
+        </div>}
       </section>
 
       {/* Tabs */}
@@ -155,7 +171,7 @@ export default function Bank() {
         <section className="max-w-7xl mx-auto px-4 md:px-8 pt-10">
           <h2 className="font-display text-3xl md:text-5xl font-semibold tracking-tight">{t('browse.title')}</h2>
           <p className="mt-3 text-lg text-text-secondary max-w-2xl">{t('browse.sub')}</p>
-          <div className="mt-8"><Browse keywords={kw?.keywords} onPick={(kind, label) => { setQ(''); setFilters({ label: `${kind}:${label}` }); setSort('asked'); setTab('questions'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} /></div>
+          <div className="mt-8"><Browse keywords={kw?.keywords} onPick={preview ? toGate : (kind, label) => { setQ(''); setFilters({ label: `${kind}:${label}` }); setSort('asked'); setTab('questions'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} /></div>
         </section>
       )}
 
@@ -163,14 +179,14 @@ export default function Bank() {
         <section className="max-w-7xl mx-auto px-4 md:px-8 pt-10">
           <h2 className="font-display text-3xl md:text-5xl font-semibold tracking-tight">{t('boards.title')}</h2>
           <p className="mt-3 text-lg text-text-secondary max-w-2xl">{t('boards.sub')}</p>
-          <div className="mt-8"><Boards boards={kw?.boards} onOpenQuestion={setFamilyId} onFilterBoard={(name) => { setQ(''); setFilters({ board: name }); setSort('asked'); setTab('questions'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} /></div>
+          <div className="mt-8"><Boards boards={kw?.boards} onOpenQuestion={setFamilyId} onFilterBoard={preview ? toGate : (name) => { setQ(''); setFilters({ board: name }); setSort('asked'); setTab('questions'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} /></div>
         </section>
       )}
 
       {tab === 'questions' && (
         <>
           {/* Collections */}
-          {!dq && !active.length && (
+          {!dq && !active.length && !preview && (
             <section className="pt-8">
               <p className="max-w-7xl mx-auto px-4 md:px-8 prep-eyebrow text-text-tertiary mb-3">{t('bank.collections')}</p>
               <div className="max-w-7xl mx-auto px-4 md:px-8 flex gap-3 overflow-x-auto pb-2 snap-x">
@@ -185,17 +201,21 @@ export default function Bank() {
             </section>
           )}
 
-          <section className="max-w-7xl mx-auto px-4 md:px-8 pt-8 lg:grid lg:grid-cols-[18rem_1fr] lg:gap-10">
-            <aside className="hidden lg:block lg:sticky lg:top-40 lg:self-start lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto pr-2 -mr-2">
-              <FilterPanel filters={filters} setFilter={setFilter} facets={res.facets} />
-            </aside>
+          <section className={`mx-auto px-4 md:px-8 pt-8 ${preview ? 'max-w-4xl' : 'max-w-7xl lg:grid lg:grid-cols-[18rem_1fr] lg:gap-10'}`}>
+            {!preview && (
+              <aside className="hidden lg:block lg:sticky lg:top-40 lg:self-start lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto pr-2 -mr-2">
+                <FilterPanel filters={filters} setFilter={setFilter} facets={res.facets} />
+              </aside>
+            )}
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-text-secondary" aria-live="polite">
-                  {loading ? t('bank.loading') : <><CountUp value={res.total} duration={0.6} className="prep-num font-display text-2xl font-semibold text-text-primary mr-1.5" />{t('bank.results', { n: '' }).trim()}</>}
+                  {loading ? t('bank.loading')
+                    : preview ? t('bank.preview.count', { shown: fmt(res.items.length), n: fmt(corpus.questions || res.total) })
+                      : <><CountUp value={res.total} duration={0.6} className="prep-num font-display text-2xl font-semibold text-text-primary mr-1.5" />{t('bank.results', { n: '' }).trim()}</>}
                 </p>
-                <div className="flex items-center gap-2">
+                {!preview && <div className="flex items-center gap-2">
                   <Button tone="ghost" size="md" icon="sliders" className="lg:hidden" onClick={() => setSheet(true)}>{t('bank.filters')}{active.length ? ` · ${active.length}` : ''}</Button>
                   <label className="relative">
                     <span className="sr-only">Sort</span>
@@ -204,7 +224,7 @@ export default function Bank() {
                     </select>
                     <Icon name="chevronDown" className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </label>
-                </div>
+                </div>}
               </div>
               {(active.length > 0 || dq) && (
                 <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -222,7 +242,13 @@ export default function Bank() {
                     : res.items.map((f) => <BankCard key={f.id} f={f} onOpen={setFamilyId} />)}
                 {loading && !res.items.length && Array.from({ length: 6 }, (_, i) => <div key={i} className="iv-skeleton h-28 rounded-3xl" />)}
               </div>
-              {!loading && res.items.length < res.total && (
+              {preview && !loading && res.items.length > 0 && (
+                <PreviewEnd innerRef={gate} title={t(`bank.preview.${gateKind}.title`, { n: fmt(corpus.questions || res.total) })} body={t(`bank.preview.${gateKind}.body`, { n: fmt(corpus.questions || res.total) })}>
+                  {gateKind === 'guest' && <Button tone="primary" size="lg" iconRight="arrowRight" onClick={signIn}>{t('acct.signIn')}</Button>}
+                  {(gateKind === 'none' || gateKind === 'rejected') && <Button tone="primary" size="lg" icon="upload" onClick={() => go({ screen: 'daf' })}>{t(gateKind === 'rejected' ? 'dv.uploadAgain' : 'dv.upload')}</Button>}
+                </PreviewEnd>
+              )}
+              {!preview && !loading && res.items.length < res.total && (
                 <div className="mt-8 text-center">
                   <Button tone="ghost" size="lg" onClick={loadMore} disabled={more}>{more ? t('bank.loading') : t('bank.more')}</Button>
                 </div>

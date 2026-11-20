@@ -1,6 +1,8 @@
 // Notes: current topics a board may raise (each with likely questions and model answers, and a PDF), and the
 // guide to the 100 questions boards ask most. Topics that touch the student's DAF are marked "for you".
+// While CURRENT_TOPICS_LIVE is false (src/lib/features.js) only the guide is shown.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { CURRENT_TOPICS_LIVE } from '../../lib/features';
 import Icon from '../../components/mcq/Icon';
 import { ErrorBanner } from '../../components/mcq/ui';
 import { errorMessage } from '../../lib/interviewApi';
@@ -148,15 +150,15 @@ function Tabs({ tab }) {
 export default function Notes() {
   const { view } = usePrep();
   const { t, hi } = useT();
-  if (view.note) return <NoteReader slug={view.note} />;
-  const tab = view.tab === 'guide' ? 'guide' : 'topics';
+  if (CURRENT_TOPICS_LIVE && view.note) return <NoteReader slug={view.note} />;
+  const tab = !CURRENT_TOPICS_LIVE || view.tab === 'guide' ? 'guide' : 'topics';
   const titleCls = `font-display font-semibold text-text-primary ${hi ? 'text-[2.2rem] leading-[1.3] md:text-6xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.6rem] leading-[1.04] md:text-7xl md:leading-[1]'}`;
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 pt-10 md:pt-16">
       <p className="prep-eyebrow text-brand mb-5">{t('nt.eyebrow')}</p>
       <SplitHeading className={titleCls}>{t('nt.titleA')}<Highlight still>{t('nt.titleHl')}</Highlight></SplitHeading>
-      <p className="mt-6 text-lg md:text-xl text-text-secondary max-w-3xl">{t('nt.sub')}</p>
-      <Tabs tab={tab} />
+      <p className="mt-6 text-lg md:text-xl text-text-secondary max-w-3xl">{t(CURRENT_TOPICS_LIVE ? 'nt.sub' : 'nt.subGuide')}</p>
+      {CURRENT_TOPICS_LIVE && <Tabs tab={tab} />}
       {tab === 'topics' ? <Topics /> : <GuideView />}
     </div>
   );

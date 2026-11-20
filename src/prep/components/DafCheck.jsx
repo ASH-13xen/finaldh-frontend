@@ -11,13 +11,14 @@ const TONE = {
   none: 'border-amber-300 bg-amber-50 dark:bg-amber-400/10 dark:border-amber-400/30',
   pending: 'border-sky-300 bg-sky-50 dark:bg-sky-400/10 dark:border-sky-400/30',
   rejected: 'border-rose-300 bg-rose-50 dark:bg-rose-400/10 dark:border-rose-400/30',
-  verified: 'border-accent-soft-border bg-accent-soft-bg'
+  verified: 'border-accent-soft-border bg-accent-soft-bg',
+  guest: 'border-accent-soft-border bg-accent-soft-bg'
 };
-const ICON = { none: 'upload', pending: 'clock', rejected: 'alert', verified: 'check' };
+const ICON = { none: 'upload', pending: 'clock', rejected: 'alert', verified: 'check', guest: 'user' };
 
 export function DafCheckCard({ onUpload, showVerified = false, className = '' }) {
   const { t } = useT();
-  const { go, screen } = usePrep();
+  const { go, screen, signIn } = usePrep();
   const check = useDafCheck();
   if (check.loading || check.admin) return null;
   if (check.verified && !showVerified) return null;
@@ -31,6 +32,7 @@ export function DafCheckCard({ onUpload, showVerified = false, className = '' })
         <p className="font-display text-xl md:text-2xl font-semibold text-text-primary">{t(`dv.${s}.title`)}</p>
         <p className="mt-1 text-[15px] text-text-secondary leading-relaxed">{t(`dv.${s}.body`, { reason: check.reason || '' })}</p>
       </div>
+      {s === 'guest' && <Button tone="primary" size="md" iconRight="arrowRight" onClick={signIn}>{t('acct.signIn')}</Button>}
       {(s === 'none' || s === 'rejected') && (
         onUpload
           ? <Button tone="primary" size="md" icon="upload" onClick={onUpload}>{t(s === 'rejected' ? 'dv.uploadAgain' : 'dv.upload')}</Button>

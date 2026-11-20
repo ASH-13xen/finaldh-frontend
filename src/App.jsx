@@ -8,6 +8,11 @@ import QuestionUploader from "./sections/QuestionUploader";
 import DisplayPYQ from "./sections/DisplayPYQ";
 import DisplayUPSCQuestions from "./sections/DisplayUPSCQuestions";
 import BuyCourses from "./sections/BuyCourses";
+import PrepFlow from "./prep/PrepFlow";
+import { INTERVIEW_SECTION_LIVE } from "./lib/features";
+
+// Where a visitor was in Interview Prep when they chose to sign in; they go back there afterwards.
+const AFTER_LOGIN = "afterLogin";
 import UploadCourse from "./sections/UploadCourse";
 import { readTabFromHash } from "./lib/tabRouting";
 
@@ -41,7 +46,12 @@ function App() {
 
   // Automatically switch tabs when logging in
   useEffect(() => {
-    if (user && (activeTab === "login" || activeTab === "buy_pdfs")) {
+    if (!user) return;
+    let back = null;
+    try { back = sessionStorage.getItem(AFTER_LOGIN); sessionStorage.removeItem(AFTER_LOGIN); } catch { /* storage blocked */ }
+    if (back && back.startsWith("interview_") && (activeTab === "login" || activeTab === "buy_pdfs" || activeTab.startsWith("interview_"))) {
+      navigate(back);
+    } else if (activeTab === "login" || activeTab === "buy_pdfs") {
       navigate(user.isAdmin ? "manage_courses" : "student");
     }
   }, [user]);
@@ -216,6 +226,22 @@ function App() {
         activeTab={activeTab}
         setActiveTab={navigate}
         onUserUpdate={setUser}
+      />
+    );
+  }
+
+  // Visitors can look around Interview Prep (opened from the course pages' Interview (PT) tab); anything that
+  // needs an account sends them to sign in and then back to the screen they were on.
+  if (INTERVIEW_SECTION_LIVE && activeTab?.startsWith("interview_")) {
+    return (
+      <PrepFlow
+        user={null}
+        activeTab={activeTab}
+        onExit={() => navigate("buy_pdfs")}
+        onSignIn={(screen) => {
+          try { sessionStorage.setItem(AFTER_LOGIN, `interview_${screen || "home"}`); } catch { /* storage blocked */ }
+          navigate("login");
+        }}
       />
     );
   }
