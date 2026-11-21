@@ -1,19 +1,27 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import LoginSection from "./sections/LoginSection";
 import DashboardSection from "./sections/DashboardSection";
 import Navbar from "./components/Navbar";
-import QuestionUploader from "./sections/QuestionUploader";
-import DisplayPYQ from "./sections/DisplayPYQ";
-import DisplayUPSCQuestions from "./sections/DisplayUPSCQuestions";
 import BuyCourses from "./sections/BuyCourses";
-import PrepFlow from "./prep/PrepFlow";
 import { INTERVIEW_SECTION_LIVE } from "./lib/features";
+import { lazyPage } from "./lib/lazyPage";
+
+// Pages visitors rarely open load only when opened.
+const QuestionUploader = lazyPage(() => import("./sections/QuestionUploader"));
+const DisplayPYQ = lazyPage(() => import("./sections/DisplayPYQ"));
+const DisplayUPSCQuestions = lazyPage(() => import("./sections/DisplayUPSCQuestions"));
+const UploadCourse = lazyPage(() => import("./sections/UploadCourse"));
+const PrepFlow = lazyPage(() => import("./prep/PrepFlow"));
+const PageLoading = () => (
+  <div className="min-h-[50vh] flex items-center justify-center">
+    <div className="w-10 h-10 border-4 border-border-default border-t-brand rounded-full animate-spin" />
+  </div>
+);
 
 // Where a visitor was in Interview Prep when they chose to sign in; they go back there afterwards.
 const AFTER_LOGIN = "afterLogin";
-import UploadCourse from "./sections/UploadCourse";
 import { readTabFromHash } from "./lib/tabRouting";
 
 function App() {
@@ -234,6 +242,7 @@ function App() {
   // needs an account sends them to sign in and then back to the screen they were on.
   if (INTERVIEW_SECTION_LIVE && activeTab?.startsWith("interview_")) {
     return (
+      <Suspense fallback={<PageLoading />}>
       <PrepFlow
         user={null}
         activeTab={activeTab}
@@ -243,6 +252,7 @@ function App() {
           navigate("login");
         }}
       />
+      </Suspense>
     );
   }
 
@@ -263,6 +273,7 @@ function App() {
           setActiveTab={navigate}
         />
         <main className="grow">
+          <Suspense fallback={<PageLoading />}>
           {activeTab === "uploader" ? (
             <QuestionUploader syllabusData={null} />
           ) : activeTab === "pyqs" ? (
@@ -274,6 +285,7 @@ function App() {
           ) : (
             <UploadCourse />
           )}
+          </Suspense>
         </main>
       </div>
     );

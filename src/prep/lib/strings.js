@@ -43,6 +43,8 @@ export const STRINGS = {
     'home.ctaDaf': 'Start with your DAF',
     'home.ctaPredicted': 'See your predicted questions',
     'home.ctaBank': 'Browse {n} real questions',
+    'home.ctaBankPlain': 'Browse the real questions',
+    'home.tile.bankPlain': 'Every question boards asked. Search by meaning, filter by your DAF.',
     'home.stat.interviews': 'real interviews',
     'home.stat.questions': 'questions asked',
     'home.stat.followUps': 'follow-ups traced',

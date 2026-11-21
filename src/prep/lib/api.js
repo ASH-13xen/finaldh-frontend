@@ -15,6 +15,7 @@ export const api = {
   facets: () => iv('/bank/facets'),
   trends: () => iv('/bank/trends'),
   keywords: () => iv('/bank/keywords'),
+  myDaf: () => iv('/bank/my-daf'),
   prep: () => iv('/prep'),
   savePrep: (key, body) => iv(`/prep/items/${encodeURIComponent(key)}`, { method: 'PUT', body }),
   deletePrep: (key) => iv(`/prep/items/${encodeURIComponent(key)}`, { method: 'DELETE' }),

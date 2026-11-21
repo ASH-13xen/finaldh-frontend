@@ -1,31 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Navbar from '../components/Navbar';
 import ErrorBoundary from '../components/ErrorBoundary';
 import StudentDashboard from './StudentDashboard';
-import ProgressUpdater from './ProgressUpdater';
-import QuestionUploader from './QuestionUploader';
-import DisplayPYQ from './DisplayPYQ';
-import DisplayUPSCQuestions from './DisplayUPSCQuestions';
 import LoadingSpinner from '../components/LoadingSpinner';
 import BuyCourses from './BuyCourses';
-import UploadCourse from './UploadCourse';
-import PYQRecommender from './PYQRecommender';
-import PDFEditor from './PDFEditor';
-import PurchaseCourses from './PurchaseCourses';
-import AdminPayments from './AdminPayments';
-import AdminProgressData from './AdminProgressData';
-import AdminProgressBuilder from './AdminProgressBuilder';
-import ProgressSection from './ProgressSection';
-import AdminMcqData from './AdminMcqData';
-import McqFlow from './McqFlow';
-import AdminView from './AdminView';
-import AdminContactUsers from './AdminContactUsers';
 import PaymentRejectionNotice from '../components/PaymentRejectionNotice';
 import ComingSoon from './ComingSoon';
-import PrepFlow from '../prep/PrepFlow';
-import AdminInterviewData from './AdminInterviewData';
-import AdminDafVerification from './AdminDafVerification';
 import { MCQ_SECTION_LIVE, INTERVIEW_SECTION_LIVE } from '../lib/features';
+import { lazyPage } from '../lib/lazyPage';
+
+// Every other page loads only when it is opened, so a student's first download stays small.
+const DisplayPYQ = lazyPage(() => import('./DisplayPYQ'));
+const DisplayUPSCQuestions = lazyPage(() => import('./DisplayUPSCQuestions'));
+const UploadCourse = lazyPage(() => import('./UploadCourse'));
+const PYQRecommender = lazyPage(() => import('./PYQRecommender'));
+const PDFEditor = lazyPage(() => import('./PDFEditor'));
+const PurchaseCourses = lazyPage(() => import('./PurchaseCourses'));
+const AdminPayments = lazyPage(() => import('./AdminPayments'));
+const AdminProgressData = lazyPage(() => import('./AdminProgressData'));
+const AdminProgressBuilder = lazyPage(() => import('./AdminProgressBuilder'));
+const ProgressSection = lazyPage(() => import('./ProgressSection'));
+const AdminMcqData = lazyPage(() => import('./AdminMcqData'));
+const McqFlow = lazyPage(() => import('./McqFlow'));
+const AdminView = lazyPage(() => import('./AdminView'));
+const AdminContactUsers = lazyPage(() => import('./AdminContactUsers'));
+const PrepFlow = lazyPage(() => import('../prep/PrepFlow'));
+const AdminInterviewData = lazyPage(() => import('./AdminInterviewData'));
+const AdminDafVerification = lazyPage(() => import('./AdminDafVerification'));
+
+const PageLoading = () => <div className="py-24 flex justify-center"><LoadingSpinner text="Loading..." /></div>;
 
 export default function DashboardSection({ user, onLogout, activeTab, setActiveTab, onUserUpdate }) {
   const [syllabusData, setSyllabusData] = useState(null);
@@ -76,7 +79,9 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
       <div className="min-h-screen bg-page text-text-primary">
         {!user.isAdmin && <PaymentRejectionNotice />}
         <ErrorBoundary key="interview">
-          <PrepFlow user={user} activeTab={activeTab} onLogout={onLogout} onExit={() => setActiveTab(user.isAdmin ? 'manage_courses' : 'student')} />
+          <Suspense fallback={<PageLoading />}>
+            <PrepFlow user={user} activeTab={activeTab} onLogout={onLogout} onExit={() => setActiveTab(user.isAdmin ? 'manage_courses' : 'student')} />
+          </Suspense>
         </ErrorBoundary>
       </div>
     );
@@ -95,6 +100,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
       {/* key={activeTab} remounts the boundary on tab switch, so navigating away from a
           crashed section clears the error instead of leaving it stuck forever. */}
       <ErrorBoundary key={activeTab}>
+      <Suspense fallback={<PageLoading />}>
         {activeTab === 'student' && (
           <StudentDashboard user={user} setActiveTab={setActiveTab} onUserUpdate={onUserUpdate} />
         )}
@@ -182,6 +188,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
         {activeTab === 'admin_daf' && user.isAdmin && (
           <AdminDafVerification />
         )}
+      </Suspense>
       </ErrorBoundary>
       </main>
     </div>

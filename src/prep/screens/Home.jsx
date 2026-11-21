@@ -76,7 +76,7 @@ function DafSlip({ profile }) {
         </ul>
         <p className="mt-5 text-xs text-text-tertiary leading-relaxed">{t('home.sampleNote')}</p>
       </div>
-      <div data-note className="absolute -right-2 -top-9 md:-right-10 md:-top-10 rotate-[4deg] pointer-events-none select-none" aria-hidden="true">
+      <div data-note className="absolute -right-2 -top-9 md:-right-4 md:-top-10 2xl:-right-10 rotate-[4deg] pointer-events-none select-none" aria-hidden="true">
         <span className="prep-hand text-2xl md:text-[1.7rem] text-brand whitespace-nowrap">{t('home.boardsLove')}</span>
         <svg width="70" height="46" viewBox="0 0 70 46" className="absolute left-2 top-8 text-brand" fill="none">
           <path data-arrow d="M60 4 C 48 20, 30 30, 8 40" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
@@ -204,7 +204,7 @@ function PathTiles({ corpus, go }) {
   const tiles = [
     { key: 'daf', span: 'md:col-span-3', desc: t(DAF_FILL_IN_OPTION ? 'home.tile.daf' : 'home.tile.dafUpload') },
     { key: 'predictions', span: 'md:col-span-3', desc: t('home.tile.predictions') },
-    { key: 'bank', span: 'md:col-span-2', desc: t('home.tile.bank', { n: fmt(corpus.transcripts) }) },
+    { key: 'bank', span: 'md:col-span-2', desc: corpus.transcripts ? t('home.tile.bank', { n: fmt(corpus.transcripts) }) : t('home.tile.bankPlain') },
     { key: 'practice', span: 'md:col-span-2', desc: t('home.tile.practice') },
     { key: 'notes', span: 'md:col-span-2', desc: t(CURRENT_TOPICS_LIVE ? 'home.tile.notes' : 'home.tile.guide') },
     { key: 'insights', span: 'md:col-span-6', desc: t('home.tile.insights') }
@@ -268,7 +268,8 @@ function QuestionOfTheDay({ list, onOpen }) {
 export default function Home() {
   const { status, go, daf } = usePrep();
   const { t, hi } = useT();
-  const corpus = status.corpus || {};
+  // null until /status answers: the hero shows at once and its numbers fill in.
+  const corpus = status?.corpus || null;
   const [trends, setTrends] = useState(null);
   const [kw, setKw] = useState(null);
   const [familyId, setFamilyId] = useState(null);
@@ -290,7 +291,7 @@ export default function Home() {
       {/* Hero */}
       <section className="max-w-7xl mx-auto px-4 md:px-8 pt-10 md:pt-16 pb-12 md:pb-20 grid grid-cols-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)] gap-12 lg:gap-14 items-center">
         <div>
-          <p className="prep-eyebrow text-brand mb-4 md:mb-5">{t('home.eyebrow', { years: yearsRange(corpus.years) })}</p>
+          <p className="prep-eyebrow text-brand mb-4 md:mb-5">{t('home.eyebrow', { years: yearsRange(corpus?.years || []) })}</p>
           {/* The initiative's name leads; the line below says what it is. */}
           <h1 className="font-display italic font-semibold text-brand tracking-[-0.03em] leading-[0.95] text-[3.6rem] sm:text-7xl md:text-8xl lg:text-[7.2rem] pb-2">
             {t('section.title')}
@@ -300,14 +301,20 @@ export default function Home() {
             : 'tracking-[-0.02em] text-[2.05rem] leading-[1.08] sm:text-5xl md:text-[3.25rem] lg:text-[3.6rem] lg:leading-[1.04]'}`}>
             {t('home.titleA')}<Highlight still>{t('home.titleHl')}</Highlight>{t('home.titleB')}
           </SplitHeading>
-          <p className="mt-6 md:mt-8 text-lg md:text-xl text-text-secondary leading-relaxed max-w-xl">
-            {t('home.sub', { interviews: fmt(corpus.transcripts) })}
-          </p>
+          {corpus ? (
+            <p className="mt-6 md:mt-8 text-lg md:text-xl text-text-secondary leading-relaxed max-w-xl">
+              {t('home.sub', { interviews: fmt(corpus.transcripts) })}
+            </p>
+          ) : (
+            <div className="mt-6 md:mt-8 max-w-xl space-y-3" aria-hidden="true">
+              {['100%', '92%', '60%'].map((w) => <div key={w} className="h-5 rounded-full bg-sunken animate-pulse" style={{ width: w }} />)}
+            </div>
+          )}
           <div className="mt-8 md:mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
             <Button tone="primary" size="xl" magnetic iconRight="arrowRight" onClick={() => go({ screen: hasDaf ? 'predictions' : 'daf' })}>
               {hasDaf ? t('home.ctaPredicted') : t('home.ctaDaf')}
             </Button>
-            <Button tone="ghost" size="xl" icon="search" onClick={() => go({ screen: 'bank' })}>{t('home.ctaBank', { n: fmt(corpus.questions) })}</Button>
+            <Button tone="ghost" size="xl" icon="search" onClick={() => go({ screen: 'bank' })}>{corpus ? t('home.ctaBank', { n: fmt(corpus.questions) }) : t('home.ctaBankPlain')}</Button>
           </div>
         </div>
         <div className="lg:pl-4">
@@ -318,7 +325,13 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-4 md:px-8 -mt-4 mb-10"><DafCheckCard /></section>
 
       {/* Numbers */}
-      <section className="max-w-7xl mx-auto px-4 md:px-8"><Stats corpus={corpus} /></section>
+      <section className="max-w-7xl mx-auto px-4 md:px-8">
+        {corpus ? <Stats corpus={corpus} /> : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 py-6" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => <div key={i} className="h-24 md:h-28 rounded-2xl bg-sunken animate-pulse" />)}
+          </div>
+        )}
+      </section>
 
       {/* The boards, with their photos and how candidates found them */}
       {kw?.boards?.length > 0 && (
@@ -349,7 +362,7 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-4 md:px-8 pt-16 md:pt-24">
         <p className="prep-eyebrow text-brand mb-3">{t('home.pathEyebrow')}</p>
         <h2 className="font-display text-4xl md:text-6xl font-semibold tracking-tight mb-8 md:mb-12">{t('home.pathTitle')}</h2>
-        <PathTiles corpus={corpus} go={go} />
+        <PathTiles corpus={corpus || {}} go={go} />
       </section>
 
       {/* Question of the day */}

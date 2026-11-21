@@ -204,6 +204,10 @@ export const STRINGS6 = {
     'bank.preview.pending.title': 'Your DAF is being verified',
     'bank.preview.pending.body': 'This is a preview of the questions asked most. Search, filters and all {n} questions open as soon as our team approves your DAF.',
     'bank.searchLocked': 'Search opens once your DAF is verified',
+    'bank.filtersLocked': 'Filters unlock once your DAF is verified',
+    'bank.filtersLockedGuest': 'Sign in and verify your DAF to use the filters',
+    'bank.mine.title': 'From your DAF',
+    'bank.mine.all': 'All of my DAF',
     'bank.searchLockedGuest': 'Sign in to search {n} questions'
   },
   hi: {

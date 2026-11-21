@@ -30,6 +30,21 @@ function useDebounced(value, ms = 300) {
   return v;
 }
 
+// The filters before the DAF is verified: what they hold, greyed out, under a note on how to unlock them.
+function LockedFilters({ facets, label, onUnlock }) {
+  return (
+    <div>
+      <button type="button" onClick={onUnlock}
+        className="prep-focus w-full mt-4 mb-3 rounded-2xl border border-dashed border-border-default bg-surface px-4 py-3 flex items-center gap-2.5 text-left text-sm font-semibold text-text-secondary hover:border-text-primary hover:text-text-primary cursor-pointer">
+        <Icon name="lock" className="w-4 h-4 shrink-0" />{label}
+      </button>
+      <div className="pointer-events-none select-none opacity-45" aria-hidden="true" inert>
+        <FilterPanel filters={{}} setFilter={() => {}} facets={facets} />
+      </div>
+    </div>
+  );
+}
+
 const KIND_LABEL = { hobby: 'browse.kind.hobby', college: 'browse.kind.college', discipline: 'browse.kind.discipline', job: 'browse.kind.job', state: 'browse.kind.state', optional: 'browse.kind.optional' };
 
 export default function Bank() {
@@ -69,6 +84,16 @@ export default function Bank() {
     return () => { cancelled = true; };
   }, []);
 
+  // "From your DAF": each DAF item as a bank filter, with how many questions it covers (verified students).
+  const [mine, setMine] = useState(null);
+  const dafKey = (daf.profile?.items || []).map((i) => i.key).join(',');
+  useEffect(() => {
+    if (!check.verified || !dafKey) return undefined;
+    let cancelled = false;
+    api.myDaf().then((d) => { if (!cancelled) setMine(d); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [check.verified, dafKey]);
+
   useGSAP(() => {
     if (loading || !list.current || prefersReducedMotion()) return;
     gsap.from(list.current.querySelectorAll('[data-card]'), { y: 18, autoAlpha: 0, duration: 0.55, stagger: 0.035, clearProps: 'transform' });
@@ -95,6 +120,13 @@ export default function Bank() {
   const setFilter = (k, v) => setFilters((f) => { const n = { ...f }; if (v) n[k] = v; else delete n[k]; return n; });
   const clearAll = () => { setFilters({}); setQ(''); setSort(''); };
   const applyCollection = (c) => { setQ(''); setFilters(c.filters); setSort(c.sort || 'asked'); setTab('questions'); };
+  // A "From your DAF" chip: tap to show those questions, tap again to clear.
+  const applyMine = (f) => {
+    const on = Object.entries(f).every(([k, v]) => filters[k] === v) && Object.keys(filters).length === Object.keys(f).length;
+    setQ('');
+    setFilters(on ? {} : f);
+    setSort(on ? '' : 'asked');
+  };
 
   const homeState = daf.profile?.profile?.homeState;
   const collections = useMemo(() => [
@@ -116,6 +148,7 @@ export default function Bank() {
     if (k === 'topic') return t(`topic.${v}`);
     if (k === 'asker') return t(`bank.asker.${v}`);
     if (k === 'shelfLife') return v === 'evergreen' ? t('bank.f.relevant') : t('col.current');
+    if (k === 'mine') return t('bank.mine.all');
     if (k === 'label') { const [kind, ...rest] = v.split(':'); return `${t(KIND_LABEL[kind] || 'bank.filters')}: ${rest.join(':')}`; }
     return v;
   };
@@ -185,6 +218,22 @@ export default function Bank() {
 
       {tab === 'questions' && (
         <>
+          {!preview && mine?.items?.length > 0 && (
+            <section className="max-w-7xl mx-auto px-4 md:px-8 pt-8">
+              <p className="prep-eyebrow text-brand mb-3 flex items-center gap-2"><Icon name="fileText" className="w-4 h-4" />{t('bank.mine.title')}</p>
+              <div className="flex flex-wrap gap-2" role="group" aria-label={t('bank.mine.title')}>
+                <Chip active={filters.mine === '1'} onClick={() => applyMine({ mine: '1' })}>
+                  {t('bank.mine.all')}<span className="prep-num text-xs opacity-60">{fmt(mine.total)}</span>
+                </Chip>
+                {mine.items.map((m) => (
+                  <Chip key={m.filter} active={filters.label === m.filter} onClick={() => applyMine({ label: m.filter })}>
+                    {m.label}<span className="prep-num text-xs opacity-60">{fmt(m.questions)}</span>
+                  </Chip>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Collections */}
           {!dq && !active.length && !preview && (
             <section className="pt-8">
@@ -201,12 +250,12 @@ export default function Bank() {
             </section>
           )}
 
-          <section className={`mx-auto px-4 md:px-8 pt-8 ${preview ? 'max-w-4xl' : 'max-w-7xl lg:grid lg:grid-cols-[18rem_1fr] lg:gap-10'}`}>
-            {!preview && (
-              <aside className="hidden lg:block lg:sticky lg:top-40 lg:self-start lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto pr-2 -mr-2">
-                <FilterPanel filters={filters} setFilter={setFilter} facets={res.facets} />
-              </aside>
-            )}
+          <section className="max-w-7xl mx-auto px-4 md:px-8 pt-8 lg:grid lg:grid-cols-[18rem_1fr] lg:gap-10">
+            <aside className="hidden lg:block lg:sticky lg:top-40 lg:self-start lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto pr-2 -mr-2">
+              {preview
+                ? <LockedFilters facets={res.facets} label={t(guest ? 'bank.filtersLockedGuest' : 'bank.filtersLocked')} onUnlock={toGate} />
+                : <FilterPanel filters={filters} setFilter={setFilter} facets={res.facets} />}
+            </aside>
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -215,6 +264,7 @@ export default function Bank() {
                     : preview ? t('bank.preview.count', { shown: fmt(res.items.length), n: fmt(corpus.questions || res.total) })
                       : <><CountUp value={res.total} duration={0.6} className="prep-num font-display text-2xl font-semibold text-text-primary mr-1.5" />{t('bank.results', { n: '' }).trim()}</>}
                 </p>
+                {preview && <Button tone="ghost" size="md" icon="lock" className="lg:hidden" onClick={toGate}>{t('bank.filters')}</Button>}
                 {!preview && <div className="flex items-center gap-2">
                   <Button tone="ghost" size="md" icon="sliders" className="lg:hidden" onClick={() => setSheet(true)}>{t('bank.filters')}{active.length ? ` · ${active.length}` : ''}</Button>
                   <label className="relative">

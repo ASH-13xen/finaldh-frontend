@@ -33,7 +33,7 @@ const toScreen = (s) => {
 function Loader() {
   const { t } = useT();
   return (
-    <div className="prep-paper min-h-[calc(100vh-64px)] flex flex-col items-center justify-center gap-5 px-6 text-center">
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-5 px-6 text-center">
       <span className="relative flex w-4 h-4" aria-hidden="true">
         <span className="absolute inset-0 rounded-full bg-brand/40 animate-ping" />
         <span className="relative w-4 h-4 rounded-full bg-brand" />
@@ -154,10 +154,15 @@ function Flow({ user, initialScreen, onLogout, onExit, onSignIn }) {
   if (statusError) {
     return <div className="max-w-3xl mx-auto px-4 py-16"><ErrorBanner onRetry={() => setReload((k) => k + 1)}>{errorMessage(statusError, t('common.error'))}</ErrorBanner></div>;
   }
-  if (!status) return <Loader />;
 
+  // The header and the home page show straight away (the home page fills its numbers in when /status
+  // answers, which can take a moment right after the server wakes); other screens wait under the header.
+  const waiting = !status && view.screen !== 'home' && !(guest && GUEST_GATED.includes(view.screen));
   let body;
-  switch (guest && GUEST_GATED.includes(view.screen) ? 'gated' : view.screen) {
+  switch (waiting ? 'waiting' : guest && GUEST_GATED.includes(view.screen) ? 'gated' : view.screen) {
+    case 'waiting':
+      body = <Loader />;
+      break;
     case 'gated':
       body = <GuestGate screen={view.screen} />;
       break;

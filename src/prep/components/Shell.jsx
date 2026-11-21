@@ -197,7 +197,7 @@ export default function Shell({ children }) {
   }, { dependencies: [screen] });
 
   return (
-    <div lang={lang} className={`prep-paper min-h-screen text-text-primary ${hi ? 'prep-hi' : ''}`}>
+    <div lang={lang} className={`prep-paper min-h-screen overflow-x-clip text-text-primary ${hi ? 'prep-hi' : ''}`}>
       {banner}
       <header className="sticky top-0 z-40 border-b border-border-subtle bg-page/85 backdrop-blur-xl supports-[backdrop-filter]:bg-page/70">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center gap-2 sm:gap-3 md:gap-5">
