@@ -16,6 +16,7 @@ export const api = {
   trends: () => iv('/bank/trends'),
   keywords: () => iv('/bank/keywords'),
   myDaf: () => iv('/bank/my-daf'),
+  myInterview: () => iv('/my-interview'),
   prep: () => iv('/prep'),
   savePrep: (key, body) => iv(`/prep/items/${encodeURIComponent(key)}`, { method: 'PUT', body }),
   deletePrep: (key) => iv(`/prep/items/${encodeURIComponent(key)}`, { method: 'DELETE' }),

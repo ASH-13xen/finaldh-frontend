@@ -57,6 +57,9 @@ export default function Practice() {
   const [asked, setAsked] = useState(null);
   const [history, setHistory] = useState({ attempts: [] });
   const aiLeft = credits?.admin ? Infinity : (credits?.total ?? 0);
+  // Detailed feedback takes 2 credits and works on answers up to 2 minutes (audio is billed by length).
+  const feedbackNeeds = credits?.feedbackCredits || 2;
+  const feedbackMaxSec = credits?.feedbackMaxSeconds || 120;
   const [ai, setAi] = useState(null);
   const savedFor = useRef(null);
   const hasDaf = !!daf.profile && !daf.profile.empty;
@@ -88,7 +91,8 @@ export default function Practice() {
 
   const getAi = async () => {
     if (!result?.blob) return;
-    if (aiLeft < 1) { openCredits(); return; }
+    if ((result.metrics?.durationSec || 0) > feedbackMaxSec) return;
+    if (aiLeft < feedbackNeeds) { openCredits(); return; }
     setAi({ loading: true });
     try {
       const d = await api.analyzeAnswer(result.blob, { question: pick?.text || '', lang, device: result.metrics });
@@ -189,6 +193,8 @@ export default function Practice() {
               lang={lang}
               ai={ai}
               aiLeft={aiLeft}
+              aiNeeds={feedbackNeeds}
+              aiTooLong={(result?.metrics?.durationSec || 0) > feedbackMaxSec}
               onAi={getAi}
               onAgain={() => { recorder.reset(); setAi(null); toStage(); }}
               onNext={() => { recorder.reset(); setAi(null); setPick(null); }}

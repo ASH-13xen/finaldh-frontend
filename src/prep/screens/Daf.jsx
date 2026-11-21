@@ -14,6 +14,8 @@ import { DafCheckCard } from '../components/DafCheck';
 import { EMPTY_DAF } from '../lib/india';
 import { errorMessage } from '../../lib/interviewApi';
 import { useToast } from '../../components/Toast';
+import { useDafCheck } from '../lib/useDafCheck';
+import DafChangeSheet from '../components/DafChangeSheet';
 
 const SPECIFIC = new Set(['hobby', 'eca', 'education', 'work']);
 const strength = (pct) => (pct >= 88 ? 0.62 : pct >= 78 ? 0.44 : pct >= 65 ? 0.3 : 0.18);
@@ -136,7 +138,16 @@ function Start({ onFile, onFill, n }) {
 }
 
 export default function Daf() {
-  const { status, daf, go, refreshCredits } = usePrep();
+  const { status, daf, go, refreshCredits, user } = usePrep();
+  const check = useDafCheck();
+  // One upload per account (another after a rejection); admins can always upload. Once verified, the DAF
+  // changes only by re-uploading it: Rs 50, verified again (the sheet shows the price when they tap it).
+  const canUpload = !!user?.isAdmin || !!check.canUpload;
+  const needsPayment = !user?.isAdmin && !!check.changeNeedsPayment;
+  const lockedAfterVerify = check.verified && !user?.isAdmin;
+  const change = check.change || {};
+  const [paying, setPaying] = useState(false);
+  const reupload = () => (canUpload ? setMode('start') : needsPayment ? setPaying(true) : null);
   const { t, lang, hi } = useT();
   const toast = useToast();
   const profile = daf.profile;
@@ -164,29 +175,35 @@ export default function Daf() {
 
   const current = useMemo(() => ({ ...EMPTY_DAF, ...(profile?.profile || {}) }), [profile]);
 
+  // One call sends the file to our team for verification and has it read, so the student can check the
+  // details before saving them. If it can't be read, they fill in the form from it.
   const onFile = async (file) => {
     setMode('reading');
-    // The file goes to our team for verification (practice and AI unlock once it's verified) while AI reads it
-    // to fill in the form.
-    api.dafSubmit(file)
-      .then((d) => { if (d?.stored) toast.success(t('dv.sent')); refreshCredits(); })
-      .catch((err) => toast.error(errorMessage(err)));
     try {
-      const d = await api.extractDaf(file);
-      setDraft({ fields: { ...EMPTY_DAF, ...d.fields }, unsure: d.unsure || [] });
-      setMode('review');
+      const d = await api.dafSubmit(file);
+      refreshCredits();
+      if (d?.fields) {
+        if (d.stored) toast.success(t('dv.sent'));
+        setDraft({ fields: { ...EMPTY_DAF, ...d.fields }, unsure: d.unsure || [] });
+        setMode('review');
+      } else {
+        toast.info(t('daf.readFailed'));
+        setDraft({ fields: current, unsure: [] });
+        setMode('form');
+      }
     } catch (err) {
       toast.error(errorMessage(err));
-      setMode(err?.data?.aiUnavailable ? 'form' : 'start');
-      if (err?.data?.aiUnavailable) setDraft({ fields: current, unsure: [] });
+      refreshCredits();
+      setMode(null);
     }
   };
 
   const save = async (fields) => {
     setSaving(true);
     try {
-      await api.saveProfile(fields);
-      toast.success(t('daf.saved'));
+      const r = await api.saveProfile(fields);
+      toast.success(t(r?.changePending ? 'daf.changeSent' : 'daf.saved'));
+      refreshCredits();
       daf.refresh();
       setGroups(null);
       setMode(null);
@@ -212,6 +229,12 @@ export default function Daf() {
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 pt-10 md:pt-16">
       <DafCheckCard className="mb-10" showVerified onUpload={() => setMode('start')} />
+      {lockedAfterVerify && (change.status === 'pending' || change.status === 'rejected') && (
+        <div className={`mb-10 -mt-6 rounded-[1.5rem] border px-5 py-5 md:px-7 ${change.status === 'pending' ? 'border-sky-300 bg-sky-50 dark:bg-sky-400/10 dark:border-sky-400/30' : 'border-rose-300 bg-rose-50 dark:bg-rose-400/10 dark:border-rose-400/30'}`} role="status">
+          <p className="font-display text-xl md:text-2xl font-semibold text-text-primary">{t(`daf.change${change.status === 'pending' ? 'Pending' : 'Rejected'}.title`)}</p>
+          <p className="mt-1 text-[15px] text-text-secondary leading-relaxed">{t(`daf.change${change.status === 'pending' ? 'Pending' : 'Rejected'}.body`, { reason: change.reason || '' })}</p>
+        </div>
+      )}
       {view === 'view' && (
         <>
           <p className="prep-eyebrow text-brand mb-5">{t('daf.eyebrow')}</p>
@@ -219,12 +242,11 @@ export default function Daf() {
           <p className="mt-6 text-lg md:text-xl text-text-secondary leading-relaxed max-w-2xl">{t('daf.sub')}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button tone="primary" size="lg" magnetic iconRight="arrowRight" onClick={() => go({ screen: 'predictions' })}>{t('daf.toPredictions')}</Button>
-            <Button tone="ghost" size="lg" icon="edit" onClick={() => { setDraft({ fields: current, unsure: [] }); setMode('form'); }}>{t('daf.edit')}</Button>
-            <Button tone="ghost" size="lg" icon="upload" onClick={() => setMode('start')}>{t('daf.reupload')}</Button>
+            {(canUpload || needsPayment) && <Button tone="ghost" size="lg" icon="upload" onClick={reupload}>{t('daf.reupload')}</Button>}
           </div>
           <div className="mt-12"><Heatmap items={profile.items || []} groups={groups} go={go} /></div>
           <div className="mt-8 text-right">
-            <Button tone="plain" size="sm" icon="trash" onClick={remove}>{t('daf.delete')}</Button>
+            {!lockedAfterVerify && <Button tone="plain" size="sm" icon="trash" onClick={remove}>{t('daf.delete')}</Button>}
           </div>
         </>
       )}
@@ -234,7 +256,20 @@ export default function Daf() {
           <p className="prep-eyebrow text-brand mb-5">{t('daf.eyebrow')}</p>
           <SplitHeading className={titleCls}>{t('daf.startTitle')}</SplitHeading>
           <p className="mt-6 text-lg md:text-xl text-text-secondary leading-relaxed max-w-2xl">{t('daf.startSub', { n: fmt(status.corpus?.transcripts || 0) })}</p>
-          <div className="mt-10"><Start onFile={onFile} onFill={() => { setDraft({ fields: current, unsure: [] }); setMode('form'); }} n={status.corpus?.transcripts || 0} /></div>
+          <div className="mt-10">
+            {canUpload
+              ? <Start onFile={onFile} onFill={() => { setDraft({ fields: current, unsure: [] }); setMode('form'); }} n={status.corpus?.transcripts || 0} />
+              : (
+                <div className="prep-card max-w-3xl p-6 md:p-10">
+                  <span className="w-14 h-14 rounded-2xl bg-accent-soft-bg text-brand flex items-center justify-center"><Icon name="check" className="w-7 h-7" /></span>
+                  <h2 className="mt-6 font-display text-3xl md:text-4xl font-semibold tracking-tight">{t(needsPayment ? 'dc.title' : 'daf.uploadedTitle')}</h2>
+                  <p className="mt-2 text-lg text-text-secondary">{needsPayment ? t('dc.startBody', { price: check.changePrice || 50 }) : t('daf.uploadedBody')}</p>
+                  {needsPayment
+                    ? <Button className="mt-8" tone="primary" size="lg" icon="upload" onClick={() => setPaying(true)}>{t('daf.reupload')}</Button>
+                    : !hasDaf && !lockedAfterVerify && <Button className="mt-8" tone="primary" size="lg" icon="edit" onClick={() => { setDraft({ fields: current, unsure: [] }); setMode('form'); }}>{t('daf.fillFromFile')}</Button>}
+                </div>
+              )}
+          </div>
           {hasDaf && <Button tone="plain" size="md" icon="arrowLeft" className="mt-6" onClick={() => setMode(null)}>{t('common.back')}</Button>}
         </>
       )}
@@ -255,6 +290,8 @@ export default function Daf() {
       {view === 'form' && draft && (
         <DafForm mode="steps" initial={draft.fields} keywords={keywords} services={status.services} saving={saving} onSave={save} onCancel={() => setMode(null)} />
       )}
+
+      {paying && <DafChangeSheet price={check.changePrice || 50} onClose={() => setPaying(false)} onPaid={() => { setPaying(false); refreshCredits(); setMode('start'); }} />}
     </div>
   );
 }

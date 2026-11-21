@@ -13,6 +13,64 @@ const api = async (path, { method = 'GET', body } = {}) => {
 };
 
 const when = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '');
+// "2026-12-07" -> "Mon 7 Dec 2026" (the schedule's dates are Indian dates)
+const day = (iso) => (iso ? new Date(`${iso}T12:00:00+05:30`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : '');
+
+// The roll number on the upload checked against UPSC's interview schedule.
+function ScheduleMatch({ item }) {
+  const s = item.schedule || {};
+  if (s.found) {
+    return (
+      <p className="text-xs mt-1 font-semibold text-brand">
+        Roll {item.rollNo} → {s.name} · {day(s.date)} · {s.session} (report {s.reportingTime})
+      </p>
+    );
+  }
+  if (s.noRoll) return <p className="text-xs mt-1 text-text-tertiary">No roll number read from this DAF yet.</p>;
+  if (!s.loaded) return <p className="text-xs mt-1 text-text-tertiary">Roll {item.rollNo} · upload UPSC’s interview schedule to check it.</p>;
+  return <p className="text-xs mt-1 font-semibold text-status-danger-text">⚠ Roll {item.rollNo} is not in the interview schedule — check this DAF carefully.</p>;
+}
+
+// UPSC's interview schedule: what is loaded, and uploading the PDF UPSC publishes (a new one replaces it).
+function ScheduleBox({ info, onUploaded }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const upload = async (file) => {
+    if (!file) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      const form = new FormData();
+      form.append('file', file, file.name);
+      const res = await fetch('/api/interview/admin/schedule', { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }, body: form });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `Upload failed (${res.status}).`);
+      setMsg(`Loaded ${data.rows.toLocaleString('en-IN')} candidates.`);
+      onUploaded();
+    } catch (e) {
+      setMsg(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="mt-6 bg-surface border border-border-default rounded-2xl px-5 py-4 flex flex-col md:flex-row md:items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-text-primary">UPSC interview schedule</p>
+        <p className="text-xs text-text-tertiary mt-0.5">
+          {info?.count
+            ? `${info.count.toLocaleString('en-IN')} candidates · ${day(info.firstDate)} – ${day(info.lastDate)} · uploaded ${when(info.uploadedAt)}${info.fileName ? ` (${info.fileName})` : ''}`
+            : 'Not uploaded yet. Upload the schedule PDF UPSC publishes to check roll numbers and show students their interview date.'}
+        </p>
+        {msg && <p className="text-xs mt-1 font-semibold text-text-secondary">{msg}</p>}
+      </div>
+      <label className={`px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken shrink-0 ${busy ? 'opacity-50 pointer-events-none' : ''}`}>
+        {busy ? 'Reading…' : info?.count ? 'Upload a new schedule PDF' : 'Upload schedule PDF'}
+        <input type="file" accept="application/pdf" className="sr-only" onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ''; }} />
+      </label>
+    </div>
+  );
+}
 const size = (n) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
 function Viewer({ item, onClose }) {
@@ -98,7 +156,9 @@ export default function AdminDafVerification() {
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-12">
       <h1 className="font-display text-3xl md:text-4xl font-semibold text-text-primary tracking-tight">DAF Checks</h1>
-      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide.</p>
+      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details.</p>
+
+      <ScheduleBox info={data?.schedule} onUploaded={() => setTick((k) => k + 1)} />
 
       <div className="mt-6 flex flex-wrap gap-2">
         {['pending', 'verified', 'rejected'].map((s) => (
@@ -117,11 +177,15 @@ export default function AdminDafVerification() {
         {(data?.items || []).map((item) => (
           <li key={item.id} className="bg-surface border border-border-default rounded-2xl px-5 py-4 flex flex-col md:flex-row md:items-center gap-3">
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-text-primary">{item.userName || '—'} <span className="font-normal text-text-tertiary">· {item.userEmail}</span></p>
+              <p className="font-semibold text-text-primary">
+                {item.userName || '—'} <span className="font-normal text-text-tertiary">· {item.userEmail}</span>
+                {item.kind === 'change' && <span className="ml-2 align-middle inline-flex px-2 py-0.5 rounded-full bg-accent-soft-bg border border-accent-soft-border text-brand text-[10px] font-extrabold uppercase tracking-wider">Paid change</span>}
+              </p>
               <p className="text-xs text-text-tertiary mt-0.5">
                 Uploaded {when(item.createdAt)}{item.hasFile ? ` · ${item.fileName} · ${size(item.size)}` : ''}
                 {item.reviewedAt ? ` · ${item.status} ${when(item.reviewedAt)}${item.reviewedBy ? ` by ${item.reviewedBy}` : ''}` : ''}
               </p>
+              <ScheduleMatch item={item} />
               {item.reason && <p className="text-xs text-status-danger-text mt-1">Reason: {item.reason}</p>}
             </div>
             {item.status === 'pending' && (

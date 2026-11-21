@@ -12,6 +12,8 @@ import { gsap, useGSAP, useReveal, prefersReducedMotion } from '../lib/motion';
 import { useT, fmt, yearsRange } from '../lib/i18n';
 import { usePrep, SCREENS } from '../lib/context';
 import { iv } from '../../lib/interviewApi';
+import { useDafCheck } from '../lib/useDafCheck';
+import { api } from '../lib/api';
 
 // How often boards asked about each DAF area when a candidate listed it (CSE 2020-2025, measured from the
 // Gemini-parsed transcripts). Phase 2 serves these from the API with per-item rates.
@@ -199,6 +201,64 @@ const TILE_ART = {
   )
 };
 
+// The student's own interview, from UPSC's schedule (matched by the roll number on their verified DAF): the
+// date, session and reporting time, and a live countdown to it in Indian time. Hidden once the day is over.
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function InterviewCard() {
+  const { t } = useT();
+  const { user } = usePrep();
+  const check = useDafCheck();
+  const [iv, setIv] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!check.verified) return undefined;
+    let cancelled = false;
+    api.myInterview().then((d) => { if (!cancelled && d?.found) setIv(d); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [check.verified]);
+  useEffect(() => {
+    if (!iv) return undefined;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [iv]);
+  if (!iv) return null;
+  const at = new Date(iv.reportingAt).getTime();
+  if (now > at + 10 * 3600 * 1000) return null; // the day is over
+  const [y, m, d] = iv.date.split('-').map(Number);
+  const dateLine = `${iv.day}, ${d} ${MONTH_NAMES[m - 1]} ${y}`;
+  const first = (String(iv.name || user?.name || '').trim().split(/\s+/)[0] || '').toLowerCase();
+  const name = first ? first[0].toUpperCase() + first.slice(1) : '';
+  const left = Math.max(0, at - now);
+  const parts = [
+    [Math.floor(left / 86400000), 'iv.days'],
+    [Math.floor(left / 3600000) % 24, 'iv.hrs'],
+    [Math.floor(left / 60000) % 60, 'iv.min'],
+    [Math.floor(left / 1000) % 60, 'iv.sec']
+  ];
+  return (
+    <div className="rounded-[1.75rem] border border-accent-soft-border bg-accent-soft-bg/70 px-5 py-6 md:px-9 md:py-8 flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-10" role="timer" aria-live="off">
+      <div className="flex-1 min-w-0">
+        <p className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">{t('iv.hi', { name })}</p>
+        <p className="mt-2 text-[15px] md:text-base text-text-secondary leading-relaxed">
+          {dateLine} · {iv.session} · {t('iv.report', { time: iv.reportingTime })} · {t('iv.roll', { roll: iv.roll })}
+        </p>
+      </div>
+      {left > 0 ? (
+        <div className="flex items-end gap-3 md:gap-5 shrink-0" aria-label={parts.map(([n, k]) => `${n} ${t(k)}`).join(' ')}>
+          {parts.map(([n, k]) => (
+            <div key={k} className="text-center min-w-[3.2rem]">
+              <p className="prep-num font-display text-4xl md:text-5xl font-semibold leading-none text-text-primary tabular-nums">{String(n).padStart(2, '0')}</p>
+              <p className="mt-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">{t(k)}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="font-display text-2xl font-semibold text-brand">{t('iv.today')}</p>
+      )}
+    </div>
+  );
+}
+
 function PathTiles({ corpus, go }) {
   const { t } = useT();
   const tiles = [
@@ -322,7 +382,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 md:px-8 -mt-4 mb-10"><DafCheckCard /></section>
+      <section className="max-w-7xl mx-auto px-4 md:px-8 -mt-4 mb-10 space-y-6"><InterviewCard /><DafCheckCard /></section>
 
       {/* Numbers */}
       <section className="max-w-7xl mx-auto px-4 md:px-8">

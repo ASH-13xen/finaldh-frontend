@@ -10,7 +10,7 @@ export const STATES = [
 export const LANGUAGES = ['Hindi', 'English', 'Bengali', 'Marathi', 'Telugu', 'Tamil', 'Gujarati', 'Urdu', 'Kannada', 'Odia', 'Malayalam', 'Punjabi', 'Assamese', 'Maithili', 'Sanskrit', 'Konkani', 'Nepali', 'Sindhi', 'Dogri', 'Manipuri', 'Bodo', 'Santali', 'Kashmiri'];
 
 export const EMPTY_DAF = {
-  homeState: '', homeDistrict: '', hometown: '',
+  rollNo: '', homeState: '', homeDistrict: '', hometown: '',
   education: [], work: [], optional: '', hobbies: [], achievements: [],
   servicePreference: [], familyBackground: '', languages: [], otherNotes: ''
 };

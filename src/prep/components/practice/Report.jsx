@@ -123,7 +123,7 @@ function AiPanel({ ai, lang }) {
   );
 }
 
-export default function Report({ result, lang, ai, aiLeft, onAi, onAgain, onNext, onPractised, practised }) {
+export default function Report({ result, lang, ai, aiLeft, aiNeeds = 2, aiTooLong = false, onAi, onAgain, onNext, onPractised, practised }) {
   const { t } = useT();
   const m = result.metrics;
   const s = result.scores;
@@ -171,10 +171,12 @@ export default function Report({ result, lang, ai, aiLeft, onAi, onAgain, onNext
         <div className="prep-card px-5 py-5 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="font-semibold flex items-center gap-2"><Icon name="sparkles" className="w-5 h-5 text-brand" />{t('ai.get')}</p>
-            {aiLeft < 1 && <p className="mt-1 text-sm text-text-tertiary">{t('ai.none')}</p>}
+            {aiTooLong
+              ? <p className="mt-1 text-sm text-text-tertiary">{t('ai.tooLong')}</p>
+              : aiLeft < aiNeeds && <p className="mt-1 text-sm text-text-tertiary">{t('ai.none')}</p>}
             {ai?.error && <p className="mt-1 text-sm text-status-danger-text">{ai.error}</p>}
           </div>
-          <Button tone="primary" size="lg" icon="sparkles" onClick={onAi} disabled={ai?.loading}>{ai?.loading ? t('ai.loading') : t('ai.get')}</Button>
+          <Button tone="primary" size="lg" icon="sparkles" onClick={onAi} disabled={ai?.loading || aiTooLong}>{ai?.loading ? t('ai.loading') : t('ai.get')}</Button>
         </div>
       )}
 

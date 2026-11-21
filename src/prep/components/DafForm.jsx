@@ -13,9 +13,10 @@ function useSections(keywords, services) {
   const { t } = useT();
   return [
     {
-      key: 'home', title: t('daf.s.home'), fields: ['homeState', 'homeDistrict', 'hometown'],
+      key: 'home', title: t('daf.s.home'), fields: ['rollNo', 'homeState', 'homeDistrict', 'hometown'],
       render: (d, set, u) => (
         <div className="grid sm:grid-cols-2 gap-6">
+          <TextField label={t('f.rollNo')} hint={t('f.rollNoHint')} value={d.rollNo} onChange={(v) => set('rollNo', v.replace(/\D/g, '').slice(0, 7))} placeholder="0811049" maxLength={7} unsure={u.has('rollNo')} />
           <SelectField label={t('f.homeState')} value={d.homeState} onChange={(v) => set('homeState', v)} options={STATES} unsure={u.has('homeState')} />
           <TextField label={t('f.homeDistrict')} value={d.homeDistrict} onChange={(v) => set('homeDistrict', v)} unsure={u.has('homeDistrict')} />
           <TextField label={t('f.hometown')} value={d.hometown} onChange={(v) => set('hometown', v)} unsure={u.has('hometown')} />
