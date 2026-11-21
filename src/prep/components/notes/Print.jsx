@@ -83,6 +83,7 @@ ol.pp-list li { list-style: decimal; }
 .pp-cover-brand small { display: block; font-size: 8pt; letter-spacing: .24em; text-transform: uppercase; color: #6ee7b7; margin-top: 1mm; font-weight: 700; }
 .pp-cover h1 { font-family: var(--font-display); font-size: 46pt; line-height: 1.02; font-weight: 600; letter-spacing: -0.02em; margin: 6mm 0 0; }
 .prep-hi .pp-cover h1 { font-size: 36pt; line-height: 1.32; letter-spacing: 0; }
+.pp-cover-mark { font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: 30pt; line-height: 1; color: #6ee7b7; margin: 0 0 8mm; letter-spacing: -0.02em; }
 .pp-cover-num { font-family: var(--font-display); font-size: 120pt; line-height: .8; font-weight: 700; color: #6ee7b7; }
 .pp-cover-sub { margin-top: 7mm; font-size: 12pt; color: rgba(243,237,226,.8); max-width: 140mm; line-height: 1.5; }
 .pp-cover-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8mm; border-top: 0.3mm solid rgba(243,237,226,.25); padding-top: 7mm; }
@@ -240,6 +241,7 @@ export function GuideDoc({ entries, corpus }) {
         <div className="pp-cover-glow" aria-hidden="true" />
         <div className="pp-cover-brand"><img src={LOGO} alt="" /><div><b>{BRAND}</b><small>{t('print.guideLabel')}</small></div></div>
         <div>
+          <p className="pp-cover-mark">Abhivyakti</p>
           <p className="pp-cover-num">{fmt(entries.length)}</p>
           <h1>{t('guide.title', { n: fmt(entries.length) })}</h1>
           {corpus?.interviews > 0 && <p className="pp-cover-sub">{t('print.cover.built', { n: fmt(corpus.interviews) })}</p>}

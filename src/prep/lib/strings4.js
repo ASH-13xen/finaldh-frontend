@@ -4,7 +4,7 @@ export const STRINGS4 = {
     'pr.eyebrow': 'Practice Studio · voice only',
     'pr.titleA': 'Say it out loud. ',
     'pr.titleHl': 'Hear what the board hears.',
-    'pr.sub': 'Answer any question aloud and see your pace, pauses, filler words and confidence — measured on your device, free and unlimited. Detailed feedback on tone uses 1 credit.',
+    'pr.sub': 'Answer any question aloud and see your pace, pauses, filler words and confidence — measured on your device. You can also get detailed feedback on your tone.',
     'pr.privacy': 'Your voice is analysed on this device. Nothing is uploaded unless you ask for detailed feedback.',
     'pr.pick': 'Pick a question',
     'pr.src.predicted': 'Your predicted',

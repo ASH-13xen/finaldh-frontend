@@ -115,7 +115,7 @@ export const STRINGS5 = {
     'print.cover.built': 'Built from {n} real UPSC interviews',
     'print.footer': 'The Dark Horse UPSC · Free interview prep: {site}',
     'print.about': 'About The Dark Horse UPSC',
-    'print.aboutText': 'The Dark Horse UPSC helps aspirants prepare for every stage of the Civil Services Examination. Our Interview Prep reads thousands of real interviews to predict what your board will ask — and lets you practise your answers aloud.',
+    'print.aboutText': 'The Dark Horse UPSC helps aspirants prepare for every stage of the Civil Services Examination. Abhivyakti, our UPSC interview prep, reads thousands of real interviews to predict what your board will ask — and lets you practise your answers aloud.',
     'print.scan': 'Scan to practise free',
     'print.chat': 'Talk to us on Telegram',
     'print.practise': 'Practise these answers aloud, free, at {site}',

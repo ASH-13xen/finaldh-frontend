@@ -55,7 +55,10 @@ const getNavLinks = (user, pendingReports = 0, pendingDafs = 0) => {
       match: (t) => t?.startsWith('interview_'),
       label: (
         <>
-          Interview<span className="hidden sm:inline"> Prep</span>
+          Abhivyakti
+          <span className="ml-1 sm:ml-1.5 inline-flex items-center px-1 sm:px-1.5 rounded-full bg-accent-soft-bg border border-accent-soft-border text-brand text-[7px] sm:text-[9px] font-extrabold uppercase tracking-wider align-middle">
+            Interview
+          </span>
           <svg viewBox="0 0 24 24" aria-label="opens in a new window" className="inline-block ml-1 w-3 h-3 -mt-0.5 opacity-70" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
           {!INTERVIEW_SECTION_LIVE && (
             <span className="ml-1 sm:ml-1.5 inline-flex items-center px-1 sm:px-1.5 rounded-full bg-accent-soft-bg border border-accent-soft-border text-brand text-[7px] sm:text-[9px] font-extrabold uppercase tracking-wider align-middle">

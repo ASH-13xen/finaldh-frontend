@@ -4,7 +4,8 @@
 export const STRINGS = {
   en: {
     // section frame
-    'section.title': 'Interview Prep',
+    'section.title': 'Abhivyakti',
+    'section.kind': 'UPSC Interview Prep',
     'section.edition': 'The Interview Edition',
     'nav.home': 'Home',
     'nav.daf': 'My DAF',
@@ -34,7 +35,7 @@ export const STRINGS = {
     'common.back': 'Back',
 
     // home
-    'home.eyebrow': 'The Interview Edition',
+    'home.eyebrow': 'UPSC Interview Prep · by The Dark Horse UPSC',
     'home.titleA': 'Walk into the board room knowing ',
     'home.titleHl': 'what they’ll ask.',
     'home.titleB': '',
@@ -80,7 +81,8 @@ export const STRINGS = {
   },
 
   hi: {
-    'section.title': 'इंटरव्यू की तैयारी',
+    'section.title': 'Abhivyakti',
+    'section.kind': 'UPSC इंटरव्यू की तैयारी',
     'section.edition': 'इंटरव्यू संस्करण',
     'nav.home': 'होम',
     'nav.daf': 'मेरा DAF',

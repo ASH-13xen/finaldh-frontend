@@ -38,7 +38,8 @@ function Loader() {
         <span className="absolute inset-0 rounded-full bg-brand/40 animate-ping" />
         <span className="relative w-4 h-4 rounded-full bg-brand" />
       </span>
-      <p className="font-display italic text-2xl text-text-primary">{t('section.title')}</p>
+      <p className="font-display italic text-3xl text-brand">{t('section.title')}</p>
+      <p className="prep-eyebrow text-text-tertiary">{t('section.kind')}</p>
       <p className="text-sm text-text-tertiary">{t('common.loading')}</p>
     </div>
   );
@@ -63,6 +64,13 @@ function Flow({ user, initialScreen, onLogout, onExit, onSignIn }) {
   const [creditsTick, setCreditsTick] = useState(0);
   const [creditsOpen, setCreditsOpen] = useState(false);
   const [ask, setAsk] = useState(null); // why a visitor is being asked to sign in: { reason, vars }
+
+  // The window's title names the initiative while it is open.
+  useEffect(() => {
+    const before = document.title;
+    document.title = 'Abhivyakti · UPSC Interview Prep — The Dark Horse UPSC';
+    return () => { document.title = before; };
+  }, []);
 
   useEffect(() => {
     if (guest) return undefined;

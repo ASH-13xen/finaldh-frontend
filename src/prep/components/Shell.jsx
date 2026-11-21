@@ -8,7 +8,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { gsap, useGSAP, prefersReducedMotion } from '../lib/motion';
 import { useT, HINDI_ENABLED } from '../lib/i18n';
 import { usePrep, SCREENS, MOBILE_TABS } from '../lib/context';
-import { LOGO, BRAND } from '../lib/notes';
+import { LOGO } from '../lib/notes';
 import CreditsPill from './credits/CreditsPill';
 
 const NAV = SCREENS.filter((s) => s.nav);
@@ -204,7 +204,7 @@ export default function Shell({ children }) {
           <button type="button" onClick={() => go({ screen: 'home' })} className="prep-focus flex items-center gap-2.5 shrink-0 cursor-pointer rounded-xl min-w-0">
             <img src={LOGO} alt="" className="w-9 h-9 rounded-full object-cover border border-border-default" />
             <span className="flex flex-col items-start leading-none min-w-0">
-              <span className="hidden sm:block text-[10px] font-bold uppercase tracking-[0.2em] text-text-tertiary">{BRAND}</span>
+              <span className="hidden sm:block text-[10px] font-bold uppercase tracking-[0.2em] text-text-tertiary">{t('section.kind')}</span>
               <span className="font-display italic text-lg md:text-xl font-semibold tracking-tight whitespace-nowrap sm:mt-1">{t('section.title')}</span>
             </span>
           </button>

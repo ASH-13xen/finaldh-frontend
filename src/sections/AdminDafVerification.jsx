@@ -98,7 +98,7 @@ export default function AdminDafVerification() {
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-12">
       <h1 className="font-display text-3xl md:text-4xl font-semibold text-text-primary tracking-tight">DAF Checks</h1>
-      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Interview Prep. Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide.</p>
+      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide.</p>
 
       <div className="mt-6 flex flex-wrap gap-2">
         {['pending', 'verified', 'rejected'].map((s) => (

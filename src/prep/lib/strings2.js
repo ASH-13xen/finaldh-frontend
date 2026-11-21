@@ -91,7 +91,7 @@ export const STRINGS2 = {
     'dd.reveal': 'Show the sample answer',
     'dd.personal': 'This one is about you — the answer has to be your own. Use the structure above.',
     'dd.aiNote': 'Auto-generated — check facts before you use them.',
-    'dd.loadApproach': 'Show me how to approach it · 1 credit',
+    'dd.loadApproach': 'Show me how to approach it',
     'dd.aiOff': 'Answer guides aren’t available right now. Please try again later.',
     'dd.answered': 'What the candidate said, or how the board reacted',
     'dd.byBoard': '{board}’s board',

@@ -77,7 +77,7 @@ export default function LoginSection({ error, googleButtonRef }) {
             Prepare with precision.
           </h1>
           <p className="mt-6 text-sm sm:text-base text-text-secondary font-medium max-w-md leading-relaxed">
-            Topic-wise study guides, previous-year questions, progress tracking and Interview Prep — built around one goal: clearing the UPSC Civil Services Examination.
+            Topic-wise study guides, previous-year questions, progress tracking and Abhivyakti, our interview prep — built around one goal: clearing the UPSC Civil Services Examination.
           </p>
         </div>
       </div>

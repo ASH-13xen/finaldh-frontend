@@ -172,7 +172,7 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {/* Students before INTERVIEW_SECTION_LIVE (admins never get here: see the early return above). */}
         {activeTab?.startsWith('interview_') && (
-          <ComingSoon title="Interview Prep" onBack={() => setActiveTab('student')} />
+          <ComingSoon title="Abhivyakti" onBack={() => setActiveTab('student')} />
         )}
 
         {activeTab === 'admin_interview_data' && (

@@ -290,10 +290,14 @@ export default function Home() {
       {/* Hero */}
       <section className="max-w-7xl mx-auto px-4 md:px-8 pt-10 md:pt-16 pb-12 md:pb-20 grid grid-cols-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)] gap-12 lg:gap-14 items-center">
         <div>
-          <p className="prep-eyebrow text-brand mb-5 md:mb-7">{t('home.eyebrow', { years: yearsRange(corpus.years) })}</p>
-          <SplitHeading className={`font-display font-semibold text-text-primary ${hi
-            ? 'text-[2.3rem] leading-[1.28] sm:text-5xl md:text-6xl lg:text-[4.1rem] lg:leading-[1.22]'
-            : 'tracking-[-0.025em] text-[2.7rem] leading-[1.04] sm:text-6xl md:text-7xl lg:text-[4.9rem] lg:leading-[1]'}`}>
+          <p className="prep-eyebrow text-brand mb-4 md:mb-5">{t('home.eyebrow', { years: yearsRange(corpus.years) })}</p>
+          {/* The initiative's name leads; the line below says what it is. */}
+          <h1 className="font-display italic font-semibold text-brand tracking-[-0.03em] leading-[0.95] text-[3.6rem] sm:text-7xl md:text-8xl lg:text-[7.2rem] pb-2">
+            {t('section.title')}
+          </h1>
+          <SplitHeading as="h2" className={`mt-5 md:mt-7 font-display font-semibold text-text-primary ${hi
+            ? 'text-[1.9rem] leading-[1.3] sm:text-4xl md:text-5xl lg:text-[3.2rem] lg:leading-[1.24]'
+            : 'tracking-[-0.02em] text-[2.05rem] leading-[1.08] sm:text-5xl md:text-[3.25rem] lg:text-[3.6rem] lg:leading-[1.04]'}`}>
             {t('home.titleA')}<Highlight still>{t('home.titleHl')}</Highlight>{t('home.titleB')}
           </SplitHeading>
           <p className="mt-6 md:mt-8 text-lg md:text-xl text-text-secondary leading-relaxed max-w-xl">

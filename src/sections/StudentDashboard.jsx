@@ -1165,7 +1165,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
             <a href="#purchase_courses" className="px-4 py-2 bg-brand hover:bg-brand-hover text-text-on-accent rounded-xl text-xs font-bold">Browse courses</a>
-            <button type="button" onClick={() => { const w = window.open(`${window.location.pathname}#interview_home`, '_blank'); if (!w) window.location.hash = 'interview_home'; }} className="px-4 py-2 border border-border-default rounded-xl text-xs font-bold text-text-primary hover:bg-sunken cursor-pointer">Interview Prep</button>
+            <button type="button" onClick={() => { const w = window.open(`${window.location.pathname}#interview_home`, '_blank'); if (!w) window.location.hash = 'interview_home'; }} className="px-4 py-2 border border-border-default rounded-xl text-xs font-bold text-text-primary hover:bg-sunken cursor-pointer">Abhivyakti · Interview Prep</button>
           </div>
         </div>
       ) : (
