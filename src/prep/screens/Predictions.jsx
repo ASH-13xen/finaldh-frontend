@@ -14,7 +14,6 @@ import { useT, fmt, yearsRange } from '../lib/i18n';
 import { usePrep } from '../lib/context';
 import { api } from '../lib/api';
 import { errorMessage } from '../../lib/interviewApi';
-import { useToast } from '../../components/Toast';
 import { DafGate } from '../components/DafCheck';
 import { useDafCheck } from '../lib/useDafCheck';
 
@@ -116,7 +115,6 @@ export default function Predictions() {
 function PredictedQuestions() {
   const { go, prep, daf, status } = usePrep();
   const { t, lang, hi } = useT();
-  const toast = useToast();
   // Predictions belong to a language and a DAF; a response for an older pair is ignored.
   const reqKey = `${lang}|${(daf.profile?.items || []).map((i) => i.key).join(',')}`;
   const [res, setRes] = useState({ key: null, data: null, error: null });
@@ -126,7 +124,6 @@ function PredictedQuestions() {
   const [tier, setTier] = useState('all');
   const [onlyReal, setOnlyReal] = useState(false);
   const [familyId, setFamilyId] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
   const root = useRef(null);
 
   useEffect(() => {
@@ -137,15 +134,6 @@ function PredictedQuestions() {
     return () => { cancelled = true; };
   }, [reqKey, lang]);
 
-  const refresh = async () => {
-    setRefreshing(true);
-    try {
-      const d = await api.predictions(lang, true);
-      setRes({ key: reqKey, data: d, error: null });
-      if (d.limited) toast.info(t('pred.limited'));
-    } catch (err) { toast.error(errorMessage(err)); }
-    setRefreshing(false);
-  };
 
   const keep = (p) => (tier === 'all' || p.tier === tier) && (!onlyReal || p.source !== 'new');
   const groups = useMemo(() => (data?.groups || []).map((g) => ({ ...g, shown: g.predictions.filter(keep) })).filter((g) => g.shown.length),
@@ -216,7 +204,6 @@ function PredictedQuestions() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Chip active={onlyReal} onClick={() => setOnlyReal((o) => !o)}><Icon name="check" className="w-4 h-4" />{t('pred.onlyReal')}</Chip>
-              {data.ai?.available && <Button tone="ghost" size="md" icon="refresh" onClick={refresh} disabled={refreshing}>{t('pred.refresh')}</Button>}
               <Button tone="ghost" size="md" icon="edit" onClick={() => go({ screen: 'daf' })}>{t('pred.editDaf')}</Button>
             </div>
           </section>

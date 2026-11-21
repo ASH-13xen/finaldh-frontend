@@ -8,7 +8,7 @@ export const api = {
   deleteProfile: () => iv('/profile', { method: 'DELETE' }),
   extractDaf: (file) => upload('/profile/extract', 'file', file, file.name || 'daf'),
   dafSubmit: (file) => upload('/daf/submit', 'file', file, file.name || 'daf'),
-  predictions: (lang, refresh = false) => iv(`/predictions${qs({ lang, refresh: refresh ? 1 : '' })}`),
+  predictions: (lang) => iv(`/predictions${qs({ lang })}`),
   family: (id) => iv(`/bank/families/${id}`),
   approach: (id, lang) => iv(`/bank/families/${id}/approach${qs({ lang })}`, { method: 'POST' }),
   search: (params) => iv(`/bank/search${qs(params)}`),
