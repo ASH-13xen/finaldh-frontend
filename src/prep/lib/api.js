@@ -10,6 +10,23 @@ export const api = {
   dafSubmit: (file) => upload('/daf/submit', 'file', file, file.name || 'daf'),
   // A verified student's roll number with proof (free; an admin checks it).
   rollClaim: (rollNo, file) => upload('/daf/roll', 'file', file, file.name || 'proof', { rollNo }),
+  // A DAF filled in by hand, sent for verification like an upload; the roll number (optional) needs a proof.
+  dafForm: async (fields, rollNo = '', proof = null) => {
+    const form = new FormData();
+    form.append('fields', JSON.stringify(fields));
+    if (rollNo) form.append('rollNo', rollNo);
+    if (proof) form.append('file', proof, proof.name || 'proof');
+    let res;
+    try {
+      res = await fetch('/api/interview/daf/form', { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }, body: form });
+    } catch {
+      throw new Error('Could not reach the server. Check your internet connection and try again.');
+    }
+    let data = null;
+    try { data = await res.json(); } catch { /* empty */ }
+    if (!res.ok) { const err = new Error(data?.error || `Something went wrong (${res.status}).`); err.status = res.status; err.data = data; throw err; }
+    return data;
+  },
   predictions: (lang) => iv(`/predictions${qs({ lang })}`),
   family: (id) => iv(`/bank/families/${id}`),
   approach: (id, lang) => iv(`/bank/families/${id}/approach${qs({ lang })}`, { method: 'POST' }),

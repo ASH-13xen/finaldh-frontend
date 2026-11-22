@@ -117,7 +117,7 @@ export const STRINGS2 = {
     'daf.uploadTypes': 'PDF, JPG or PNG · up to 10 MB',
     'daf.uploadPrivacy': 'Our team checks it to verify you, then the file is deleted. Your name, roll number, address, phone and parents’ names are never saved with your DAF details.',
     'daf.fill': 'Fill it in',
-    'daf.fillSub': 'Seven short steps: home, education, work, optional, hobbies, services, family.',
+    'daf.fillSub': 'Seven short steps: home, education, work, optional, hobbies, services, family. Our team verifies it, just like an upload.',
     'daf.reading': 'Reading your DAF…',
     'daf.readingSub': 'Finding your home state, education, work, optional and hobbies.',
     'daf.reviewTitle': 'Check what we read',

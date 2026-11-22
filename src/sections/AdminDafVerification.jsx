@@ -107,6 +107,45 @@ function ScheduleBox({ info, onUploaded }) {
 }
 const size = (n) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
+// A DAF filled in by hand: what the student typed, for the admin to check (there is no DAF file).
+const FORM_FIELDS = [
+  ['homeState', 'Home state'], ['homeDistrict', 'Home district'], ['hometown', 'Town or city'], ['education', 'Education'],
+  ['work', 'Work'], ['optional', 'Optional subject'], ['hobbies', 'Hobbies'], ['achievements', 'Achievements'],
+  ['servicePreference', 'Service preference'], ['familyBackground', 'Family background'], ['languages', 'Languages'], ['otherNotes', 'Other notes']
+];
+const lines = (v) => (Array.isArray(v)
+  ? v.map((x) => (x && typeof x === 'object' ? Object.values(x).filter(Boolean).join(' · ') : String(x || ''))).filter(Boolean)
+  : (v ? [String(v)] : []));
+
+function FormDetails({ item, onClose }) {
+  const rows = FORM_FIELDS.map(([k, label]) => [label, lines(item.fields?.[k])]).filter(([, v]) => v.length);
+  return (
+    <div className="fixed inset-0 z-[120] bg-ink-950/70 backdrop-blur-sm p-3 md:p-8 flex" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="relative m-auto w-full max-w-2xl max-h-full bg-surface rounded-2xl overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-3 border-b border-border-default flex items-center justify-between gap-3">
+          <p className="font-semibold text-text-primary truncate">{item.userName || item.userEmail} — DAF filled in by hand</p>
+          <button type="button" onClick={onClose} className="px-3 py-1.5 rounded-lg border border-border-default text-sm font-semibold cursor-pointer shrink-0">Close</button>
+        </div>
+        <div className="overflow-auto px-5 py-4">
+          <p className="text-xs text-text-tertiary mb-4">There is no DAF file: check these details{item.rollNo ? ', and the roll number against its proof' : ''}.</p>
+          <dl className="space-y-3">
+            <div className="grid grid-cols-[9rem_1fr] gap-3 text-sm">
+              <dt className="font-semibold text-text-secondary">Roll number</dt>
+              <dd className="text-text-primary">{item.rollNo || <span className="text-text-tertiary">Not given</span>}</dd>
+            </div>
+            {rows.map(([label, v]) => (
+              <div key={label} className="grid grid-cols-[9rem_1fr] gap-3 text-sm">
+                <dt className="font-semibold text-text-secondary">{label}</dt>
+                <dd className="text-text-primary">{v.map((x, i) => <p key={i}>{x}</p>)}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Viewer({ item, onClose }) {
   const [url, setUrl] = useState(null);
   const [error, setError] = useState('');
@@ -150,6 +189,7 @@ export default function AdminDafVerification() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(null);
   const [viewing, setViewing] = useState(null);
+  const [details, setDetails] = useState(null); // a filled-in DAF's details
   const [tick, setTick] = useState(0);
   const [rolls, setRolls] = useState({}); // roll numbers the admin typed, by upload
 
@@ -207,7 +247,7 @@ export default function AdminDafVerification() {
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-12">
       <h1 className="font-display text-3xl md:text-4xl font-semibold text-text-primary tracking-tight">DAF Checks</h1>
-      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details. Check the roll number against the DAF before verifying: it decides which interview date the student sees, and they can’t change it afterwards. A “Roll number” is a verified student adding a missing roll number with proof (free): approve it only if the proof shows that number.</p>
+      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details. Check the roll number against the DAF before verifying: it decides which interview date the student sees, and they can’t change it afterwards. A “Roll number” is a verified student adding a missing roll number with proof (free): approve it only if the proof shows that number. A DAF “Filled in” by hand has no file: check the details, and any roll number against its proof.</p>
 
       <ScheduleBox info={data?.schedule} onUploaded={() => setTick((k) => k + 1)} />
 
@@ -231,10 +271,11 @@ export default function AdminDafVerification() {
               <p className="font-semibold text-text-primary">
                 {item.userName || '—'} <span className="font-normal text-text-tertiary">· {item.userEmail}</span>
                 {item.kind === 'change' && <span className="ml-2 align-middle inline-flex px-2 py-0.5 rounded-full bg-accent-soft-bg border border-accent-soft-border text-brand text-[10px] font-extrabold uppercase tracking-wider">Paid change</span>}
+                {item.source === 'form' && <span className="ml-2 align-middle inline-flex px-2 py-0.5 rounded-full bg-amber-50 border border-amber-300 text-amber-800 dark:bg-amber-400/10 dark:border-amber-400/30 dark:text-amber-200 text-[10px] font-extrabold uppercase tracking-wider">Filled in</span>}
                 {item.kind === 'roll' && <span className="ml-2 align-middle inline-flex px-2 py-0.5 rounded-full bg-sky-50 border border-sky-300 text-sky-800 dark:bg-sky-400/10 dark:border-sky-400/30 dark:text-sky-200 text-[10px] font-extrabold uppercase tracking-wider">Roll number</span>}
               </p>
               <p className="text-xs text-text-tertiary mt-0.5">
-                Uploaded {when(item.createdAt)}{item.hasFile ? ` · ${item.fileName} · ${size(item.size)}` : ''}
+                {item.source === 'form' ? 'Filled in' : 'Uploaded'} {when(item.createdAt)}{item.hasFile ? ` · ${item.source === 'form' ? 'proof: ' : ''}${item.fileName} · ${size(item.size)}` : ''}
                 {item.reviewedAt ? ` · ${item.status} ${when(item.reviewedAt)}${item.reviewedBy ? ` by ${item.reviewedBy}` : ''}` : ''}
               </p>
               {item.status === 'pending' && (
@@ -245,7 +286,8 @@ export default function AdminDafVerification() {
             </div>
             {item.status === 'pending' && (
               <div className="flex flex-wrap gap-2 shrink-0">
-                <button type="button" onClick={() => setViewing(item)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">{item.kind === 'roll' ? 'View proof' : 'View DAF'}</button>
+                {item.source === 'form' && <button type="button" onClick={() => setDetails(item)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">View details</button>}
+                {item.hasFile && <button type="button" onClick={() => setViewing(item)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">{item.kind === 'roll' || item.source === 'form' ? 'View proof' : 'View DAF'}</button>}
                 <button type="button" disabled={busy === item.id} onClick={() => act(item, 'verify')} className="px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-text-on-accent text-sm font-bold cursor-pointer disabled:opacity-50">{item.kind === 'roll' ? 'Approve' : 'Verify'}</button>
                 <button type="button" disabled={busy === item.id} onClick={() => act(item, 'reject')} className="px-4 py-2 rounded-xl border border-status-danger-text/40 text-status-danger-text text-sm font-bold cursor-pointer disabled:opacity-50">Reject</button>
               </div>
@@ -254,6 +296,7 @@ export default function AdminDafVerification() {
         ))}
       </ul>
       {viewing && <Viewer item={viewing} onClose={() => setViewing(null)} />}
+      {details && <FormDetails item={details} onClose={() => setDetails(null)} />}
     </div>
   );
 }

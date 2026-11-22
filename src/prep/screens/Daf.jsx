@@ -281,6 +281,29 @@ export default function Daf() {
     setSaving(false);
   };
 
+  // A DAF filled in by hand goes to our team for verification, like an upload. Its roll number is optional;
+  // given, it needs a proof. (A verified student's change keeps the roll number our team checked.)
+  const sendForm = async (fields, { proof } = {}) => {
+    const typed = lockedAfterVerify ? '' : String(fields.rollNo || '');
+    const roll = typed.length === 6 ? `0${typed}` : typed;
+    if (typed && roll.length !== 7) { toast.error(t('rc.needRoll')); return; }
+    if (roll && !proof) { toast.error(t('df.needProof')); return; }
+    setSaving(true);
+    try {
+      await api.dafForm(fields, roll, roll ? proof : null);
+      toast.success(t('dv.sent'));
+      refreshCredits();
+      daf.refresh();
+      setGroups(null);
+      setMode(null);
+      setDraft(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+    setSaving(false);
+  };
+
   const remove = async () => {
     if (!window.confirm(t('daf.deleteConfirm'))) return;
     try {
@@ -326,7 +349,7 @@ export default function Daf() {
           <p className="mt-6 text-lg md:text-xl text-text-secondary leading-relaxed max-w-2xl">{t('daf.startSub', { n: fmt(status.corpus?.transcripts || 0) })}</p>
           <div className="mt-10">
             {canUpload
-              ? <Start onFile={onFile} onFill={() => { setDraft({ fields: current, unsure: [] }); setMode('form'); }} n={status.corpus?.transcripts || 0} />
+              ? <Start onFile={onFile} onFill={() => { setDraft({ fields: { ...current, rollNo: lockedAfterVerify ? current.rollNo : '' }, unsure: [], send: true }); setMode('form'); }} n={status.corpus?.transcripts || 0} />
               : (
                 <div className="prep-card max-w-3xl p-6 md:p-10">
                   <span className="w-14 h-14 rounded-2xl bg-accent-soft-bg text-brand flex items-center justify-center"><Icon name="check" className="w-7 h-7" /></span>
@@ -356,7 +379,9 @@ export default function Daf() {
       )}
 
       {view === 'form' && draft && (
-        <DafForm mode="steps" initial={draft.fields} keywords={keywords} services={status.services} saving={saving} onSave={save} onCancel={() => setMode(null)} rollLocked={!user?.isAdmin} rollHint={rollHint} />
+        <DafForm mode="steps" initial={draft.fields} keywords={keywords} services={status.services} saving={saving}
+          onSave={draft.send ? sendForm : save} onCancel={() => setMode(null)} send={!!draft.send}
+          rollLocked={draft.send ? lockedAfterVerify : !user?.isAdmin} rollProof={!!draft.send && !lockedAfterVerify} rollHint={rollHint} />
       )}
 
       {paying && <DafChangeSheet price={check.changePrice || 50} onClose={() => setPaying(false)} onPaid={() => { setPaying(false); refreshCredits(); setMode('start'); }} />}
