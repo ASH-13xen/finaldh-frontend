@@ -348,7 +348,16 @@ export default function Daf() {
           <SplitHeading className={titleCls}>{t('daf.startTitle')}</SplitHeading>
           <p className="mt-6 text-lg md:text-xl text-text-secondary leading-relaxed max-w-2xl">{t('daf.startSub', { n: fmt(status.corpus?.transcripts || 0) })}</p>
           <div className="mt-10">
-            {canUpload
+            {lockedAfterVerify && !hasDaf ? (
+              // Verified, but the details were never filled in (the file couldn't be read automatically and the
+              // form was skipped): they fill them in now, free.
+              <div className="prep-card max-w-3xl p-6 md:p-10">
+                <span className="w-14 h-14 rounded-2xl bg-text-primary text-page flex items-center justify-center"><Icon name="edit" className="w-7 h-7" /></span>
+                <h2 className="mt-6 font-display text-3xl md:text-4xl font-semibold tracking-tight">{t('daf.needDetails.title')}</h2>
+                <p className="mt-2 text-lg text-text-secondary">{t('daf.needDetails.body')}</p>
+                <Button className="mt-8" tone="primary" size="lg" icon="edit" onClick={() => { setDraft({ fields: current, unsure: [] }); setMode('form'); }}>{t('daf.needDetails.cta')}</Button>
+              </div>
+            ) : canUpload
               ? <Start onFile={onFile} onFill={() => { setDraft({ fields: { ...current, rollNo: lockedAfterVerify ? current.rollNo : '' }, unsure: [], send: true }); setMode('form'); }} n={status.corpus?.transcripts || 0} />
               : (
                 <div className="prep-card max-w-3xl p-6 md:p-10">

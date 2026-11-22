@@ -146,7 +146,7 @@ export default function Practice() {
           <div className="mt-6">
             {src === 'predicted' && (!hasDaf ? (
               <button type="button" onClick={() => go({ screen: 'daf' })} className="prep-focus prep-card prep-card-hover w-full text-left px-6 py-6 cursor-pointer flex items-center justify-between gap-4">
-                <span className="text-lg">{t('pr.needDaf')}</span><Icon name="arrowRight" className="w-5 h-5 text-brand" />
+                <span className="text-lg">{t('pr.needDetails')}</span><Icon name="arrowRight" className="w-5 h-5 text-brand" />
               </button>
             ) : (
               <>

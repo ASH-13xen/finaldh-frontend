@@ -1,6 +1,7 @@
 // Admin -> DAF Checks: students' uploaded DAFs waiting for verification. Open the file, then Verify (the
 // student's practice, 15 free AI uses and credit purchases unlock) or Reject with a reason (the student is
-// asked to upload again). The file is deleted once reviewed.
+// asked to send it again). Files stay viewable after review; Delete removes an entry (a waiting one can be sent
+// again).
 import { useCallback, useEffect, useState } from 'react';
 
 const api = async (path, { method = 'GET', body } = {}) => {
@@ -207,6 +208,26 @@ export default function AdminDafVerification() {
     return () => { cancelled = true; };
   }, [status, tick]);
 
+  // Deleting an entry: a waiting one is undone (the student can send it again); a reviewed one leaves the
+  // student's verification as it is.
+  const remove = useCallback(async (item) => {
+    const who = item.userName || item.userEmail;
+    const what = item.kind === 'roll' ? 'roll number request' : item.kind === 'change' ? 'DAF change' : 'DAF';
+    const question = item.status === 'pending'
+      ? `Delete ${who}'s waiting ${what}? It is removed with its file, and the student can send it again.`
+      : `Delete this ${item.status} ${what} of ${who}? Only this record and its file are removed: the student stays ${item.status === 'verified' ? 'verified' : 'as they are'}.`;
+    if (!window.confirm(question)) return;
+    setBusy(item.id);
+    try {
+      await api(`/admin/daf/${item.id}`, { method: 'DELETE' });
+      setTick((k) => k + 1);
+    } catch (e) {
+      window.alert(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }, []);
+
   const act = useCallback(async (item, kind) => {
     let body;
     if (kind === 'reject') {
@@ -247,7 +268,7 @@ export default function AdminDafVerification() {
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-12">
       <h1 className="font-display text-3xl md:text-4xl font-semibold text-text-primary tracking-tight">DAF Checks</h1>
-      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details. Check the roll number against the DAF before verifying: it decides which interview date the student sees, and they can’t change it afterwards. A “Roll number” is a verified student adding a missing roll number with proof (free): approve it only if the proof shows that number. A DAF “Filled in” by hand has no file: check the details, and any roll number against its proof.</p>
+      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. Files stay here after you decide; Delete removes an entry. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details. Check the roll number against the DAF before verifying: it decides which interview date the student sees, and they can’t change it afterwards. A “Roll number” is a verified student adding a missing roll number with proof (free): approve it only if the proof shows that number. A DAF “Filled in” by hand has no file: check the details, and any roll number against its proof.</p>
 
       <ScheduleBox info={data?.schedule} onUploaded={() => setTick((k) => k + 1)} />
 
@@ -282,16 +303,21 @@ export default function AdminDafVerification() {
                 <RollCheck item={item} roll={rolls[item.id] ?? item.rollNo ?? ''} onChange={(v) => setRolls((x) => ({ ...x, [item.id]: v }))} />
               )}
               {item.status === 'verified' && <ScheduleMatch item={item} />}
+              {item.detailsMissing && <p className="text-xs mt-1 font-semibold text-amber-700 dark:text-amber-300">The student hasn’t filled in their DAF details yet. Once verified, they can fill them in from My DAF.</p>}
               {item.reason && <p className="text-xs text-status-danger-text mt-1">Reason: {item.reason}</p>}
             </div>
-            {item.status === 'pending' && (
-              <div className="flex flex-wrap gap-2 shrink-0">
-                {item.source === 'form' && <button type="button" onClick={() => setDetails(item)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">View details</button>}
-                {item.hasFile && <button type="button" onClick={() => setViewing(item)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">{item.kind === 'roll' || item.source === 'form' ? 'View proof' : 'View DAF'}</button>}
-                <button type="button" disabled={busy === item.id} onClick={() => act(item, 'verify')} className="px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-text-on-accent text-sm font-bold cursor-pointer disabled:opacity-50">{item.kind === 'roll' ? 'Approve' : 'Verify'}</button>
-                <button type="button" disabled={busy === item.id} onClick={() => act(item, 'reject')} className="px-4 py-2 rounded-xl border border-status-danger-text/40 text-status-danger-text text-sm font-bold cursor-pointer disabled:opacity-50">Reject</button>
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2 shrink-0">
+              {item.source === 'form' && <button type="button" onClick={() => setDetails(item)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">View details</button>}
+              {item.hasFile && <button type="button" onClick={() => setViewing(item)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">{item.kind === 'roll' || item.source === 'form' ? 'View proof' : 'View DAF'}</button>}
+              {item.status === 'pending' && (
+                <>
+                  <button type="button" disabled={busy === item.id} onClick={() => act(item, 'verify')} className="px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-text-on-accent text-sm font-bold cursor-pointer disabled:opacity-50">{item.kind === 'roll' ? 'Approve' : 'Verify'}</button>
+                  <button type="button" disabled={busy === item.id} onClick={() => act(item, 'reject')} className="px-4 py-2 rounded-xl border border-status-danger-text/40 text-status-danger-text text-sm font-bold cursor-pointer disabled:opacity-50">Reject</button>
+                </>
+              )}
+              <button type="button" disabled={busy === item.id} onClick={() => remove(item)} title="Delete this entry"
+                className="px-3 py-2 rounded-xl text-sm font-semibold text-text-tertiary hover:text-status-danger-text hover:bg-sunken cursor-pointer disabled:opacity-50">Delete</button>
+            </div>
           </li>
         ))}
       </ul>

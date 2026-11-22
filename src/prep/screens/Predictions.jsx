@@ -146,9 +146,9 @@ function PredictedQuestions() {
     return (
       <section className="max-w-3xl mx-auto px-4 md:px-8 py-20 text-center">
         <Icon name="fileText" className="w-12 h-12 mx-auto text-brand" />
-        <h1 className="mt-6 font-display text-4xl md:text-5xl font-semibold tracking-tight">{t('pred.needDaf')}</h1>
-        <p className="mt-4 text-lg text-text-secondary">{t('pred.needDafSub')}</p>
-        <Button tone="primary" size="xl" iconRight="arrowRight" magnetic className="mt-8" onClick={() => go({ screen: 'daf' })}>{t('home.ctaDaf')}</Button>
+        <h1 className="mt-6 font-display text-4xl md:text-5xl font-semibold tracking-tight">{t('pred.needDetails')}</h1>
+        <p className="mt-4 text-lg text-text-secondary">{t('pred.needDetailsSub')}</p>
+        <Button tone="primary" size="xl" iconRight="arrowRight" magnetic className="mt-8" onClick={() => go({ screen: 'daf' })}>{t('daf.needDetails.cta')}</Button>
       </section>
     );
   }

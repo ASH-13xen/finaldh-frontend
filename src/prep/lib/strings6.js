@@ -281,7 +281,14 @@ export const STRINGS6 = {
     'daf.sendNote': 'When you send it, our team verifies your DAF — usually within a day. Your predicted questions and practice unlock then.',
     'f.rollNoOptional': 'Optional. If you add it, attach a proof below — your e-summon letter, admit card or the DAF page showing it — and our team checks it. Leave it empty and no proof is needed; you can add it later from My DAF.',
     'f.rollProof': 'Proof of your roll number (PDF or photo)',
-    'df.needProof': 'Attach a proof of your roll number, or leave the roll number empty.'
+    'df.needProof': 'Attach a proof of your roll number, or leave the roll number empty.',
+    // Verified, but the DAF details were never filled in (say the file couldn't be read automatically)
+    'daf.needDetails.title': 'Fill in your DAF details',
+    'daf.needDetails.body': 'Your DAF is verified. Fill in its details — home state, education, work, hobbies — and your predicted questions are built from them. It takes about two minutes, and it’s free.',
+    'daf.needDetails.cta': 'Fill in my DAF details',
+    'pred.needDetails': 'Fill in your DAF details',
+    'pred.needDetailsSub': 'Your DAF is verified. Add its details and your predicted questions are built from them — what boards asked candidates with the same home state, subjects, work and hobbies.',
+    'pr.needDetails': 'Fill in your DAF details to practise your own predicted questions.'
   },
   hi: {
     'cat.polity': 'राजव्यवस्था',
