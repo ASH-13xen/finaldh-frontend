@@ -184,7 +184,8 @@ export default function Daf() {
       refreshCredits();
       if (d?.fields) {
         if (d.stored) toast.success(t('dv.sent'));
-        setDraft({ fields: { ...EMPTY_DAF, ...d.fields }, unsure: d.unsure || [] });
+        // Once verified the roll number stays the one our team checked (they check the new DAF's too).
+        setDraft({ fields: { ...EMPTY_DAF, ...d.fields, ...(lockedAfterVerify ? { rollNo: current.rollNo } : {}) }, unsure: d.unsure || [] });
         setMode('review');
       } else {
         toast.info(t('daf.readFailed'));
@@ -282,13 +283,13 @@ export default function Daf() {
           <h1 className={titleCls}>{t('daf.reviewTitle')}</h1>
           <p className="mt-6 text-lg text-text-secondary max-w-2xl">{t('daf.reviewSub')}</p>
           <div className="mt-10">
-            <DafForm mode="review" initial={draft.fields} unsure={draft.unsure} keywords={keywords} services={status.services} saving={saving} onSave={save} onCancel={() => setMode(null)} />
+            <DafForm mode="review" initial={draft.fields} unsure={draft.unsure} keywords={keywords} services={status.services} saving={saving} onSave={save} onCancel={() => setMode(null)} rollLocked={lockedAfterVerify} />
           </div>
         </>
       )}
 
       {view === 'form' && draft && (
-        <DafForm mode="steps" initial={draft.fields} keywords={keywords} services={status.services} saving={saving} onSave={save} onCancel={() => setMode(null)} />
+        <DafForm mode="steps" initial={draft.fields} keywords={keywords} services={status.services} saving={saving} onSave={save} onCancel={() => setMode(null)} rollLocked={lockedAfterVerify} />
       )}
 
       {paying && <DafChangeSheet price={check.changePrice || 50} onClose={() => setPaying(false)} onPaid={() => { setPaying(false); refreshCredits(); setMode('start'); }} />}

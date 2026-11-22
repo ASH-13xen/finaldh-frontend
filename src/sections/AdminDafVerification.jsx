@@ -16,7 +16,7 @@ const when = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', m
 // "2026-12-07" -> "Mon 7 Dec 2026" (the schedule's dates are Indian dates)
 const day = (iso) => (iso ? new Date(`${iso}T12:00:00+05:30`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : '');
 
-// The roll number on the upload checked against UPSC's interview schedule.
+// A roll number checked against UPSC's interview schedule.
 function ScheduleMatch({ item }) {
   const s = item.schedule || {};
   if (s.found) {
@@ -26,9 +26,43 @@ function ScheduleMatch({ item }) {
       </p>
     );
   }
-  if (s.noRoll) return <p className="text-xs mt-1 text-text-tertiary">No roll number read from this DAF yet.</p>;
+  if (s.noRoll) return <p className="text-xs mt-1 text-text-tertiary">Verified without a roll number: this student sees no interview date.</p>;
   if (!s.loaded) return <p className="text-xs mt-1 text-text-tertiary">Roll {item.rollNo} · upload UPSC’s interview schedule to check it.</p>;
   return <p className="text-xs mt-1 font-semibold text-status-danger-text">⚠ Roll {item.rollNo} is not in the interview schedule — check this DAF carefully.</p>;
+}
+
+const fullRoll = (v) => (v.length === 6 ? `0${v}` : v); // a leading zero left off
+
+// A waiting upload's roll number: read from the DAF or typed by the student, for the admin to check against
+// the file and correct. Verifying saves it, and the student can never change it afterwards.
+function RollCheck({ item, roll, onChange }) {
+  const r = fullRoll(roll);
+  const known = r === item.rollNo; // the list already has its schedule match
+  const [lookup, setLookup] = useState({ roll: '', data: null });
+  useEffect(() => {
+    if (known || r.length !== 7) return undefined;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      api(`/admin/schedule/roll/${r}`).then((d) => { if (!cancelled) setLookup({ roll: r, data: d }); }).catch(() => {});
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [r, known]);
+  const schedule = known ? item.schedule : lookup.roll === r ? lookup.data : null;
+  let note;
+  if (!roll) note = <p className="text-xs mt-1 font-semibold text-status-danger-text">No roll number — type it from the DAF before verifying.</p>;
+  else if (r.length !== 7) note = <p className="text-xs mt-1 text-text-tertiary">A roll number has 7 digits.</p>;
+  else if (!schedule) note = <p className="text-xs mt-1 text-text-tertiary">Checking…</p>;
+  else note = <ScheduleMatch item={{ rollNo: r, schedule }} />;
+  return (
+    <div className="mt-2">
+      <label className="inline-flex items-center gap-2 text-xs font-semibold text-text-secondary">
+        Roll no.
+        <input value={roll} onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 7))} inputMode="numeric" placeholder="7 digits" maxLength={7}
+          className="w-28 h-8 rounded-lg border border-border-default bg-surface px-2 text-sm tabular-nums text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-primary" />
+      </label>
+      {note}
+    </div>
+  );
 }
 
 // UPSC's interview schedule: what is loaded, and uploading the PDF UPSC publishes (a new one replaces it).
@@ -117,6 +151,7 @@ export default function AdminDafVerification() {
   const [busy, setBusy] = useState(null);
   const [viewing, setViewing] = useState(null);
   const [tick, setTick] = useState(0);
+  const [rolls, setRolls] = useState({}); // roll numbers the admin typed, by upload
 
   useEffect(() => {
     let cancelled = false;
@@ -138,8 +173,17 @@ export default function AdminDafVerification() {
       const reason = window.prompt(`Why can't ${item.userName || item.userEmail}'s DAF be verified? (The student sees this.)`, 'This file is not a DAF.');
       if (!reason) return;
       body = { reason };
-    } else if (!window.confirm(`Verify ${item.userName || item.userEmail}'s DAF? Their practice, the full question bank and 15 free credits unlock.`)) {
-      return;
+    } else {
+      // The roll number decides whose interview date the student sees, and they can't change it later.
+      const roll = fullRoll(rolls[item.id] ?? item.rollNo ?? '');
+      if (roll && roll.length !== 7) { window.alert('A roll number has 7 digits.'); return; }
+      const who = item.userName || item.userEmail;
+      const unlocks = item.kind === 'change' ? 'Their new DAF replaces the old one.' : 'Their practice, the full question bank and 15 free credits unlock.';
+      const ok = window.confirm(roll
+        ? `Verify ${who}'s DAF with roll number ${roll}? ${unlocks}\n\nThe student can't change the roll number later.`
+        : `Verify ${who}'s DAF WITHOUT a roll number? ${unlocks}\n\nThey won't see their interview date, and they can't add a roll number later.`);
+      if (!ok) return;
+      body = { rollNo: roll };
     }
     setBusy(item.id);
     try {
@@ -150,13 +194,13 @@ export default function AdminDafVerification() {
     } finally {
       setBusy(null);
     }
-  }, []);
+  }, [rolls]);
 
   const counts = data?.counts || {};
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-12">
       <h1 className="font-display text-3xl md:text-4xl font-semibold text-text-primary tracking-tight">DAF Checks</h1>
-      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details.</p>
+      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details. Check the roll number against the DAF before verifying: it decides which interview date the student sees, and they can’t change it afterwards.</p>
 
       <ScheduleBox info={data?.schedule} onUploaded={() => setTick((k) => k + 1)} />
 
@@ -185,7 +229,10 @@ export default function AdminDafVerification() {
                 Uploaded {when(item.createdAt)}{item.hasFile ? ` · ${item.fileName} · ${size(item.size)}` : ''}
                 {item.reviewedAt ? ` · ${item.status} ${when(item.reviewedAt)}${item.reviewedBy ? ` by ${item.reviewedBy}` : ''}` : ''}
               </p>
-              <ScheduleMatch item={item} />
+              {item.status === 'pending' && (
+                <RollCheck item={item} roll={rolls[item.id] ?? item.rollNo ?? ''} onChange={(v) => setRolls((x) => ({ ...x, [item.id]: v }))} />
+              )}
+              {item.status === 'verified' && <ScheduleMatch item={item} />}
               {item.reason && <p className="text-xs text-status-danger-text mt-1">Reason: {item.reason}</p>}
             </div>
             {item.status === 'pending' && (

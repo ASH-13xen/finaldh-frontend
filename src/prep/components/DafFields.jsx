@@ -20,12 +20,13 @@ export function FieldShell({ label, hint, unsure, children, htmlFor }) {
   );
 }
 
-export function TextField({ label, value, onChange, placeholder, hint, unsure, suggestions, maxLength = 200 }) {
+export function TextField({ label, value, onChange, placeholder, hint, unsure, suggestions, maxLength = 200, readOnly = false }) {
   const id = useId();
   const listId = suggestions?.length ? `${id}-list` : undefined;
+  const cls = readOnly ? `${inputCls.replace('bg-surface', 'bg-sunken').replace('text-text-primary', 'text-text-secondary')} cursor-not-allowed` : inputCls;
   return (
     <FieldShell label={label} hint={hint} unsure={unsure} htmlFor={id}>
-      <input id={id} value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} list={listId} className={inputCls} autoComplete="off" />
+      <input id={id} value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={readOnly ? '' : placeholder} maxLength={maxLength} list={listId} className={cls} autoComplete="off" readOnly={readOnly} aria-readonly={readOnly || undefined} />
       {listId && <datalist id={listId}>{suggestions.map((s) => <option key={s} value={s} />)}</datalist>}
     </FieldShell>
   );

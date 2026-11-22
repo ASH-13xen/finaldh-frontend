@@ -9,14 +9,16 @@ import { STATES, LANGUAGES } from '../lib/india';
 
 const labels = (list, n = 60) => (list || []).slice(0, n).map((k) => k.label);
 
-function useSections(keywords, services) {
+// rollLocked: once the DAF is verified the roll number is the one our team checked against it; students
+// can't change it (it decides whose interview date they see).
+function useSections(keywords, services, rollLocked) {
   const { t } = useT();
   return [
     {
       key: 'home', title: t('daf.s.home'), fields: ['rollNo', 'homeState', 'homeDistrict', 'hometown'],
       render: (d, set, u) => (
         <div className="grid sm:grid-cols-2 gap-6">
-          <TextField label={t('f.rollNo')} hint={t('f.rollNoHint')} value={d.rollNo} onChange={(v) => set('rollNo', v.replace(/\D/g, '').slice(0, 7))} placeholder="0811049" maxLength={7} unsure={u.has('rollNo')} />
+          <TextField label={t('f.rollNo')} hint={t(rollLocked ? 'f.rollNoLocked' : 'f.rollNoHint')} value={d.rollNo} onChange={(v) => { if (!rollLocked) set('rollNo', v.replace(/\D/g, '').slice(0, 7)); }} placeholder="0811049" maxLength={7} unsure={!rollLocked && u.has('rollNo')} readOnly={rollLocked} />
           <SelectField label={t('f.homeState')} value={d.homeState} onChange={(v) => set('homeState', v)} options={STATES} unsure={u.has('homeState')} />
           <TextField label={t('f.homeDistrict')} value={d.homeDistrict} onChange={(v) => set('homeDistrict', v)} unsure={u.has('homeDistrict')} />
           <TextField label={t('f.hometown')} value={d.hometown} onChange={(v) => set('hometown', v)} unsure={u.has('hometown')} />
@@ -79,13 +81,13 @@ function useSections(keywords, services) {
   ];
 }
 
-export default function DafForm({ initial, unsure = [], mode = 'steps', keywords, services, saving, onSave, onCancel }) {
+export default function DafForm({ initial, unsure = [], mode = 'steps', keywords, services, saving, onSave, onCancel, rollLocked = false }) {
   const { t } = useT();
   const [d, setD] = useState(initial);
   const [step, setStep] = useState(0);
   const body = useRef(null);
   const u = new Set(unsure);
-  const sections = useSections(keywords, services);
+  const sections = useSections(keywords, services, rollLocked);
   const set = (k, v) => setD((x) => ({ ...x, [k]: v }));
   const last = step === sections.length - 1;
 

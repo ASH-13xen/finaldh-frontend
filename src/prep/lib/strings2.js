@@ -146,6 +146,7 @@ export const STRINGS2 = {
     'f.homeDistrict': 'Home district',
     'f.rollNo': 'UPSC roll number',
     'f.rollNoHint': '7 digits, as on your DAF and e-summon letter',
+    'f.rollNoLocked': 'Our team checks this against your DAF; it can’t be changed here.',
     'f.hometown': 'Town or city',
     'f.degree': 'Degree',
     'f.discipline': 'Subject or branch',
