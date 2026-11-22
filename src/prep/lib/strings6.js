@@ -113,7 +113,7 @@ export const STRINGS6 = {
     'cr.paidLeft': 'bought credits left',
     'cr.usesTitle': 'One credit is one of these',
     'cr.use.answer': 'Write my answer: an answer drafted from your own DAF, with the follow-ups to expect',
-    'cr.use.feedback': 'Detailed feedback on a recorded answer (2 credits): tone, confidence and every filler word',
+    'cr.use.feedback': 'Detailed feedback on a recorded answer (2 credits, or 3 for an answer over 90 seconds): tone, confidence and every filler word',
     'cr.use.approach': 'How to approach it: what a question tests, a structure, points and pitfalls (once per question)',
     'cr.freeAlways': 'Always free: predictions, the question bank, boards, notes, the 100-question guide and the on-device practice report',
     'cr.packs': 'Get more',

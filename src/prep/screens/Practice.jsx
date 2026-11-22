@@ -1,7 +1,7 @@
 // Practice Studio (voice only): pick a question - any predicted one (filtered like Predicted Questions), most
 // asked, a drill (short or 3 minutes) or your own - answer it aloud in up to 3 minutes, and see how it
-// sounded. On-device numbers are free and unlimited; detailed feedback takes 2 credits (any answer up to 3
-// minutes). Attempts are saved as numbers (never audio) for comparing and for progress.
+// sounded. On-device numbers are free and unlimited; detailed feedback takes 2 credits for an answer up to 90
+// seconds and 3 for a longer one. Attempts are saved as numbers (never audio) for comparing and for progress.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../../components/mcq/Icon';
 import Studio from '../components/practice/Studio';
@@ -64,11 +64,11 @@ export default function Practice() {
   const [asked, setAsked] = useState(null);
   const [history, setHistory] = useState({ attempts: [] });
   const aiLeft = credits?.admin ? Infinity : (credits?.total ?? 0);
-  // Detailed feedback works on answers up to 3 minutes and takes 2 credits (the server says how many for short
-  // and long answers). Every answer can run 3 minutes; short drills have their own timers.
+  // Detailed feedback works on answers up to 3 minutes: 2 credits up to 90 seconds, 3 for a longer answer (the
+  // audio is billed by length). Every answer can run 3 minutes; short drills have their own timers.
   const feedbackMaxSec = credits?.feedbackMaxSeconds ?? 180;
   const answerSec = result?.metrics?.durationSec || 0;
-  const feedbackNeeds = answerSec > (credits?.feedbackShortSeconds ?? 90) ? (credits?.feedbackLongCredits ?? 2) : (credits?.feedbackCredits ?? 2);
+  const feedbackNeeds = answerSec > (credits?.feedbackShortSeconds ?? 90) ? (credits?.feedbackLongCredits ?? 3) : (credits?.feedbackCredits ?? 2);
   const [ai, setAi] = useState(null);
   const savedFor = useRef(null);
   const hasDaf = !!daf.profile && !daf.profile.empty;
