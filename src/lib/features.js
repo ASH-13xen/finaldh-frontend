@@ -16,8 +16,7 @@ export const INTERVIEW_SECTION_LIVE = true;
 // Hidden 2026-11-20 at the client's request.
 export const CURRENT_TOPICS_LIVE = false;
 
-// The "Fill it in" card on My DAF (typing the DAF in from scratch). While false, students can only upload their
-// DAF - which they need anyway to get it verified. The form itself stays: students check what AI read from the
-// upload in it, use it for "Edit DAF", and get it when AI can't read the file. Hidden 2026-11-20 at the
-// client's request; set to true to offer it again.
-export const DAF_FILL_IN_OPTION = false;
+// The "Fill it in" card on My DAF (typing the DAF in from scratch). Hidden 2026-11-20, back 2026-11-22 at the
+// client's request. The roll number can't be typed in: it comes only from the official DAF upload (checked by
+// our team). Unlocking still needs that upload to be verified.
+export const DAF_FILL_IN_OPTION = true;

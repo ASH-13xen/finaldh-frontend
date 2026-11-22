@@ -178,11 +178,18 @@ export default function AdminDafVerification() {
       const roll = fullRoll(rolls[item.id] ?? item.rollNo ?? '');
       if (roll && roll.length !== 7) { window.alert('A roll number has 7 digits.'); return; }
       const who = item.userName || item.userEmail;
-      const unlocks = item.kind === 'change' ? 'Their new DAF replaces the old one.' : 'Their practice, the full question bank and 15 free credits unlock.';
-      const ok = window.confirm(roll
-        ? `Verify ${who}'s DAF with roll number ${roll}? ${unlocks}\n\nThe student can't change the roll number later.`
-        : `Verify ${who}'s DAF WITHOUT a roll number? ${unlocks}\n\nThey won't see their interview date, and they can't add a roll number later.`);
-      if (!ok) return;
+      let question;
+      if (item.kind === 'roll') {
+        // A verified student adding a missing roll number with proof.
+        if (!roll) { window.alert('Enter the roll number shown on the proof to approve it.'); return; }
+        question = `Approve roll number ${roll} for ${who}? Their interview date and countdown show on their Home.\n\nThe student can't change it later.`;
+      } else {
+        const unlocks = item.kind === 'change' ? 'Their new DAF replaces the old one.' : 'Their practice, the full question bank and 15 free credits unlock.';
+        question = roll
+          ? `Verify ${who}'s DAF with roll number ${roll}? ${unlocks}\n\nThe student can't change the roll number later.`
+          : `Verify ${who}'s DAF WITHOUT a roll number? ${unlocks}\n\nThey won't see their interview date until they send their roll number with proof (free), which you check here.`;
+      }
+      if (!window.confirm(question)) return;
       body = { rollNo: roll };
     }
     setBusy(item.id);
@@ -200,7 +207,7 @@ export default function AdminDafVerification() {
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-12">
       <h1 className="font-display text-3xl md:text-4xl font-semibold text-text-primary tracking-tight">DAF Checks</h1>
-      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details. Check the roll number against the DAF before verifying: it decides which interview date the student sees, and they can’t change it afterwards.</p>
+      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. The file is deleted once you decide. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details. Check the roll number against the DAF before verifying: it decides which interview date the student sees, and they can’t change it afterwards. A “Roll number” is a verified student adding a missing roll number with proof (free): approve it only if the proof shows that number.</p>
 
       <ScheduleBox info={data?.schedule} onUploaded={() => setTick((k) => k + 1)} />
 
@@ -224,6 +231,7 @@ export default function AdminDafVerification() {
               <p className="font-semibold text-text-primary">
                 {item.userName || '—'} <span className="font-normal text-text-tertiary">· {item.userEmail}</span>
                 {item.kind === 'change' && <span className="ml-2 align-middle inline-flex px-2 py-0.5 rounded-full bg-accent-soft-bg border border-accent-soft-border text-brand text-[10px] font-extrabold uppercase tracking-wider">Paid change</span>}
+                {item.kind === 'roll' && <span className="ml-2 align-middle inline-flex px-2 py-0.5 rounded-full bg-sky-50 border border-sky-300 text-sky-800 dark:bg-sky-400/10 dark:border-sky-400/30 dark:text-sky-200 text-[10px] font-extrabold uppercase tracking-wider">Roll number</span>}
               </p>
               <p className="text-xs text-text-tertiary mt-0.5">
                 Uploaded {when(item.createdAt)}{item.hasFile ? ` · ${item.fileName} · ${size(item.size)}` : ''}
@@ -237,8 +245,8 @@ export default function AdminDafVerification() {
             </div>
             {item.status === 'pending' && (
               <div className="flex flex-wrap gap-2 shrink-0">
-                <button type="button" onClick={() => setViewing(item)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">View DAF</button>
-                <button type="button" disabled={busy === item.id} onClick={() => act(item, 'verify')} className="px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-text-on-accent text-sm font-bold cursor-pointer disabled:opacity-50">Verify</button>
+                <button type="button" onClick={() => setViewing(item)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">{item.kind === 'roll' ? 'View proof' : 'View DAF'}</button>
+                <button type="button" disabled={busy === item.id} onClick={() => act(item, 'verify')} className="px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-text-on-accent text-sm font-bold cursor-pointer disabled:opacity-50">{item.kind === 'roll' ? 'Approve' : 'Verify'}</button>
                 <button type="button" disabled={busy === item.id} onClick={() => act(item, 'reject')} className="px-4 py-2 rounded-xl border border-status-danger-text/40 text-status-danger-text text-sm font-bold cursor-pointer disabled:opacity-50">Reject</button>
               </div>
             )}

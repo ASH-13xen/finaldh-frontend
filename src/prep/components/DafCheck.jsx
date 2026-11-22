@@ -15,6 +15,18 @@ const TONE = {
   guest: 'border-accent-soft-border bg-accent-soft-bg'
 };
 const ICON = { none: 'upload', pending: 'clock', rejected: 'alert', verified: 'check', guest: 'user' };
+export const ADMIN_TELEGRAM = 'https://t.me/tdhadmin';
+
+// While something waits for our team: how to reach the admin (as on the courses pages).
+export function AdminContact({ className = '' }) {
+  const { t } = useT();
+  return (
+    <p className={`text-sm text-text-secondary ${className}`}>
+      {t('dv.contact')}{' '}
+      <a href={ADMIN_TELEGRAM} target="_blank" rel="noopener noreferrer" className="font-bold text-brand hover:underline">{t('dv.contactLink')}</a>
+    </p>
+  );
+}
 
 export function DafCheckCard({ onUpload, showVerified = false, className = '' }) {
   const { t } = useT();
@@ -31,6 +43,7 @@ export function DafCheckCard({ onUpload, showVerified = false, className = '' })
       <div className="flex-1 min-w-0">
         <p className="font-display text-xl md:text-2xl font-semibold text-text-primary">{t(`dv.${s}.title`)}</p>
         <p className="mt-1 text-[15px] text-text-secondary leading-relaxed">{t(`dv.${s}.body`, { reason: check.reason || '' })}</p>
+        {s === 'pending' && <AdminContact className="mt-2" />}
       </div>
       {s === 'guest' && <Button tone="primary" size="md" iconRight="arrowRight" onClick={signIn}>{t('acct.signIn')}</Button>}
       {(s === 'none' || s === 'rejected') && (

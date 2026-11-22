@@ -8,6 +8,8 @@ export const api = {
   deleteProfile: () => iv('/profile', { method: 'DELETE' }),
   extractDaf: (file) => upload('/profile/extract', 'file', file, file.name || 'daf'),
   dafSubmit: (file) => upload('/daf/submit', 'file', file, file.name || 'daf'),
+  // A verified student's roll number with proof (free; an admin checks it).
+  rollClaim: (rollNo, file) => upload('/daf/roll', 'file', file, file.name || 'proof', { rollNo }),
   predictions: (lang) => iv(`/predictions${qs({ lang })}`),
   family: (id) => iv(`/bank/families/${id}`),
   approach: (id, lang) => iv(`/bank/families/${id}/approach${qs({ lang })}`, { method: 'POST' }),

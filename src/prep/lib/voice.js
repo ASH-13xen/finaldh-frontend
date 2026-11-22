@@ -184,7 +184,8 @@ export function useRecorder() {
     ctx.createMediaStreamSource(stream).connect(analyser);
     const buf = new Float32Array(analyser.fftSize);
     const mime = pickMime();
-    const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    // 64 kbps is plenty for a voice and keeps a 3-minute answer around 1.5 MB for detailed feedback.
+    const rec = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), audioBitsPerSecond: 64000 });
     const chunks = [];
     rec.ondataavailable = (e) => { if (e.data?.size) chunks.push(e.data); };
     rec.start(250);

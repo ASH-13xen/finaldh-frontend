@@ -9,16 +9,16 @@ import { STATES, LANGUAGES } from '../lib/india';
 
 const labels = (list, n = 60) => (list || []).slice(0, n).map((k) => k.label);
 
-// rollLocked: once the DAF is verified the roll number is the one our team checked against it; students
-// can't change it (it decides whose interview date they see).
-function useSections(keywords, services, rollLocked) {
+// rollLocked: students never type the roll number (it decides whose interview date they see): it comes from
+// the official DAF they upload and is checked by our team. rollHint says which of those applies.
+function useSections(keywords, services, rollLocked, rollHint) {
   const { t } = useT();
   return [
     {
       key: 'home', title: t('daf.s.home'), fields: ['rollNo', 'homeState', 'homeDistrict', 'hometown'],
       render: (d, set, u) => (
         <div className="grid sm:grid-cols-2 gap-6">
-          <TextField label={t('f.rollNo')} hint={t(rollLocked ? 'f.rollNoLocked' : 'f.rollNoHint')} value={d.rollNo} onChange={(v) => { if (!rollLocked) set('rollNo', v.replace(/\D/g, '').slice(0, 7)); }} placeholder="0811049" maxLength={7} unsure={!rollLocked && u.has('rollNo')} readOnly={rollLocked} />
+          <TextField label={t('f.rollNo')} hint={t(rollLocked ? rollHint : 'f.rollNoHint')} value={d.rollNo} onChange={(v) => { if (!rollLocked) set('rollNo', v.replace(/\D/g, '').slice(0, 7)); }} placeholder="0811049" maxLength={7} unsure={!rollLocked && u.has('rollNo')} readOnly={rollLocked} />
           <SelectField label={t('f.homeState')} value={d.homeState} onChange={(v) => set('homeState', v)} options={STATES} unsure={u.has('homeState')} />
           <TextField label={t('f.homeDistrict')} value={d.homeDistrict} onChange={(v) => set('homeDistrict', v)} unsure={u.has('homeDistrict')} />
           <TextField label={t('f.hometown')} value={d.hometown} onChange={(v) => set('hometown', v)} unsure={u.has('hometown')} />
@@ -81,13 +81,13 @@ function useSections(keywords, services, rollLocked) {
   ];
 }
 
-export default function DafForm({ initial, unsure = [], mode = 'steps', keywords, services, saving, onSave, onCancel, rollLocked = false }) {
+export default function DafForm({ initial, unsure = [], mode = 'steps', keywords, services, saving, onSave, onCancel, rollLocked = false, rollHint = 'f.rollNoLocked' }) {
   const { t } = useT();
   const [d, setD] = useState(initial);
   const [step, setStep] = useState(0);
   const body = useRef(null);
   const u = new Set(unsure);
-  const sections = useSections(keywords, services, rollLocked);
+  const sections = useSections(keywords, services, rollLocked, rollHint);
   const set = (k, v) => setD((x) => ({ ...x, [k]: v }));
   const last = step === sections.length - 1;
 

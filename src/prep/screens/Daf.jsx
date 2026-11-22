@@ -10,7 +10,7 @@ import { gsap, useGSAP, useReveal, prefersReducedMotion } from '../lib/motion';
 import { useT, fmt } from '../lib/i18n';
 import { usePrep } from '../lib/context';
 import { api } from '../lib/api';
-import { DafCheckCard } from '../components/DafCheck';
+import { DafCheckCard, AdminContact } from '../components/DafCheck';
 import { EMPTY_DAF } from '../lib/india';
 import { errorMessage } from '../../lib/interviewApi';
 import { useToast } from '../../components/Toast';
@@ -137,6 +137,69 @@ function Start({ onFile, onFill, n }) {
   );
 }
 
+const SKY = 'border-sky-300 bg-sky-50 dark:bg-sky-400/10 dark:border-sky-400/30';
+const ROSE = 'border-rose-300 bg-rose-50 dark:bg-rose-400/10 dark:border-rose-400/30';
+
+// A verified student with no checked roll number adds one, free, with proof (an e-summon letter, admit card or
+// the DAF page showing it). Our team checks it on DAF Checks; then their interview date shows on Home.
+function RollClaim({ roll, onSent }) {
+  const { t } = useT();
+  const toast = useToast();
+  const [value, setValue] = useState('');
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const input = useRef(null);
+  const claim = roll?.claim || {};
+  if (claim.status === 'pending') {
+    return (
+      <div className={`mb-10 -mt-6 rounded-[1.5rem] border px-5 py-5 md:px-7 ${SKY}`} role="status">
+        <p className="font-display text-xl md:text-2xl font-semibold text-text-primary">{t('rc.pending.title')}</p>
+        <p className="mt-1 text-[15px] text-text-secondary leading-relaxed">{t('rc.pending.body')}</p>
+        <AdminContact className="mt-2" />
+      </div>
+    );
+  }
+  const send = async (e) => {
+    e.preventDefault();
+    const r = value.length === 6 ? `0${value}` : value;
+    if (r.length !== 7) { toast.error(t('rc.needRoll')); return; }
+    if (!file) { toast.error(t('rc.needFile')); return; }
+    setBusy(true);
+    try {
+      await api.rollClaim(r, file);
+      toast.success(t('rc.sent'));
+      onSent();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+    setBusy(false);
+  };
+  const rejected = claim.status === 'rejected';
+  return (
+    <form onSubmit={send} className={`mb-10 -mt-6 rounded-[1.5rem] border px-5 py-6 md:px-7 md:py-7 ${rejected ? ROSE : 'border-border-default bg-surface'}`}>
+      <p className="font-display text-xl md:text-2xl font-semibold text-text-primary">{t(rejected ? 'rc.rejected.title' : 'rc.title')}</p>
+      <p className="mt-1 text-[15px] text-text-secondary leading-relaxed max-w-3xl">{rejected ? t('rc.rejected.body', { reason: claim.reason || '' }) : t('rc.body')}</p>
+      <div className="mt-5 grid sm:grid-cols-[11rem_minmax(0,1fr)_auto] gap-3 items-end">
+        <label className="block">
+          <span className="block text-sm font-semibold mb-1.5">{t('rc.roll')}</span>
+          <input value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, '').slice(0, 7))} inputMode="numeric" maxLength={7} placeholder="7 digits"
+            className="prep-focus w-full h-12 rounded-2xl border border-border-default bg-surface px-4 text-[17px] tabular-nums text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-primary" />
+        </label>
+        <div className="min-w-0">
+          <span className="block text-sm font-semibold mb-1.5">{t('rc.proof')}</span>
+          <button type="button" onClick={() => input.current?.click()}
+            className="prep-focus w-full h-12 rounded-2xl border border-dashed border-border-default hover:border-brand bg-surface px-4 flex items-center gap-2 text-left cursor-pointer transition-colors">
+            <Icon name="fileText" className="w-5 h-5 shrink-0 text-text-tertiary" />
+            <span className={`truncate ${file ? 'text-text-primary' : 'text-text-tertiary'}`}>{file ? file.name : t('rc.choose')}</span>
+          </button>
+          <input ref={input} type="file" accept="application/pdf,image/png,image/jpeg,image/webp,image/heic" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        </div>
+        <Button type="submit" tone="primary" size="md" icon="upload" disabled={busy}>{busy ? t('rc.sending') : t('rc.send')}</Button>
+      </div>
+    </form>
+  );
+}
+
 export default function Daf() {
   const { status, daf, go, refreshCredits, user } = usePrep();
   const check = useDafCheck();
@@ -145,6 +208,8 @@ export default function Daf() {
   const canUpload = !!user?.isAdmin || !!check.canUpload;
   const needsPayment = !user?.isAdmin && !!check.changeNeedsPayment;
   const lockedAfterVerify = check.verified && !user?.isAdmin;
+  // Students never type the roll number: it comes from the official DAF they upload, checked by our team.
+  const rollHint = lockedAfterVerify ? 'f.rollNoLocked' : 'f.rollNoUpload';
   const change = check.change || {};
   const [paying, setPaying] = useState(false);
   const reupload = () => (canUpload ? setMode('start') : needsPayment ? setPaying(true) : null);
@@ -231,11 +296,13 @@ export default function Daf() {
     <div className="max-w-6xl mx-auto px-4 md:px-8 pt-10 md:pt-16">
       <DafCheckCard className="mb-10" showVerified onUpload={() => setMode('start')} />
       {lockedAfterVerify && (change.status === 'pending' || change.status === 'rejected') && (
-        <div className={`mb-10 -mt-6 rounded-[1.5rem] border px-5 py-5 md:px-7 ${change.status === 'pending' ? 'border-sky-300 bg-sky-50 dark:bg-sky-400/10 dark:border-sky-400/30' : 'border-rose-300 bg-rose-50 dark:bg-rose-400/10 dark:border-rose-400/30'}`} role="status">
+        <div className={`mb-10 -mt-6 rounded-[1.5rem] border px-5 py-5 md:px-7 ${change.status === 'pending' ? SKY : ROSE}`} role="status">
           <p className="font-display text-xl md:text-2xl font-semibold text-text-primary">{t(`daf.change${change.status === 'pending' ? 'Pending' : 'Rejected'}.title`)}</p>
           <p className="mt-1 text-[15px] text-text-secondary leading-relaxed">{t(`daf.change${change.status === 'pending' ? 'Pending' : 'Rejected'}.body`, { reason: change.reason || '' })}</p>
+          {change.status === 'pending' && <AdminContact className="mt-2" />}
         </div>
       )}
+      {lockedAfterVerify && view === 'view' && check.roll && !check.roll.checked && <RollClaim roll={check.roll} onSent={refreshCredits} />}
       {view === 'view' && (
         <>
           <p className="prep-eyebrow text-brand mb-5">{t('daf.eyebrow')}</p>
@@ -243,7 +310,7 @@ export default function Daf() {
           <p className="mt-6 text-lg md:text-xl text-text-secondary leading-relaxed max-w-2xl">{t('daf.sub')}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button tone="primary" size="lg" magnetic iconRight="arrowRight" onClick={() => go({ screen: 'predictions' })}>{t('daf.toPredictions')}</Button>
-            {(canUpload || needsPayment) && <Button tone="ghost" size="lg" icon="upload" onClick={reupload}>{t('daf.reupload')}</Button>}
+            {(canUpload || needsPayment) && <Button tone="ghost" size="lg" icon="upload" onClick={reupload}>{t(check.verified ? 'daf.reupload' : 'dv.upload')}</Button>}
           </div>
           <div className="mt-12"><Heatmap items={profile.items || []} groups={groups} go={go} /></div>
           <div className="mt-8 text-right">
@@ -283,13 +350,13 @@ export default function Daf() {
           <h1 className={titleCls}>{t('daf.reviewTitle')}</h1>
           <p className="mt-6 text-lg text-text-secondary max-w-2xl">{t('daf.reviewSub')}</p>
           <div className="mt-10">
-            <DafForm mode="review" initial={draft.fields} unsure={draft.unsure} keywords={keywords} services={status.services} saving={saving} onSave={save} onCancel={() => setMode(null)} rollLocked={lockedAfterVerify} />
+            <DafForm mode="review" initial={draft.fields} unsure={draft.unsure} keywords={keywords} services={status.services} saving={saving} onSave={save} onCancel={() => setMode(null)} rollLocked={!user?.isAdmin} rollHint={rollHint} />
           </div>
         </>
       )}
 
       {view === 'form' && draft && (
-        <DafForm mode="steps" initial={draft.fields} keywords={keywords} services={status.services} saving={saving} onSave={save} onCancel={() => setMode(null)} rollLocked={lockedAfterVerify} />
+        <DafForm mode="steps" initial={draft.fields} keywords={keywords} services={status.services} saving={saving} onSave={save} onCancel={() => setMode(null)} rollLocked={!user?.isAdmin} rollHint={rollHint} />
       )}
 
       {paying && <DafChangeSheet price={check.changePrice || 50} onClose={() => setPaying(false)} onPaid={() => { setPaying(false); refreshCredits(); setMode('start'); }} />}

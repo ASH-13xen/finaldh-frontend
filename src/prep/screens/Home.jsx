@@ -206,14 +206,19 @@ const TILE_ART = {
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 function InterviewCard() {
   const { t } = useT();
-  const { user } = usePrep();
+  const { user, go } = usePrep();
   const check = useDafCheck();
   const [iv, setIv] = useState(null);
+  const [noRoll, setNoRoll] = useState(null); // verified, but no checked roll number: its request's status
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!check.verified) return undefined;
     let cancelled = false;
-    api.myInterview().then((d) => { if (!cancelled && d?.found) setIv(d); }).catch(() => {});
+    api.myInterview().then((d) => {
+      if (cancelled) return;
+      if (d?.found) setIv(d);
+      else if (d?.noRoll) setNoRoll(d.claim || 'none');
+    }).catch(() => {});
     return () => { cancelled = true; };
   }, [check.verified]);
   useEffect(() => {
@@ -221,6 +226,17 @@ function InterviewCard() {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [iv]);
+  // No roll number yet: they can add it (free, with proof) on My DAF.
+  if (!iv && noRoll) {
+    const pending = noRoll === 'pending';
+    return (
+      <div className="rounded-[1.75rem] border border-border-default bg-surface px-5 py-5 md:px-8 flex flex-col sm:flex-row sm:items-center gap-4">
+        <Icon name="calendar" className="w-6 h-6 text-brand shrink-0" />
+        <p className="flex-1 text-[15px] md:text-base text-text-secondary leading-relaxed">{t(pending ? 'iv.rollPending' : 'iv.addRoll')}</p>
+        {!pending && <Button tone="ghost" size="md" iconRight="arrowRight" onClick={() => go({ screen: 'daf' })}>{t('iv.addRollCta')}</Button>}
+      </div>
+    );
+  }
   if (!iv) return null;
   const at = new Date(iv.reportingAt).getTime();
   if (now > at + 10 * 3600 * 1000) return null; // the day is over

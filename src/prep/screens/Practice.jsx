@@ -1,11 +1,12 @@
-// Practice Studio (voice only): pick a question - predicted, most asked, a drill or your own - answer it
-// aloud, and see how it sounded. On-device numbers are free and unlimited; AI feedback on tone uses an AI credit
-// per day. Attempts are saved as numbers (never audio) for comparing and for progress.
+// Practice Studio (voice only): pick a question - any predicted one (filtered like Predicted Questions), most
+// asked, a drill (short or 3 minutes) or your own - answer it aloud in up to 3 minutes, and see how it
+// sounded. On-device numbers are free and unlimited; detailed feedback takes 1 credit for an answer up to 90
+// seconds and 2 for a longer one. Attempts are saved as numbers (never audio) for comparing and for progress.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../../components/mcq/Icon';
 import Studio from '../components/practice/Studio';
 import Report from '../components/practice/Report';
-import { Chip } from '../components/badges';
+import { Chip, TierBadge } from '../components/badges';
 import { SplitHeading, Highlight } from '../components/motion';
 import { useT, fmt } from '../lib/i18n';
 import { usePrep } from '../lib/context';
@@ -13,7 +14,9 @@ import { api } from '../lib/api';
 import { DafGate } from '../components/DafCheck';
 import { useRecorder, speechRecognitionSupported } from '../lib/voice';
 import { errorMessage } from '../../lib/interviewApi';
+import { TIERS, groupTitle, byLikelihood } from '../lib/predicted';
 
+// limit: the short version's seconds (0 = no timer); timed drills also come in a 3-minute version.
 const DRILLS = [
   { key: 'intro', limit: 60, icon: 'user' },
   { key: 'why', limit: 90, icon: 'target' },
@@ -47,26 +50,32 @@ function Spark({ values, band, color = 'var(--prep-emerald)', label, last }) {
 
 export default function Practice() {
   const { view, go, prep, daf, credits, refreshCredits, openCredits } = usePrep();
-  const { t, lang, hi } = useT();
+  const { t, tn, lang, hi } = useT();
   const recorder = useRecorder();
   const { state, result, error } = recorder;
   const [src, setSrc] = useState('predicted');
   const [pick, setPick] = useState(() => (view.question ? { text: view.question, key: view.key || '', label: t('pr.src.predicted') } : null));
   const [own, setOwn] = useState('');
-  const [predicted, setPredicted] = useState(null);
+  const [groups, setGroups] = useState(null); // predictions by DAF item
+  const [tier, setTier] = useState('all');
+  const [onlyReal, setOnlyReal] = useState(false);
+  const [item, setItem] = useState('all');
+  const [drillLen, setDrillLen] = useState('short');
   const [asked, setAsked] = useState(null);
   const [history, setHistory] = useState({ attempts: [] });
   const aiLeft = credits?.admin ? Infinity : (credits?.total ?? 0);
-  // Detailed feedback takes 2 credits and works on answers up to 2 minutes (audio is billed by length).
-  const feedbackNeeds = credits?.feedbackCredits || 2;
-  const feedbackMaxSec = credits?.feedbackMaxSeconds || 120;
+  // Detailed feedback works on answers up to 3 minutes: 1 credit up to 90 seconds, 2 for a longer answer
+  // (the audio is billed by length). Every answer can run 3 minutes; short drills have their own timers.
+  const feedbackMaxSec = credits?.feedbackMaxSeconds ?? 180;
+  const answerSec = result?.metrics?.durationSec || 0;
+  const feedbackNeeds = answerSec > (credits?.feedbackShortSeconds ?? 90) ? (credits?.feedbackLongCredits ?? 2) : (credits?.feedbackCredits ?? 1);
   const [ai, setAi] = useState(null);
   const savedFor = useRef(null);
   const hasDaf = !!daf.profile && !daf.profile.empty;
 
   useEffect(() => {
     let cancelled = false;
-    if (hasDaf) api.predictions(lang).then((d) => { if (!cancelled) setPredicted(d.groups.flatMap((g) => g.predictions).filter((p) => p.tier !== 'worth').slice(0, 14)); }).catch(() => { if (!cancelled) setPredicted([]); });
+    if (hasDaf) api.predictions(lang).then((d) => { if (!cancelled) setGroups(d.groups || []); }).catch(() => { if (!cancelled) setGroups([]); });
     api.trends().then((d) => { if (!cancelled) setAsked(d.mostAsked || []); }).catch(() => { if (!cancelled) setAsked([]); });
     return () => { cancelled = true; };
   }, [lang, hasDaf]);
@@ -84,7 +93,15 @@ export default function Practice() {
       .then(loadHistory).catch(() => {});
   }, [state, result, pick, lang, loadHistory]);
 
+  // Every predicted question, with the same filters as Predicted Questions.
+  const predicted = useMemo(() => (groups || [])
+    .filter((g) => item === 'all' || g.key === item)
+    .flatMap((g) => g.predictions.map((p) => ({ ...p, itemLabel: groupTitle(t, g) })))
+    .filter((p) => (tier === 'all' || p.tier === tier) && (!onlyReal || p.source !== 'new'))
+    .sort(byLikelihood), [groups, item, tier, onlyReal, t]);
+
   const drill = pick?.drill ? DRILLS.find((d) => d.key === pick.drill) : null;
+  const timeLimit = drill ? (drill.limit ? (pick.long ? feedbackMaxSec : drill.limit) : 0) : feedbackMaxSec;
   const stageRef = useRef(null);
   const toStage = () => setTimeout(() => stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   const choose = (p) => { recorder.reset(); setAi(null); setPick(p); toStage(); };
@@ -132,12 +149,41 @@ export default function Practice() {
                 <span className="text-lg">{t('pr.needDaf')}</span><Icon name="arrowRight" className="w-5 h-5 text-brand" />
               </button>
             ) : (
-              <ul className="grid md:grid-cols-2 gap-3">
-                {(predicted || []).map((p) => (
-                  <li key={p.key}><button type="button" onClick={() => choose({ text: p.question, key: p.key, label: t('pr.src.predicted') })} className="prep-focus prep-card prep-card-hover w-full h-full text-left px-5 py-4 cursor-pointer font-display text-lg leading-snug">{p.question}</button></li>
-                ))}
-                {!predicted && Array.from({ length: 4 }, (_, i) => <li key={i} className="iv-skeleton h-20 rounded-3xl" />)}
-              </ul>
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  {['all', ...TIERS].map((k) => <Chip key={k} active={tier === k} onClick={() => setTier(k)}>{k === 'all' ? t('pr.filter.all') : t(`tier.${k}`)}</Chip>)}
+                  <Chip active={onlyReal} onClick={() => setOnlyReal((o) => !o)}><Icon name="check" className="w-4 h-4" />{t('pred.onlyReal')}</Chip>
+                  {groups?.length > 1 && (
+                    <label className="relative inline-flex">
+                      <span className="sr-only">{t('pr.filter.item')}</span>
+                      <select value={item} onChange={(e) => setItem(e.target.value)}
+                        className="prep-focus h-10 max-w-[15rem] rounded-full border border-border-default bg-surface pl-4 pr-9 text-sm font-semibold text-text-primary appearance-none cursor-pointer truncate">
+                        <option value="all">{t('pr.filter.allItems')}</option>
+                        {groups.map((g) => <option key={g.key} value={g.key}>{groupTitle(t, g)}</option>)}
+                      </select>
+                      <Icon name="chevronDown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-tertiary" />
+                    </label>
+                  )}
+                </div>
+                {groups && <p className="mt-3 text-sm text-text-tertiary">{tn('pr.count', predicted.length, { n: fmt(predicted.length) })}</p>}
+                <ul className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {predicted.map((p) => {
+                    const done = ['practised', 'confident'].includes(prep.items.get(p.key)?.status);
+                    return (
+                      <li key={`${p.id}-${p.key}`}><button type="button" onClick={() => choose({ text: p.question, key: p.key, label: t('pr.src.predicted') })} className="prep-focus prep-card prep-card-hover w-full h-full text-left px-5 py-4 cursor-pointer flex flex-col gap-2.5">
+                        <span className="flex items-center gap-2 min-w-0">
+                          <TierBadge tier={p.tier} size="sm" />
+                          <span className="text-xs text-text-tertiary truncate">{p.itemLabel}</span>
+                          {done && <span className="ml-auto shrink-0 text-brand" title={t('pr.marked')}><Icon name="check" className="w-4 h-4" /></span>}
+                        </span>
+                        <span className="font-display text-lg leading-snug">{p.question}</span>
+                      </button></li>
+                    );
+                  })}
+                  {!groups && Array.from({ length: 4 }, (_, i) => <li key={i} className="iv-skeleton h-24 rounded-3xl" />)}
+                  {groups && !predicted.length && <li className="text-text-secondary py-6">{t('pred.empty')}</li>}
+                </ul>
+              </>
             ))}
             {src === 'asked' && (
               <ul className="grid md:grid-cols-2 gap-3">
@@ -149,15 +195,25 @@ export default function Practice() {
               </ul>
             )}
             {src === 'drills' && (
-              <ul className="grid md:grid-cols-2 gap-4">
-                {DRILLS.map((d) => (
-                  <li key={d.key}><button type="button" onClick={() => choose({ text: t(`drill.${d.key}.q`), key: '', label: t(`drill.${d.key}`), drill: d.key })} className="prep-focus prep-card prep-card-hover group w-full h-full text-left px-6 py-6 cursor-pointer">
-                    <Icon name={d.icon} className="w-7 h-7 text-brand" />
-                    <p className="mt-4 font-display text-2xl font-semibold group-hover:text-brand transition-colors">{t(`drill.${d.key}`)}</p>
-                    <p className="mt-1 text-text-secondary">{t(`drill.${d.key}.sub`)}</p>
-                  </button></li>
-                ))}
-              </ul>
+              <>
+                <div className="flex items-center gap-2" role="group" aria-label={t('drill.len')}>
+                  {['short', 'long'].map((k) => <Chip key={k} active={drillLen === k} onClick={() => setDrillLen(k)}><Icon name="clock" className="w-4 h-4" />{t(`drill.len.${k}`)}</Chip>)}
+                </div>
+                <ul className="mt-4 grid md:grid-cols-2 gap-4">
+                  {DRILLS.map((d) => {
+                    // The 3-minute version of a timed drill (the pace trainer has no timer either way).
+                    const long = drillLen === 'long' && d.limit > 0;
+                    const name = t(long ? `drill.${d.key}.long` : `drill.${d.key}`);
+                    return (
+                      <li key={d.key}><button type="button" onClick={() => choose({ text: t(`drill.${d.key}.q`), key: '', label: name, drill: d.key, long })} className="prep-focus prep-card prep-card-hover group w-full h-full text-left px-6 py-6 cursor-pointer">
+                        <Icon name={d.icon} className="w-7 h-7 text-brand" />
+                        <p className="mt-4 font-display text-2xl font-semibold group-hover:text-brand transition-colors">{name}</p>
+                        <p className="mt-1 text-text-secondary">{t(long ? `drill.${d.key}.long.sub` : `drill.${d.key}.sub`)}</p>
+                      </button></li>
+                    );
+                  })}
+                </ul>
+              </>
             )}
             {src === 'own' && (
               <form onSubmit={(e) => { e.preventDefault(); if (own.trim()) choose({ text: own.trim(), key: '', label: t('pr.src.own') }); }} className="flex flex-col sm:flex-row gap-3">
@@ -180,7 +236,7 @@ export default function Practice() {
             lang={lang}
             recorder={recorder}
             onChange={() => { recorder.reset(); setAi(null); setPick(null); }}
-            timeLimit={drill?.limit || 0}
+            timeLimit={timeLimit}
             liveFillers={!!drill?.liveFillers}
             showPace={!!drill?.showPace}
           />
@@ -194,7 +250,7 @@ export default function Practice() {
               ai={ai}
               aiLeft={aiLeft}
               aiNeeds={feedbackNeeds}
-              aiTooLong={(result?.metrics?.durationSec || 0) > feedbackMaxSec}
+              aiTooLong={answerSec > feedbackMaxSec}
               onAi={getAi}
               onAgain={() => { recorder.reset(); setAi(null); toStage(); }}
               onNext={() => { recorder.reset(); setAi(null); setPick(null); }}

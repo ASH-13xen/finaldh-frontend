@@ -29,8 +29,9 @@ export async function iv(path, { method = 'GET', body } = {}) {
   return handle(res);
 }
 
-export async function upload(path, field, blob, filename) {
+export async function upload(path, field, blob, filename, fields = {}) {
   const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, String(v));
   form.append(field, blob, filename);
   let res;
   try {

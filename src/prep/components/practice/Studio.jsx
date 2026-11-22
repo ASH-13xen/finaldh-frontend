@@ -141,7 +141,7 @@ export default function Studio({ question, label, lang, recorder, onChange, time
             <div className="w-full max-w-2xl grid grid-cols-3 items-center gap-4">
               <div className="text-center">
                 <p className="prep-num font-display text-3xl">{clock(live.seconds)}</p>
-                <p className="text-xs text-white/50">{timeLimit ? t('pr.timeLeft', { s: left }) : t('pr.recording')}</p>
+                <p className="text-xs text-white/50">{timeLimit ? t('pr.timeLeft', { s: left >= 60 ? clock(left) : `${left}s` }) : t('pr.recording')}</p>
               </div>
               <Level level={live.level} on={recording} />
               <div className="text-center">

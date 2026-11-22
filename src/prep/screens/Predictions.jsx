@@ -16,18 +16,12 @@ import { api } from '../lib/api';
 import { errorMessage } from '../../lib/interviewApi';
 import { DafGate } from '../components/DafCheck';
 import { useDafCheck } from '../lib/useDafCheck';
+import { TIERS, groupTitle, byLikelihood } from '../lib/predicted';
 
 const TYPE_ICON = { intro: 'user', motivation: 'target', home: 'mapPin', education: 'graduation', work: 'briefcase', optional: 'book', hobby: 'heart', eca: 'award', service: 'layers', family: 'users', language: 'languages', name: 'user' };
-const TIERS = ['certain', 'likely', 'worth'];
 const DONE = new Set(['practised', 'confident']);
 
 const groupEyebrow = (t, g) => (g.isCollege ? t('area.college') : t(`area.${g.type}`));
-const groupTitle = (t, g) => {
-  if (g.type === 'intro' || g.type === 'motivation') return t(`area.${g.type}`);
-  if (g.type === 'education' && !g.isCollege) return g.label;
-  if (g.type === 'work') return g.label;
-  return g.value || g.label;
-};
 
 function RateLine({ g }) {
   const { t } = useT();
@@ -141,8 +135,7 @@ function PredictedQuestions() {
     [data, tier, onlyReal]);
   const all = useMemo(() => (data?.groups || []).flatMap((g) => g.predictions.map((p) => ({ ...p, itemLabel: groupTitle(t, g) }))), [data, t]);
   const ranked = useMemo(() => {
-    const order = { certain: 0, likely: 1, worth: 2 };
-    return all.filter(keep).sort((a, b) => order[a.tier] - order[b.tier] || (b.evidence?.timesAsked || 0) - (a.evidence?.timesAsked || 0));
+    return all.filter(keep).sort(byLikelihood);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [all, tier, onlyReal]);
   const done = all.filter((p) => DONE.has(prep.items.get(p.key)?.status)).length;
