@@ -281,16 +281,17 @@ export default function Daf() {
     setSaving(false);
   };
 
-  // A DAF filled in by hand goes to our team for verification, like an upload. Its roll number is optional;
-  // given, it needs a proof. (A verified student's change keeps the roll number our team checked.)
+  // A DAF filled in by hand goes to our team for verification, like an upload. It has no file, so the roll
+  // number and a proof of it are both required. (A verified student's change keeps the roll number our team
+  // checked, and still sends a proof.)
   const sendForm = async (fields, { proof } = {}) => {
-    const typed = lockedAfterVerify ? '' : String(fields.rollNo || '');
+    const typed = String(fields.rollNo || '');
     const roll = typed.length === 6 ? `0${typed}` : typed;
-    if (typed && roll.length !== 7) { toast.error(t('rc.needRoll')); return; }
-    if (roll && !proof) { toast.error(t('df.needProof')); return; }
+    if (roll.length !== 7) { toast.error(t('df.needRoll')); return; }
+    if (!proof) { toast.error(t('df.needProof')); return; }
     setSaving(true);
     try {
-      await api.dafForm(fields, roll, roll ? proof : null);
+      await api.dafForm(fields, roll, proof);
       toast.success(t('dv.sent'));
       refreshCredits();
       daf.refresh();
@@ -414,7 +415,7 @@ export default function Daf() {
       {view === 'form' && draft && (
         <DafForm mode="steps" initial={draft.fields} keywords={keywords} services={status.services} saving={saving}
           onSave={draft.send ? sendForm : save} onCancel={() => setMode(null)} send={!!draft.send}
-          rollLocked={draft.send ? lockedAfterVerify : !user?.isAdmin} rollProof={!!draft.send && !lockedAfterVerify} rollHint={rollHint} />
+          rollLocked={draft.send ? lockedAfterVerify && !!current.rollNo : !user?.isAdmin} rollProof={!!draft.send} rollHint={rollHint} />
       )}
 
       {paying && <DafChangeSheet price={check.changePrice || 50} onClose={() => setPaying(false)} onPaid={() => { setPaying(false); refreshCredits(); setMode('start'); }} />}

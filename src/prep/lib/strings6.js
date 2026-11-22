@@ -279,9 +279,11 @@ export const STRINGS6 = {
     'daf.send': 'Send for verification',
     'daf.sending': 'Sending…',
     'daf.sendNote': 'When you send it, our team verifies your DAF — usually within a day. Your predicted questions and practice unlock then.',
-    'f.rollNoOptional': 'Optional. If you add it, attach a proof below — your e-summon letter, admit card or the DAF page showing it — and our team checks it. Leave it empty and no proof is needed; you can add it later from My DAF.',
+    'f.rollNoRequired': 'Required, with a proof of it below. Our team checks both to verify a DAF you fill in.',
     'f.rollProof': 'Proof of your roll number (PDF or photo)',
-    'df.needProof': 'Attach a proof of your roll number, or leave the roll number empty.',
+    'f.rollProofHint': 'Required: your e-summon letter, admit card or the DAF page showing your roll number.',
+    'df.needRoll': 'Add your roll number (7 digits): it’s required to send a DAF you fill in.',
+    'df.needProof': 'Attach a proof of your roll number: it’s required to send a DAF you fill in.',
     // Verified, but the DAF details were never filled in (say the file couldn't be read automatically)
     'daf.needDetails.title': 'Fill in your DAF details',
     'daf.needDetails.body': 'Your DAF is verified. Fill in its details — home state, education, work, hobbies — and your predicted questions are built from them. It takes about two minutes, and it’s free.',

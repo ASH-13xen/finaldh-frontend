@@ -10,13 +10,13 @@ import { STATES, LANGUAGES } from '../lib/india';
 
 const labels = (list, n = 60) => (list || []).slice(0, n).map((k) => k.label);
 
-// The proof that goes with a roll number typed into a DAF filled in by hand.
+// The proof of the roll number, required with a DAF filled in by hand.
 function ProofPicker({ file, onFile }) {
   const { t } = useT();
   const input = useRef(null);
   return (
     <div className="mt-6">
-      <FieldShell label={t('f.rollProof')}>
+      <FieldShell label={t('f.rollProof')} hint={t('f.rollProofHint')}>
         <button type="button" onClick={() => input.current?.click()}
           className="prep-focus w-full h-14 rounded-2xl border-2 border-dashed border-border-default hover:border-brand bg-surface px-4 flex items-center gap-3 text-left cursor-pointer transition-colors">
           <Icon name={file ? 'check' : 'upload'} className={`w-5 h-5 shrink-0 ${file ? 'text-brand' : 'text-text-tertiary'}`} />
@@ -29,11 +29,11 @@ function ProofPicker({ file, onFile }) {
 }
 
 // roll.locked: the roll number can't be typed - it comes from the official DAF upload (checked by our team);
-// roll.hint says which applies. roll.proof (a DAF filled in by hand): it can be typed, optionally, and then
-// needs a proof file.
+// roll.hint says which applies. roll.proof (a DAF filled in by hand): the roll number and a proof of it are
+// both required.
 function useSections(keywords, services, roll) {
   const { t } = useT();
-  const hint = roll.locked ? roll.hint : roll.proof ? 'f.rollNoOptional' : 'f.rollNoHint';
+  const hint = roll.locked ? roll.hint : roll.proof ? 'f.rollNoRequired' : 'f.rollNoHint';
   return [
     {
       key: 'home', title: t('daf.s.home'), fields: ['rollNo', 'homeState', 'homeDistrict', 'hometown'],
@@ -45,7 +45,7 @@ function useSections(keywords, services, roll) {
             <TextField label={t('f.homeDistrict')} value={d.homeDistrict} onChange={(v) => set('homeDistrict', v)} unsure={u.has('homeDistrict')} />
             <TextField label={t('f.hometown')} value={d.hometown} onChange={(v) => set('hometown', v)} unsure={u.has('hometown')} />
           </div>
-          {roll.proof && d.rollNo && <ProofPicker file={roll.proof.file} onFile={roll.proof.setFile} />}
+          {roll.proof && <ProofPicker file={roll.proof.file} onFile={roll.proof.setFile} />}
         </>
       )
     },
@@ -111,12 +111,30 @@ export default function DafForm({ initial, unsure = [], mode = 'steps', keywords
   const [d, setD] = useState(initial);
   const [step, setStep] = useState(0);
   const [proof, setProof] = useState(null);
+  const [problem, setProblem] = useState(''); // what stops the first step (roll number or proof missing)
   const body = useRef(null);
   const u = new Set(unsure);
-  const sections = useSections(keywords, services, { locked: rollLocked, hint: rollHint, proof: rollProof ? { file: proof, setFile: setProof } : null });
+  const pickProof = (f) => { setProof(f); setProblem(''); };
+  const sections = useSections(keywords, services, { locked: rollLocked, hint: rollHint, proof: rollProof ? { file: proof, setFile: pickProof } : null });
   const saveLabel = send ? (saving ? t('daf.sending') : t('daf.send')) : (saving ? t('daf.saving') : t('daf.save'));
-  const doSave = () => onSave(d, { proof: rollProof && d.rollNo ? proof : null });
-  const set = (k, v) => setD((x) => ({ ...x, [k]: v }));
+  const set = (k, v) => { setD((x) => ({ ...x, [k]: v })); if (k === 'rollNo') setProblem(''); };
+  // A DAF filled in by hand can't go on (or be sent) without the roll number and its proof.
+  const rollProblem = () => {
+    if (!rollProof) return '';
+    if (String(d.rollNo || '').length < 6) return t('df.needRoll');
+    if (!proof) return t('df.needProof');
+    return '';
+  };
+  const doSave = () => {
+    const p = rollProblem();
+    if (p) { setProblem(p); setStep(0); return; }
+    onSave(d, { proof: rollProof ? proof : null });
+  };
+  const next = () => {
+    const p = sections[step].key === 'home' ? rollProblem() : '';
+    setProblem(p);
+    if (!p) setStep((x) => x + 1);
+  };
   const last = step === sections.length - 1;
 
   useGSAP(() => {
@@ -156,13 +174,14 @@ export default function DafForm({ initial, unsure = [], mode = 'steps', keywords
       <div ref={body}>
         <h2 className="font-display text-4xl md:text-5xl font-semibold tracking-tight mb-8">{s.title}</h2>
         {s.render(d, set, u)}
+        {problem && <p role="alert" className="mt-6 text-[15px] font-semibold text-status-danger-text flex gap-2"><Icon name="alert" className="w-5 h-5 shrink-0" />{problem}</p>}
       </div>
       {send && last && <p className="mt-10 text-sm text-text-secondary flex gap-2"><Icon name="info" className="w-4 h-4 mt-0.5 shrink-0 text-brand" />{t('daf.sendNote')}</p>}
       <div className="mt-12 flex items-center justify-between gap-3">
         <Button tone="ghost" size="lg" icon="arrowLeft" onClick={() => setStep((x) => Math.max(0, x - 1))} disabled={step === 0}>{t('daf.back')}</Button>
         {last
           ? <Button tone="primary" size="lg" icon={send ? 'upload' : 'check'} onClick={doSave} disabled={saving}>{saveLabel}</Button>
-          : <Button tone="ink" size="lg" iconRight="arrowRight" onClick={() => setStep((x) => x + 1)}>{t('daf.next')}</Button>}
+          : <Button tone="ink" size="lg" iconRight="arrowRight" onClick={next}>{t('daf.next')}</Button>}
       </div>
     </div>
   );
