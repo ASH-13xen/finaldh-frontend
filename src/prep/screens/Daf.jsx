@@ -304,6 +304,22 @@ export default function Daf() {
     setSaving(false);
   };
 
+  // No details yet, but the uploaded DAF can fill them in (say AI was off when it was sent): read it now and let
+  // the student check them. If it can't be read, they fill them in by hand.
+  const fillByHand = () => { setDraft({ fields: current, unsure: [] }); setMode('form'); };
+  const readFromFile = async () => {
+    setMode('reading');
+    try {
+      const d = await api.dafRead();
+      setDraft({ fields: { ...EMPTY_DAF, ...d.fields, ...(lockedAfterVerify ? { rollNo: current.rollNo } : {}) }, unsure: d.unsure || [] });
+      setMode('review');
+    } catch (err) {
+      toast.info(errorMessage(err));
+      refreshCredits();
+      fillByHand();
+    }
+  };
+
   const remove = async () => {
     if (!window.confirm(t('daf.deleteConfirm'))) return;
     try {
@@ -354,8 +370,11 @@ export default function Daf() {
               <div className="prep-card max-w-3xl p-6 md:p-10">
                 <span className="w-14 h-14 rounded-2xl bg-text-primary text-page flex items-center justify-center"><Icon name="edit" className="w-7 h-7" /></span>
                 <h2 className="mt-6 font-display text-3xl md:text-4xl font-semibold tracking-tight">{t('daf.needDetails.title')}</h2>
-                <p className="mt-2 text-lg text-text-secondary">{t('daf.needDetails.body')}</p>
-                <Button className="mt-8" tone="primary" size="lg" icon="edit" onClick={() => { setDraft({ fields: current, unsure: [] }); setMode('form'); }}>{t('daf.needDetails.cta')}</Button>
+                <p className="mt-2 text-lg text-text-secondary">{t(check.detailsFromFile ? 'daf.needDetails.bodyFile' : 'daf.needDetails.body')}</p>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  {check.detailsFromFile && <Button tone="primary" size="lg" icon="sparkles" onClick={readFromFile}>{t('daf.readFromFile')}</Button>}
+                  <Button tone={check.detailsFromFile ? 'ghost' : 'primary'} size="lg" icon="edit" onClick={fillByHand}>{t(check.detailsFromFile ? 'daf.fillByHand' : 'daf.needDetails.cta')}</Button>
+                </div>
               </div>
             ) : canUpload
               ? <Start onFile={onFile} onFill={() => { setDraft({ fields: { ...current, rollNo: lockedAfterVerify ? current.rollNo : '' }, unsure: [], send: true }); setMode('form'); }} n={status.corpus?.transcripts || 0} />
@@ -363,10 +382,15 @@ export default function Daf() {
                 <div className="prep-card max-w-3xl p-6 md:p-10">
                   <span className="w-14 h-14 rounded-2xl bg-accent-soft-bg text-brand flex items-center justify-center"><Icon name="check" className="w-7 h-7" /></span>
                   <h2 className="mt-6 font-display text-3xl md:text-4xl font-semibold tracking-tight">{t(needsPayment ? 'dc.title' : 'daf.uploadedTitle')}</h2>
-                  <p className="mt-2 text-lg text-text-secondary">{needsPayment ? t('dc.startBody', { price: check.changePrice || 50 }) : t('daf.uploadedBody')}</p>
+                  <p className="mt-2 text-lg text-text-secondary">{needsPayment ? t('dc.startBody', { price: check.changePrice || 50 }) : t(!hasDaf && check.detailsFromFile ? 'daf.uploadedRead' : 'daf.uploadedBody')}</p>
                   {needsPayment
                     ? <Button className="mt-8" tone="primary" size="lg" icon="upload" onClick={() => setPaying(true)}>{t('daf.reupload')}</Button>
-                    : !hasDaf && !lockedAfterVerify && <Button className="mt-8" tone="primary" size="lg" icon="edit" onClick={() => { setDraft({ fields: current, unsure: [] }); setMode('form'); }}>{t('daf.fillFromFile')}</Button>}
+                    : !hasDaf && !lockedAfterVerify && (
+                      <div className="mt-8 flex flex-wrap gap-3">
+                        {check.detailsFromFile && <Button tone="primary" size="lg" icon="sparkles" onClick={readFromFile}>{t('daf.readFromFile')}</Button>}
+                        <Button tone={check.detailsFromFile ? 'ghost' : 'primary'} size="lg" icon="edit" onClick={fillByHand}>{t(check.detailsFromFile ? 'daf.fillByHand' : 'daf.fillFromFile')}</Button>
+                      </div>
+                    )}
                 </div>
               )}
           </div>

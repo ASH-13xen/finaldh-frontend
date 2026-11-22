@@ -288,7 +288,12 @@ export const STRINGS6 = {
     'daf.needDetails.cta': 'Fill in my DAF details',
     'pred.needDetails': 'Fill in your DAF details',
     'pred.needDetailsSub': 'Your DAF is verified. Add its details and your predicted questions are built from them — what boards asked candidates with the same home state, subjects, work and hobbies.',
-    'pr.needDetails': 'Fill in your DAF details to practise your own predicted questions.'
+    'pr.needDetails': 'Fill in your DAF details to practise your own predicted questions.',
+    // The uploaded DAF fills in the details (when it couldn't be read as it was sent)
+    'daf.readFromFile': 'Get my details from my DAF',
+    'daf.fillByHand': 'Fill in by hand',
+    'daf.needDetails.bodyFile': 'Your DAF is verified. We can read its details from the DAF you uploaded — you just check them and save. It’s free.',
+    'daf.uploadedRead': 'Your DAF details aren’t filled in yet. Get them from the DAF you sent — just check them and save. Our team verifies your DAF meanwhile.'
   },
   hi: {
     'cat.polity': 'राजव्यवस्था',
