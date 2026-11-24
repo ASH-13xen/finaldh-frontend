@@ -1,5 +1,5 @@
 import { useState, useEffect, Suspense } from 'react';
-import Navbar from '../components/Navbar';
+import Navbar, { ADMIN_SIDEBAR_PAD } from '../components/Navbar';
 import ErrorBoundary from '../components/ErrorBoundary';
 import StudentDashboard from './StudentDashboard';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -96,7 +96,8 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
       {!user.isAdmin && <PaymentRejectionNotice />}
 
       {/* Main Page Workspace Content */}
-      <main className="flex-grow">
+      {/* Admins: room for the side menu (desktop). */}
+      <main className={`flex-grow ${user.isAdmin ? ADMIN_SIDEBAR_PAD : ''}`}>
       {/* key={activeTab} remounts the boundary on tab switch, so navigating away from a
           crashed section clears the error instead of leaving it stuck forever. */}
       <ErrorBoundary key={activeTab}>

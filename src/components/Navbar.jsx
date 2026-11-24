@@ -9,6 +9,14 @@ const buttonClass = (active) =>
     active ? 'bg-brand text-text-on-accent shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
   }`;
 
+// The admin side menu (desktop): every link, one per row, so nothing hides off-screen.
+const sideButtonClass = (active) =>
+  `w-full text-left text-[13px] font-sans font-semibold px-3 py-2 rounded-lg transition-colors duration-150 cursor-pointer flex items-center ${
+    active ? 'bg-brand text-text-on-accent shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'
+  }`;
+// Admins: the side menu is this wide (DashboardSection leaves room for it).
+export const ADMIN_SIDEBAR_PAD = 'md:pl-56';
+
 const mobileButtonClass = (active) =>
   `w-full text-left font-sans font-semibold px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-between border ${
     active ? 'bg-brand text-text-on-accent border-brand shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised border-border-default'
@@ -83,6 +91,7 @@ const getNavLinks = (user, pendingReports = 0, pendingDafs = 0) => {
     links.push(
       {
         key: 'daf_checks',
+        admin: true,
         target: 'admin_daf',
         match: (t) => t === 'admin_daf',
         label: (
@@ -98,24 +107,28 @@ const getNavLinks = (user, pendingReports = 0, pendingDafs = 0) => {
       },
       {
         key: 'manage',
+        admin: true,
         target: 'manage_courses',
         match: (t) => t === 'manage_courses',
         label: <><span className="hidden sm:inline">Manage </span>Courses</>
       },
       {
         key: 'progress_data',
+        admin: true,
         target: 'admin_progress_data',
         match: (t) => t === 'admin_progress_data',
         label: <><span className="hidden sm:inline">Progress </span>Data</>
       },
       {
         key: 'progress_builder',
+        admin: true,
         target: 'admin_progress_builder',
         match: (t) => t === 'admin_progress_builder',
         label: <><span className="hidden sm:inline">Progress </span>Builder</>
       },
       {
         key: 'manage_mcq',
+        admin: true,
         target: 'admin_mcq_data',
         match: (t) => t === 'admin_mcq_data',
         label: (
@@ -131,18 +144,21 @@ const getNavLinks = (user, pendingReports = 0, pendingDafs = 0) => {
       },
       {
         key: 'requests',
+        admin: true,
         target: 'admin_purchases',
         match: (t) => t === 'admin_purchases',
         label: <><span className="hidden sm:inline">Purchase </span>Requests</>
       },
       {
         key: 'admin_view',
+        admin: true,
         target: 'admin_view',
         match: (t) => t === 'admin_view',
         label: <><span className="hidden sm:inline">Admin </span>View</>
       },
       {
         key: 'contact_users',
+        admin: true,
         target: 'admin_contact_users',
         match: (t) => t === 'admin_contact_users',
         label: <><span className="hidden sm:inline">Contact </span>User</>
@@ -249,6 +265,17 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
   const hasAnimated = useRef(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // The bar's height, for the admin side menu that sits under it.
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return undefined;
+    const setHeight = () => document.documentElement.style.setProperty('--nav-h', `${el.offsetHeight}px`);
+    setHeight();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(setHeight) : null;
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, []);
+
   useEffect(() => {
     if (hasAnimated.current || !navRef.current) return;
     hasAnimated.current = true;
@@ -270,7 +297,12 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
     }
   };
 
+  const sideGroups = user?.isAdmin
+    ? [['Student side', links.filter((l) => !l.admin)], ['Admin', links.filter((l) => l.admin)]]
+    : [];
+
   return (
+    <>
     <nav ref={navRef} className="w-full bg-surface border-b border-border-default px-4 md:px-6 py-3 md:py-4 flex items-center justify-between sticky top-0 z-50">
       {/* Brand logo & title */}
       <div className="flex items-center gap-1.5 sm:gap-4 md:gap-6 min-w-0 flex-1">
@@ -282,8 +314,8 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
 
         {/* Navigation Links - Desktop Only */}
         {user && (
-          // Scrolls sideways instead of pushing the controls off-screen when there are many (admin) links.
-          <div className="hidden md:flex items-center gap-2 border-l border-border-default pl-6 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          // Students: the links in the bar. Admins have too many for one row: theirs are in the side menu.
+          <div className={`${user.isAdmin ? 'hidden' : 'hidden md:flex'} items-center gap-2 border-l border-border-default pl-6 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
             {links.map((link) => (
               <button
                 key={link.key}
@@ -398,5 +430,30 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
         )}
       </div>
     </nav>
+
+    {/* Admins on desktop: every link in a side menu under the bar, all visible at once. */}
+    {sideGroups.length > 0 && (
+      <aside
+        className="hidden md:flex fixed left-0 z-40 w-56 flex-col bg-surface border-r border-border-default overflow-y-auto"
+        style={{ top: 'var(--nav-h, 69px)', height: 'calc(100vh - var(--nav-h, 69px))' }}
+        aria-label="Admin menu"
+      >
+        <div className="p-3 flex flex-col gap-5">
+          {sideGroups.map(([title, items]) => (
+            <div key={title}>
+              <p className="px-3 mb-1.5 text-[10px] font-sans font-extrabold uppercase tracking-wider text-text-tertiary">{title}</p>
+              <div className="flex flex-col gap-0.5">
+                {items.map((link) => (
+                  <button key={link.key} type="button" onClick={() => goToLink(link)} className={sideButtonClass(link.key === activeKey)} aria-current={link.key === activeKey ? 'page' : undefined}>
+                    <span className="min-w-0">{link.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
+    )}
+    </>
   );
 }

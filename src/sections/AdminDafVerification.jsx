@@ -270,6 +270,18 @@ export default function AdminDafVerification() {
       <h1 className="font-display text-3xl md:text-4xl font-semibold text-text-primary tracking-tight">DAF Checks</h1>
       <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. Files stay here after you decide; Delete removes an entry. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details. Check the roll number against the DAF before verifying: it decides which interview date the student sees, and they can’t change it afterwards. A “Roll number” is a verified student adding a missing roll number with proof (free): approve it only if the proof shows that number. A DAF “Filled in” by hand has no file: check the details, and any roll number against its proof.</p>
 
+      {data?.ai?.configured && !data.ai.available && (
+        // While AI is off, uploads aren't read: students type their details in and no roll number is read.
+        <div className="mt-6 rounded-2xl border border-rose-300 bg-rose-50 dark:bg-rose-400/10 dark:border-rose-400/30 px-5 py-4" role="alert">
+          <p className="font-semibold text-status-danger-text">AI is off: uploaded DAFs aren’t being read automatically</p>
+          <p className="text-sm text-text-secondary mt-1">
+            Students are asked to type their details in, and no roll number is read from the file — open each DAF and type the roll number before verifying.
+            {data.ai.billingBlocked && <> Google is refusing requests for billing reasons: {/spending cap/i.test(data.ai.reason) ? 'the project’s monthly spending cap is reached' : 'the account needs credit'}. <a href="https://ai.studio/spend" target="_blank" rel="noopener noreferrer" className="font-semibold text-brand hover:underline">Open AI Studio spend settings</a>.</>}
+          </p>
+          {data.ai.reason && <p className="text-xs text-text-tertiary mt-1 break-words">Google: {data.ai.reason}</p>}
+        </div>
+      )}
+
       <ScheduleBox info={data?.schedule} onUploaded={() => setTick((k) => k + 1)} />
 
       <div className="mt-6 flex flex-wrap gap-2">
