@@ -32,6 +32,19 @@ export default function QuestionCard({ p, itemLabel, onOpen, className = '' }) {
           <span>{p.tip}</span>
         </p>
       )}
+      {p.followUps?.length > 0 && (
+        // What the board would likely ask next, written for this student's DAF.
+        <div className="mt-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-text-tertiary">{t('pred.followUps')}</p>
+          <ul className="mt-1.5 space-y-1">
+            {p.followUps.map((f) => (
+              <li key={f} className="flex items-start gap-2 text-[15px] text-text-secondary leading-relaxed">
+                <Icon name="arrowRight" className="w-3.5 h-3.5 mt-1.5 shrink-0 text-brand" /><span>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="mt-5 pt-4 border-t border-border-subtle flex flex-wrap items-center justify-between gap-3">
         <StatusPicker qkey={p.key} info={info} />
         <div className="flex items-center gap-2">

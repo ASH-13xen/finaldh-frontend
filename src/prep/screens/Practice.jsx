@@ -159,7 +159,7 @@ export default function Practice() {
                       <select value={item} onChange={(e) => setItem(e.target.value)}
                         className="prep-focus h-10 max-w-[15rem] rounded-full border border-border-default bg-surface pl-4 pr-9 text-sm font-semibold text-text-primary appearance-none cursor-pointer truncate">
                         <option value="all">{t('pr.filter.allItems')}</option>
-                        {groups.map((g) => <option key={g.key} value={g.key}>{groupTitle(t, g)}</option>)}
+                        {groups.filter((g) => g.predictions?.length).map((g) => <option key={g.key} value={g.key}>{groupTitle(t, g)}</option>)}
                       </select>
                       <Icon name="chevronDown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-tertiary" />
                     </label>
