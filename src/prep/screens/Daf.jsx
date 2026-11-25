@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DAF_FILL_IN_OPTION } from '../../lib/features';
 import Icon from '../../components/mcq/Icon';
 import Button from '../components/Button';
+import Fold from '../components/Fold';
 import DafForm from '../components/DafForm';
 import { SplitHeading, Highlight } from '../components/motion';
 import { gsap, useGSAP, useReveal, prefersReducedMotion } from '../lib/motion';
@@ -311,11 +312,11 @@ export default function Daf() {
     } catch (err) { toast.error(errorMessage(err)); }
   };
 
-  const titleCls = `font-display font-semibold text-text-primary ${hi ? 'text-[2.2rem] leading-[1.3] md:text-6xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.6rem] leading-[1.04] md:text-7xl md:leading-[1]'}`;
+  const titleCls = `font-display font-semibold text-text-primary ${hi ? 'text-[1.9rem] leading-[1.3] md:text-5xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.1rem] leading-[1.1] md:text-5xl md:leading-[1.06]'}`;
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 pt-10 md:pt-16">
-      <DafCheckCard className="mb-10" showVerified onUpload={() => setMode('start')} />
+      <div data-tour="daf-status"><DafCheckCard className="mb-10" showVerified onUpload={() => setMode('start')} /></div>
       {lockedAfterVerify && change.status === 'rejected' && (
         <div className={`mb-10 -mt-6 rounded-[1.5rem] border px-5 py-5 md:px-7 ${ROSE}`} role="status">
           <p className="font-display text-xl md:text-2xl font-semibold text-text-primary">{t('daf.changeRejected.title')}</p>
@@ -330,9 +331,11 @@ export default function Daf() {
           <p className="mt-6 text-lg md:text-xl text-text-secondary leading-relaxed max-w-2xl">{t('daf.sub')}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button tone="primary" size="lg" magnetic iconRight="arrowRight" onClick={() => go({ screen: 'predictions' })}>{t('daf.toPredictions')}</Button>
-            {(canUpload || needsPayment) && <Button tone="ghost" size="lg" icon="upload" onClick={reupload}>{t(check.verified ? 'daf.reupload' : 'dv.upload')}</Button>}
+            {(canUpload || needsPayment) && <Button tone="ghost" size="lg" icon="upload" onClick={reupload} data-tour="daf-reupload">{t(check.verified ? 'daf.reupload' : 'dv.upload')}</Button>}
           </div>
-          <div className="mt-12"><Heatmap items={profile.items || []} groups={groups} go={go} /></div>
+          <Fold id="daf.heatmap" defaultOpen size="lg" icon="chart" title={t('daf.heatFold')} summary={t('daf.heatSummary')} className="mt-10" tour="daf-heatmap">
+            <Heatmap items={profile.items || []} groups={groups} go={go} />
+          </Fold>
           <div className="mt-8 text-right">
             {user?.isAdmin && <Button tone="plain" size="sm" icon="trash" onClick={remove}>{t('daf.delete')}</Button>}
           </div>
@@ -354,7 +357,7 @@ export default function Daf() {
                 <AdminContact className="mt-4" />
               </div>
             ) : canUpload
-              ? <Start onFile={onFile} onFill={() => { setDraft({ fields: { ...current, rollNo: lockedAfterVerify ? current.rollNo : '' }, unsure: [], send: !(lockedAfterVerify && !hasDaf) }); setMode('form'); }} n={status.corpus?.transcripts || 0} />
+              ? <div data-tour="daf-start"><Start onFile={onFile} onFill={() => { setDraft({ fields: { ...current, rollNo: lockedAfterVerify ? current.rollNo : '' }, unsure: [], send: !(lockedAfterVerify && !hasDaf) }); setMode('form'); }} n={status.corpus?.transcripts || 0} /></div>
               : (
                 <div className="prep-card max-w-3xl p-6 md:p-10">
                   <span className="w-14 h-14 rounded-2xl bg-accent-soft-bg text-brand flex items-center justify-center"><Icon name="check" className="w-7 h-7" /></span>

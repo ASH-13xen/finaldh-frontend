@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../../components/mcq/Icon';
 import Studio from '../components/practice/Studio';
+import Fold from '../components/Fold';
 import Report from '../components/practice/Report';
 import { Chip, TierBadge } from '../components/badges';
 import { SplitHeading, Highlight } from '../components/motion';
@@ -129,7 +130,7 @@ export default function Practice() {
   const recent = useMemo(() => [...history.attempts].reverse().slice(-20), [history]);
   const practised = pick?.key ? ['practised', 'confident'].includes(prep.items.get(pick.key)?.status) : false;
 
-  const titleCls = `font-display font-semibold text-text-primary ${hi ? 'text-[2.2rem] leading-[1.3] md:text-6xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.6rem] leading-[1.04] md:text-7xl md:leading-[1]'}`;
+  const titleCls = `font-display font-semibold text-text-primary ${hi ? 'text-[1.9rem] leading-[1.3] md:text-5xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.1rem] leading-[1.1] md:text-5xl md:leading-[1.06]'}`;
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 pt-10 md:pt-16">
@@ -142,7 +143,7 @@ export default function Practice() {
 
       {/* Question picker */}
       {!pick && (
-        <section className="mt-10">
+        <section className="mt-10" data-tour="pr-picker">
           <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight">{t('pr.pick')}</h2>
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
             {['predicted', 'asked', 'drills', 'own'].map((k) => <Chip key={k} active={src === k} onClick={() => setSrc(k)}>{t(`pr.src.${k}`)}</Chip>)}
@@ -232,7 +233,7 @@ export default function Practice() {
 
       {/* Stage, then the report */}
       {pick && (
-        <section ref={stageRef} className="mt-10 space-y-8 scroll-mt-40">
+        <section ref={stageRef} className="mt-10 space-y-8 scroll-mt-40" data-tour="pr-stage">
           <Studio
             key={pick.text}
             question={pick.text}
@@ -304,8 +305,7 @@ export default function Practice() {
       )}
 
       {/* Progress */}
-      <section className="mt-16">
-        <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight">{t('pr.progress')}</h2>
+      <Fold id="pr.progress" size="lg" icon="activity" title={t('pr.progress')} summary={t('pr.progressSummary')} className="mt-12" tour="pr-progress">
         {recent.length >= 2 ? (
           <>
             <p className="mt-1 text-sm text-text-tertiary">{t('pr.progressSub', { n: fmt(recent.length) })}</p>
@@ -316,7 +316,7 @@ export default function Practice() {
             </div>
           </>
         ) : <p className="mt-2 text-text-tertiary">{t('pr.noProgress')}</p>}
-      </section>
+      </Fold>
       </DafGate>
     </div>
   );

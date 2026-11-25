@@ -61,6 +61,10 @@ export default function NoteReader({ slug }) {
   const { t, lang, hi } = useT();
   const { go } = usePrep();
   const [res, setRes] = useState({ key: null, note: null, error: null });
+  // The note's sections fold (the first starts open) so a long note reads like a list of contents. The PDF
+  // (PrintView) always has every section.
+  const [openSec, setOpenSec] = useState(() => new Set([0]));
+  const toggleSec = (i) => setOpenSec((cur) => { const n = new Set(cur); if (n.has(i)) n.delete(i); else n.add(i); return n; });
   const [tick, setTick] = useState(0);
   const [printing, setPrinting] = useState(false);
   const root = useRef(null);
@@ -143,21 +147,30 @@ export default function NoteReader({ slug }) {
       </header>
 
       <div className="mt-14 md:mt-20 grid lg:grid-cols-[1fr_19rem] gap-10 lg:gap-16 items-start">
-        <div>
+        <div data-tour="note-sections">
+          {note.sections.length > 2 && (
+            <div className="mb-4 flex justify-end">
+              <button type="button" onClick={() => setOpenSec(openSec.size === note.sections.length ? new Set() : new Set(note.sections.map((_, i) => i)))}
+                className="prep-focus inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-text-primary cursor-pointer">
+                <Icon name={openSec.size === note.sections.length ? 'minimize' : 'maximize'} className="w-4 h-4" />{t(openSec.size === note.sections.length ? 'nt.closeAll' : 'nt.openAll')}
+              </button>
+            </div>
+          )}
           {note.sections.map((s, i) => (
-            <section key={i} data-reveal className="py-8 md:py-10 border-t border-border-subtle first:border-t-0 first:pt-0">
-              <div className="flex items-baseline gap-4 md:gap-6">
-                <span className="prep-num font-display text-4xl md:text-5xl font-semibold text-border-default">{String(i + 1).padStart(2, '0')}</span>
-                <h2 className="font-display text-2xl md:text-[2rem] font-semibold tracking-tight text-text-primary">{s.heading}</h2>
-              </div>
-              <ul className="mt-5 space-y-3.5 md:pl-[4.6rem]">
+            <section key={i} data-reveal className="py-5 md:py-7 border-t border-border-subtle first:border-t-0 first:pt-0">
+              <button type="button" onClick={() => toggleSec(i)} aria-expanded={openSec.has(i)} className="prep-focus group w-full flex items-baseline gap-4 md:gap-6 text-left cursor-pointer">
+                <span className={`prep-num font-display text-4xl md:text-5xl font-semibold transition-colors ${openSec.has(i) ? 'text-brand' : 'text-border-default'}`}>{String(i + 1).padStart(2, '0')}</span>
+                <h2 className="flex-1 font-display text-2xl md:text-[2rem] font-semibold tracking-tight text-text-primary group-hover:text-brand transition-colors">{s.heading}</h2>
+                <Icon name="chevronDown" className={`w-6 h-6 shrink-0 self-center text-text-tertiary transition-transform ${openSec.has(i) ? 'rotate-180' : ''}`} />
+              </button>
+              {openSec.has(i) && <ul className="mt-5 space-y-3.5 md:pl-[4.6rem]">
                 {s.points.map((p, j) => (
                   <li key={j} className="flex gap-3.5 text-[17px] md:text-lg leading-relaxed text-text-primary">
                     <span className="mt-[0.7em] w-1.5 h-1.5 rounded-full shrink-0" style={{ background: tone }} aria-hidden="true" />
                     <span>{p}</span>
                   </li>
                 ))}
-              </ul>
+              </ul>}
             </section>
           ))}
         </div>

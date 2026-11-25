@@ -7,6 +7,7 @@ import DeepDive from '../components/DeepDive';
 import { BoardStrip } from '../components/Boards';
 import { DafCheckCard } from '../components/DafCheck';
 import Button from '../components/Button';
+import Fold from '../components/Fold';
 import { SplitHeading, CountUp, Highlight } from '../components/motion';
 import { gsap, useGSAP, useReveal, prefersReducedMotion } from '../lib/motion';
 import { useT, fmt, yearsRange } from '../lib/i18n';
@@ -409,42 +410,33 @@ export default function Home() {
         )}
       </section>
 
-      {/* The boards, with their photos and how candidates found them */}
-      {kw?.boards?.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 md:px-8 pt-14 md:pt-20">
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div>
-              <h2 className="font-display text-2xl md:text-4xl font-semibold tracking-tight">{t('home.boards')}</h2>
-              <p className="mt-2 text-text-secondary max-w-2xl">{t('home.boardsSub')}</p>
-            </div>
-            <Button tone="plain" size="sm" iconRight="arrowRight" onClick={() => go({ screen: 'bank', tab: 'boards' })}>{t('home.boardsAll')}</Button>
-          </div>
-          <BoardStrip boards={kw.boards} onOpenQuestion={setFamilyId} onSeeAll={() => go({ screen: 'bank', tab: 'boards' })} />
-        </section>
-      )}
-
-      {/* Asked again and again */}
-      {mostAsked.length > 0 && (
-        <section className="pt-14 md:pt-20">
-          <div className="max-w-7xl mx-auto px-4 md:px-8 mb-6 flex items-end justify-between gap-4">
-            <h2 className="font-display text-2xl md:text-4xl font-semibold tracking-tight">{t('home.marquee')}</h2>
-            <Button tone="plain" size="sm" iconRight="arrowRight" onClick={() => go({ screen: 'bank' })}>{t('nav.bank')}</Button>
-          </div>
-          <Marquee items={mostAsked} onOpen={setFamilyId} />
-        </section>
-      )}
-
-      {/* The six tools */}
-      <section className="max-w-7xl mx-auto px-4 md:px-8 pt-16 md:pt-24">
+      {/* The six tools: the map of the whole section, first */}
+      <section className="max-w-7xl mx-auto px-4 md:px-8 pt-14 md:pt-20" data-tour="home-tools">
         <p className="prep-eyebrow text-brand mb-3">{t('home.pathEyebrow')}</p>
-        <h2 className="font-display text-4xl md:text-6xl font-semibold tracking-tight mb-8 md:mb-12">{t('home.pathTitle')}</h2>
+        <h2 className="font-display text-3xl md:text-5xl font-semibold tracking-tight mb-8 md:mb-10">{t('home.pathTitle')}</h2>
         <PathTiles corpus={corpus || {}} go={go} />
       </section>
 
       {/* Question of the day */}
-      <section className="max-w-7xl mx-auto px-4 md:px-8 pt-16 md:pt-24">
+      <section className="max-w-7xl mx-auto px-4 md:px-8 pt-14 md:pt-20" data-tour="home-qotd">
         <QuestionOfTheDay list={mostAsked} onOpen={setFamilyId} />
       </section>
+
+      {/* More to explore, folded so the page stays short: the boards, and the questions asked again and again */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 pt-14 md:pt-20 space-y-2">
+        {kw?.boards?.length > 0 && (
+          <Fold id="home.boards" size="lg" icon="users" title={t('home.boards')} summary={t('home.boardsSub')}>
+            <div className="mb-4 flex justify-end"><Button tone="plain" size="sm" iconRight="arrowRight" onClick={() => go({ screen: 'bank', tab: 'boards' })}>{t('home.boardsAll')}</Button></div>
+            <BoardStrip boards={kw.boards} onOpenQuestion={setFamilyId} onSeeAll={() => go({ screen: 'bank', tab: 'boards' })} />
+          </Fold>
+        )}
+        {mostAsked.length > 0 && (
+          <Fold id="home.asked" size="lg" icon="repeat" title={t('home.marquee')} summary={t('home.marqueeSub')}>
+            <div className="mb-4 flex justify-end"><Button tone="plain" size="sm" iconRight="arrowRight" onClick={() => go({ screen: 'bank' })}>{t('nav.bank')}</Button></div>
+            <div className="-mx-4 md:-mx-8"><Marquee items={mostAsked} onOpen={setFamilyId} /></div>
+          </Fold>
+        )}
+      </div>
 
       {familyId && <DeepDive key={familyId} familyId={familyId} onClose={() => setFamilyId(null)} />}
     </div>

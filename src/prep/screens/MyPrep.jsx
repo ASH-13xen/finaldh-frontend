@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CURRENT_TOPICS_LIVE } from '../../lib/features';
 import Icon from '../../components/mcq/Icon';
 import Button from '../components/Button';
+import Fold from '../components/Fold';
 import DeepDive from '../components/DeepDive';
 import { SplitHeading, Highlight, Ring, CountUp } from '../components/motion';
 import { useReveal } from '../lib/motion';
@@ -88,7 +89,7 @@ export default function MyPrep() {
 
   useReveal(root, { dependencies: [!!groups, saved.length, noted.length] });
 
-  const titleCls = `font-display font-semibold text-text-primary ${hi ? 'text-[2.2rem] leading-[1.3] md:text-6xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.6rem] leading-[1.04] md:text-7xl md:leading-[1]'}`;
+  const titleCls = `font-display font-semibold text-text-primary ${hi ? 'text-[1.9rem] leading-[1.3] md:text-5xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.1rem] leading-[1.1] md:text-5xl md:leading-[1.06]'}`;
 
   return (
     <div ref={root} className="max-w-6xl mx-auto px-4 md:px-8 pt-10 md:pt-16">
@@ -96,7 +97,7 @@ export default function MyPrep() {
       <SplitHeading className={titleCls}>{t('me.titleA')}<Highlight still>{t('me.titleHl')}</Highlight></SplitHeading>
 
       {/* Countdown and readiness */}
-      <section className="mt-10 grid md:grid-cols-2 gap-4 md:gap-5">
+      <section className="mt-10 grid md:grid-cols-2 gap-4 md:gap-5" data-tour="me-countdown">
         <div data-reveal className="relative overflow-hidden rounded-[1.75rem] shadow-[var(--prep-shadow)] px-6 py-7 md:px-8 md:py-8 bg-[#14110d] text-[#f3ede2]">
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(60% 70% at 100% 0%, rgba(18,155,110,0.35), transparent 70%)' }} aria-hidden="true" />
           <div className="relative">
@@ -139,8 +140,7 @@ export default function MyPrep() {
       </section>
 
       {/* Study plan */}
-      <section className="mt-16">
-        <h2 className="font-display text-3xl md:text-4xl font-semibold tracking-tight">{t('me.plan')}</h2>
+      <Fold id="me.plan" defaultOpen size="lg" icon="calendar" title={t('me.plan')} summary={t('me.planSummary')} className="mt-14" tour="me-plan">
         {!hasDaf ? (
           <button type="button" onClick={() => go({ screen: 'daf' })} className="prep-focus mt-5 prep-card prep-card-hover w-full text-left px-6 py-6 cursor-pointer flex items-center justify-between gap-4">
             <span className="text-lg">{t('me.planNoDaf')}</span><Icon name="arrowRight" className="w-5 h-5 text-brand" />
@@ -182,10 +182,11 @@ export default function MyPrep() {
             </ol>
           </>
         )}
-      </section>
+      </Fold>
 
       {/* Saved questions and notes */}
-      <section className="mt-16 grid lg:grid-cols-2 gap-8">
+      <Fold id="me.saved" size="lg" icon="bookmark" title={t('me.savedFold')} summary={t('me.savedSummary', { a: fmt(saved.length), b: fmt(noted.length) })} className="mt-4" tour="me-saved">
+      <div className="grid lg:grid-cols-2 gap-8">
         <div>
           <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight flex items-center gap-2"><Icon name="bookmark" className="w-6 h-6 text-amber-500" />{t('me.saved')}</h2>
           {saved.length ? (
@@ -215,11 +216,11 @@ export default function MyPrep() {
             </ul>
           ) : <p className="mt-4 text-text-tertiary">{t('me.notesNone')}</p>}
         </div>
-      </section>
+      </div>
+      </Fold>
 
       {/* Practice so far */}
-      <section className="mt-16">
-        <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight">{t('me.practice')}</h2>
+      <Fold id="me.practice" size="lg" icon="mic" title={t('me.practice')} summary={t('me.practiceSummary', { n: fmt(attempts.length) })} className="mt-4" tour="me-practice">
         {attempts.length ? (
           <div data-reveal className="mt-5 prep-card px-6 py-6 flex flex-wrap items-center gap-8">
             <div><p className="prep-num font-display text-4xl font-semibold">{fmt(attempts.length)}</p><p className="text-sm text-text-tertiary">{t('me.attempts', { n: '' }).trim()}</p></div>
@@ -233,7 +234,7 @@ export default function MyPrep() {
             <Button tone="primary" size="lg" icon="mic" onClick={() => go({ screen: 'practice' })}>{t('me.toPractice')}</Button>
           </div>
         )}
-      </section>
+      </Fold>
 
       {familyId && <DeepDive familyId={familyId} onClose={() => setFamilyId(null)} />}
     </div>

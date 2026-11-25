@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../../components/mcq/Icon';
 import Button from '../components/Button';
+import Fold from '../components/Fold';
 import BankCard from '../components/BankCard';
 import FilterPanel from '../components/FilterPanel';
 import Browse from '../components/Browse';
@@ -158,12 +159,12 @@ export default function Bank() {
       {/* Search hero */}
       <section className="max-w-7xl mx-auto px-4 md:px-8 pt-10 md:pt-16 pb-8">
         <p className="prep-eyebrow text-brand mb-5">{t('bank.eyebrow', { q: fmt(corpus.questions), n: fmt(corpus.transcripts), years: yearsRange(corpus.years) })}</p>
-        <SplitHeading className={`font-display font-semibold text-text-primary ${hi ? 'text-[2.2rem] leading-[1.3] md:text-6xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.6rem] leading-[1.04] md:text-7xl md:leading-[1]'}`}>
+        <SplitHeading className={`font-display font-semibold text-text-primary ${hi ? 'text-[1.9rem] leading-[1.3] md:text-5xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.1rem] leading-[1.1] md:text-5xl md:leading-[1.06]'}`}>
           {t('bank.titleA')}<Highlight still>{t('bank.titleHl')}</Highlight>{t('bank.titleB')}
         </SplitHeading>
         <div className="mt-8 md:mt-10 relative max-w-3xl">
           <Icon name="search" className="w-6 h-6 absolute left-5 md:left-7 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
-          <input
+          <input data-tour="bank-search"
             value={preview ? '' : q}
             readOnly={preview}
             onFocus={preview ? toGate : undefined}
@@ -186,7 +187,7 @@ export default function Bank() {
 
       {/* Tabs */}
       <section className="max-w-7xl mx-auto px-4 md:px-8">
-        <div className="flex gap-2 overflow-x-auto pb-1 border-b border-border-subtle">
+        <div className="flex gap-2 overflow-x-auto pb-1 border-b border-border-subtle" data-tour="bank-tabs">
           {['questions', 'browse', 'boards'].map((k) => (
             <button key={k} type="button" onClick={() => setTab(k)} aria-pressed={tab === k}
               className={`prep-focus h-12 px-4 -mb-px border-b-2 text-[15px] font-semibold whitespace-nowrap cursor-pointer transition-colors ${tab === k ? 'border-text-primary text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-primary'}`}>
@@ -234,24 +235,25 @@ export default function Bank() {
             </section>
           )}
 
-          {/* Collections */}
+          {/* Collections: ready-made lists, folded so the results come first */}
           {!dq && !active.length && !preview && (
-            <section className="pt-8">
-              <p className="max-w-7xl mx-auto px-4 md:px-8 prep-eyebrow text-text-tertiary mb-3">{t('bank.collections')}</p>
-              <div className="max-w-7xl mx-auto px-4 md:px-8 flex gap-3 overflow-x-auto pb-2 snap-x">
-                {collections.map((c) => (
-                  <button key={c.key} type="button" onClick={() => applyCollection(c)} className="prep-focus prep-card prep-card-hover snap-start shrink-0 w-56 md:w-60 text-left px-5 py-5 cursor-pointer group">
-                    <Icon name={c.icon} className="w-6 h-6 text-brand" />
-                    <p className="mt-4 font-display text-xl leading-snug font-semibold group-hover:text-brand transition-colors">{t(`col.${c.key}`, c.vars)}</p>
-                    <p className="mt-1 text-sm text-text-tertiary">{t(`col.${c.key}.sub`, c.vars)}</p>
-                  </button>
-                ))}
-              </div>
-            </section>
+            <div className="max-w-7xl mx-auto px-4 md:px-8 pt-6">
+              <Fold id="bank.collections" icon="layers" title={t('bank.collections')} summary={t('bank.collectionsSub')}>
+                <div className="-mx-4 px-4 md:-mx-8 md:px-8 flex gap-3 overflow-x-auto pb-2 snap-x">
+                  {collections.map((c) => (
+                    <button key={c.key} type="button" onClick={() => applyCollection(c)} className="prep-focus prep-card prep-card-hover snap-start shrink-0 w-56 md:w-60 text-left px-5 py-5 cursor-pointer group">
+                      <Icon name={c.icon} className="w-6 h-6 text-brand" />
+                      <p className="mt-4 font-display text-xl leading-snug font-semibold group-hover:text-brand transition-colors">{t(`col.${c.key}`, c.vars)}</p>
+                      <p className="mt-1 text-sm text-text-tertiary">{t(`col.${c.key}.sub`, c.vars)}</p>
+                    </button>
+                  ))}
+                </div>
+              </Fold>
+            </div>
           )}
 
           <section className="max-w-7xl mx-auto px-4 md:px-8 pt-8 lg:grid lg:grid-cols-[18rem_1fr] lg:gap-10">
-            <aside className="hidden lg:block lg:sticky lg:top-40 lg:self-start lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto pr-2 -mr-2">
+            <aside data-tour="bank-filters" className="hidden lg:block lg:sticky lg:top-40 lg:self-start lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto pr-2 -mr-2">
               {preview
                 ? <LockedFilters facets={res.facets} label={t(guest ? 'bank.filtersLockedGuest' : 'bank.filtersLocked')} onUnlock={toGate} />
                 : <FilterPanel filters={filters} setFilter={setFilter} facets={res.facets} />}

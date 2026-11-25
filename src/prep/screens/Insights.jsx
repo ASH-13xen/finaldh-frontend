@@ -2,6 +2,7 @@
 // go away, hobbies and optionals, every board's habits, and what was new in the latest year.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import DeepDive from '../components/DeepDive';
+import Fold from '../components/Fold';
 import { SplitHeading, Highlight, CountUp } from '../components/motion';
 import { gsap, ScrollTrigger, useGSAP, useReveal, prefersReducedMotion } from '../lib/motion';
 import { useT, fmt, yearsRange } from '../lib/i18n';
@@ -10,13 +11,12 @@ import { api } from '../lib/api';
 
 const AREAS = ['work', 'hobby', 'home', 'education', 'optional'];
 
-function Section({ title, sub, children }) {
+// Each finding folds (the first starts open), so the page reads like a short list of what boards ask.
+function Section({ id, title, sub, children, defaultOpen = false }) {
   return (
-    <section className="pt-20 md:pt-28">
-      <h2 data-reveal className="font-display text-3xl md:text-5xl font-semibold tracking-tight max-w-3xl">{title}</h2>
-      {sub && <p data-reveal className="mt-3 text-lg text-text-secondary max-w-2xl">{sub}</p>}
-      <div className="mt-8 md:mt-10">{children}</div>
-    </section>
+    <Fold id={`in.${id}`} title={title} summary={sub} defaultOpen={defaultOpen} size="lg" className="pt-3">
+      <div className="pb-6">{children}</div>
+    </Fold>
   );
 }
 
@@ -76,7 +76,7 @@ export default function Insights() {
   const boards = (kw?.boards || []).filter((b) => b.interviews >= 20);
   const maxAsked = Math.max(1, ...(trends?.mostAsked || []).map((f) => f.timesAsked));
 
-  const titleCls = `font-display font-semibold text-text-primary ${hi ? 'text-[2.2rem] leading-[1.3] md:text-6xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.6rem] leading-[1.04] md:text-7xl md:leading-[1]'}`;
+  const titleCls = `font-display font-semibold text-text-primary ${hi ? 'text-[1.9rem] leading-[1.3] md:text-5xl md:leading-[1.25]' : 'tracking-[-0.02em] text-[2.1rem] leading-[1.1] md:text-5xl md:leading-[1.06]'}`;
 
   return (
     <div ref={root} className="max-w-6xl mx-auto px-4 md:px-8 pt-10 md:pt-16">
@@ -90,13 +90,13 @@ export default function Insights() {
       </div>
 
       {kw?.areas && (
-        <Section title={t('in.areas')} sub={t('in.areasSub')}>
+        <Section id="areas" defaultOpen title={t('in.areas')} sub={t('in.areasSub')}>
           <Bars rows={AREAS.filter((a) => kw.areas[a]).map((a) => ({ label: t(`area.${a}`), value: kw.areas[a].pct, note: t('heat.questions', { q: kw.areas[a].avgQuestions }) }))} />
         </Section>
       )}
 
       {heat && (
-        <Section title={t('in.topics')} sub={t('in.topicsSub')}>
+        <Section id="topics" title={t('in.topics')} sub={t('in.topicsSub')}>
           <div className="overflow-x-auto -mx-4 px-4">
             <table className="w-full min-w-[34rem] border-separate border-spacing-1.5">
               <thead><tr><th />{years.map((y) => <th key={y} className="prep-num text-sm font-semibold text-text-tertiary pb-2">{y}</th>)}</tr></thead>
@@ -116,25 +116,25 @@ export default function Insights() {
       )}
 
       {trends?.mostAsked?.length > 0 && (
-        <Section title={t('in.mostAsked')}>
+        <Section id="mostAsked" title={t('in.mostAsked')}>
           <Bars rows={trends.mostAsked.slice(0, 10).map((f) => ({ id: f.id, label: f.text, value: f.timesAsked }))} unit="×" max={maxAsked} onClick={setFamilyId} />
         </Section>
       )}
 
       {hobbies.length > 0 && (
-        <Section title={t('in.hobbies')} sub={t('in.hobbiesSub')}>
+        <Section id="hobbies" title={t('in.hobbies')} sub={t('in.hobbiesSub')}>
           <Bars rows={hobbies.map((h) => ({ label: h.label, value: h.askedPct, note: t('in.interviews', { n: fmt(h.interviews) }) }))} />
         </Section>
       )}
 
       {optionals.length > 0 && (
-        <Section title={t('in.optionals')} sub={t('in.optionalsSub')}>
+        <Section id="optionals" title={t('in.optionals')} sub={t('in.optionalsSub')}>
           <Bars rows={optionals.map((o) => ({ label: o.label, value: o.askedPct, note: t('in.interviews', { n: fmt(o.interviews) }) }))} />
         </Section>
       )}
 
       {boards.length > 0 && (
-        <Section title={t('in.boards')} sub={t('in.boardsSub')}>
+        <Section id="boards" title={t('in.boards')} sub={t('in.boardsSub')}>
           <div data-reveal className="prep-card p-4 md:p-8">
             <svg viewBox="0 0 640 380" className="w-full h-auto" role="img" aria-label={t('in.boards')}>
               {(() => {
@@ -169,7 +169,7 @@ export default function Insights() {
       )}
 
       {trends?.newInLatest?.length > 0 && (
-        <Section title={t('in.new', { year: trends.latestYear })} sub={t('in.newSub', { year: trends.latestYear })}>
+        <Section id="new" title={t('in.new', { year: trends.latestYear })} sub={t('in.newSub', { year: trends.latestYear })}>
           <ul className="grid md:grid-cols-2 gap-3">
             {trends.newInLatest.map((f) => (
               <li key={f.id} data-reveal>
