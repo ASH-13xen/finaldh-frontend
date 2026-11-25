@@ -54,7 +54,7 @@ export default function Practice() {
   const recorder = useRecorder();
   const { state, result, error } = recorder;
   const [src, setSrc] = useState('predicted');
-  const [pick, setPick] = useState(() => (view.question ? { text: view.question, key: view.key || '', label: t('pr.src.predicted') } : null));
+  const [pick, setPick] = useState(() => (view.question ? { text: view.question, key: view.key || '', label: t(view.followUp ? 'pr.src.followUp' : 'pr.src.predicted') } : null));
   const [own, setOwn] = useState('');
   const [groups, setGroups] = useState(null); // predictions by DAF item
   const [tier, setTier] = useState('all');
@@ -99,6 +99,10 @@ export default function Practice() {
     .flatMap((g) => g.predictions.map((p) => ({ ...p, itemLabel: groupTitle(t, g) })))
     .filter((p) => (tier === 'all' || p.tier === tier) && (!onlyReal || p.source !== 'new'))
     .sort(byLikelihood), [groups, item, tier, onlyReal, t]);
+
+  // The follow-ups the board would likely ask after a predicted question (practised next, like a real interview).
+  const followUpsOf = useMemo(() => new Map((groups || []).flatMap((g) => g.predictions.map((p) => [p.key, (p.followUps || []).filter(Boolean)]))), [groups]);
+  const nextQuestions = pick?.key ? followUpsOf.get(pick.key) || [] : [];
 
   const drill = pick?.drill ? DRILLS.find((d) => d.key === pick.drill) : null;
   const timeLimit = drill ? (drill.limit ? (pick.long ? feedbackMaxSec : drill.limit) : 0) : feedbackMaxSec;
@@ -257,6 +261,23 @@ export default function Practice() {
               onPractised={pick.key ? () => prep.update(pick.key, { status: 'practised' }, { text: pick.text, source: 'past' }) : null}
               practised={practised}
             />
+          )}
+          {state === 'done' && result && !result.silent && nextQuestions.length > 0 && (
+            <div className="prep-card px-5 py-5 md:px-7 md:py-6" data-tour="pr-followups">
+              <p className="font-display text-xl md:text-2xl font-semibold text-text-primary flex items-center gap-2"><Icon name="message" className="w-5 h-5 text-brand" />{t('pr.next.title')}</p>
+              <p className="mt-1 text-[15px] text-text-secondary">{t('pr.next.sub')}</p>
+              <ul className="mt-4 space-y-2">
+                {nextQuestions.map((f) => (
+                  <li key={f}>
+                    <button type="button" onClick={() => choose({ text: f, key: '', label: t('pr.src.followUp') })} className="prep-focus w-full text-left rounded-2xl border border-border-subtle bg-surface hover:border-text-primary px-4 py-3 flex items-center gap-3 cursor-pointer">
+                      <Icon name="arrowRight" className="w-4 h-4 shrink-0 text-brand" />
+                      <span className="flex-1 text-[16px] leading-snug">{f}</span>
+                      <span className="shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-brand"><Icon name="mic" className="w-4 h-4" />{t('pr.next.practise')}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           {sameQuestion.length > 1 && (

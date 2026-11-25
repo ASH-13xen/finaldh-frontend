@@ -89,9 +89,15 @@ export default function Flashcards({ cards }) {
           {!flipped ? (
             <p className="flex-1 flex items-center font-display text-[1.6rem] leading-[1.25] md:text-[2.1rem] md:leading-[1.2] tracking-tight">{p.question}</p>
           ) : (
-            <div className="flex-1 flex flex-col justify-center gap-4">
+            <div className="flex-1 min-h-0 flex flex-col justify-center gap-4 overflow-y-auto">
               {p.tip ? <p className="text-lg leading-relaxed text-text-primary flex gap-3"><Icon name="zap" className="w-5 h-5 mt-1 shrink-0 text-amber-500" />{p.tip}</p> : <p className="text-text-tertiary">—</p>}
               {p.evidence?.timesAsked > 0 && p.source !== 'new' && <AskedLine n={p.evidence.timesAsked} years={p.evidence.years} />}
+              {p.followUps?.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-brand">{t('pred.followUps')}</p>
+                  <ul className="mt-1.5 space-y-1">{p.followUps.map((f) => <li key={f} className="flex items-start gap-2 text-[15px] md:text-base text-text-secondary leading-relaxed"><Icon name="arrowRight" className="w-3.5 h-3.5 mt-1.5 shrink-0 text-brand" />{f}</li>)}</ul>
+                </div>
+              )}
             </div>
           )}
         </div>
