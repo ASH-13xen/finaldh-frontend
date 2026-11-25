@@ -214,10 +214,11 @@ function PredictedQuestions() {
 
             {view === 'items' && (
               <div className="lg:grid lg:grid-cols-[17rem_1fr] lg:gap-10">
-                {/* The DAF items: a sticky rail on desktop, a strip of chips on phones */}
-                <nav aria-label={t('pred.items')} className="lg:sticky lg:top-40 lg:self-start mb-6 lg:mb-0">
+                {/* The DAF items: a sticky rail on desktop (scrolls on its own when it is taller than the
+                    screen - a long DAF has 20+ items), a strip of chips on phones */}
+                <nav aria-label={t('pred.items')} className="lg:sticky lg:top-40 lg:self-start lg:flex lg:flex-col lg:max-h-[calc(100vh-11rem)] mb-6 lg:mb-0">
                   <p className="hidden lg:block prep-eyebrow text-text-tertiary mb-3">{t('pred.items')}</p>
-                  <ul className="flex lg:flex-col gap-2 overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0 pb-1">
+                  <ul className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto lg:min-h-0 lg:flex-1 [scrollbar-width:thin] -mx-4 px-4 lg:mx-0 lg:px-0 lg:pr-1.5 pb-1">
                     {groups.map((g) => {
                       const doneHere = g.predictions.filter((p) => DONE.has(prep.items.get(p.key)?.status)).length;
                       return (

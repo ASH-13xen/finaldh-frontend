@@ -342,6 +342,14 @@ export default function Daf() {
           {change.status === 'pending' && <AdminContact className="mt-2" />}
         </div>
       )}
+      {/* The new DAF was verified before its details were saved: they were filled in from it - checked once here. */}
+      {lockedAfterVerify && view === 'view' && change.status === 'verified' && change.toCheck && (
+        <div className={`mb-10 -mt-6 rounded-[1.5rem] border px-5 py-5 md:px-7 ${SKY}`} role="status">
+          <p className="font-display text-xl md:text-2xl font-semibold text-text-primary">{t('daf.changeCheck.title')}</p>
+          <p className="mt-1 text-[15px] text-text-secondary leading-relaxed">{t('daf.changeCheck.body')}</p>
+          <Button className="mt-4" tone="primary" size="md" icon="edit" onClick={() => { setDraft({ fields: current, unsure: [] }); setMode('review'); }}>{t('daf.changeCheck.cta')}</Button>
+        </div>
+      )}
       {lockedAfterVerify && view === 'view' && check.roll && !check.roll.checked && <RollClaim roll={check.roll} onSent={refreshCredits} />}
       {view === 'view' && (
         <>
