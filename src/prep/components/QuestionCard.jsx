@@ -8,6 +8,7 @@ import Button from './Button';
 import { TierBadge, SourceBadge, AskedLine } from './badges';
 import { StatusPicker, SaveToggle, NoteEditor } from './PrepControls';
 import AnswerDraft from './AnswerDraft';
+import SpeakButton from './SpeakButton';
 import { useT } from '../lib/i18n';
 import { usePrep } from '../lib/context';
 
@@ -27,7 +28,7 @@ export default function QuestionCard({ p, itemLabel, onOpen, collapsible = false
         {p.tier && <TierBadge tier={p.tier} />}
         {p.source && <SourceBadge source={p.source} />}
         {itemLabel && <span className="text-xs font-semibold text-text-tertiary px-1">{itemLabel}</span>}
-        <span className="ml-auto"><SaveToggle qkey={p.key} info={info} /></span>
+        <span className="ml-auto flex items-center gap-2"><SpeakButton text={p.question} id={`q:${p.id}`} /><SaveToggle qkey={p.key} info={info} /></span>
       </div>
       {collapsible
         ? (
@@ -71,10 +72,15 @@ export default function QuestionCard({ p, itemLabel, onOpen, collapsible = false
                 {followUps.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-[15px] text-text-primary leading-relaxed">
                     <Icon name="arrowRight" className="w-3.5 h-3.5 mt-1.5 shrink-0 text-brand" />
-                    <span className="flex-1">{f}</span>
-                    <button type="button" onClick={() => go({ screen: 'practice', question: f, followUp: true })} className="prep-focus shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline cursor-pointer">
-                      <Icon name="mic" className="w-3.5 h-3.5" />{t('action.practise')}
-                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p>{f}</p>
+                      <div className="mt-1 flex items-center gap-3">
+                        <SpeakButton text={f} id={`f:${p.id}:${f}`} label={t('speak.hearFollowUp')} className="w-8 h-8" />
+                        <button type="button" onClick={() => go({ screen: 'practice', question: f, followUp: true })} className="prep-focus inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline cursor-pointer">
+                          <Icon name="mic" className="w-3.5 h-3.5" />{t('action.practise')}
+                        </button>
+                      </div>
+                    </div>
                   </li>
                 ))}
               </ul>

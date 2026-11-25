@@ -13,6 +13,7 @@ import { useT, fmt } from '../lib/i18n';
 import { api } from '../lib/api';
 import { errorMessage } from '../../lib/interviewApi';
 import { usePrep } from '../lib/context';
+import SpeakButton from './SpeakButton';
 import { SignInSheet } from './Gate';
 
 const askerLabel = (t, a) => (a === 'chairman' ? t('asker.chairman') : /^m(\d)$/.test(a || '') ? t('asker.m', { n: a.slice(1) }) : t('asker.member'));
@@ -143,7 +144,10 @@ function Body({ familyId, onOpen, canBack, onBack, onClose }) {
           </button>
         )}
         <p className="prep-eyebrow text-brand">{tn('common.askedTimes', f.timesAsked)}{(f.boardCount || f.boards?.length) ? ` · ${t('dd.boards', { n: f.boardCount || f.boards.length })}` : ''}</p>
-        <h2 className="mt-4 font-display text-[1.9rem] leading-[1.18] md:text-[2.5rem] md:leading-[1.12] font-semibold tracking-tight">{f.text}</h2>
+        <div className="mt-4 flex items-start gap-3">
+          <h2 className="flex-1 font-display text-[1.9rem] leading-[1.18] md:text-[2.5rem] md:leading-[1.12] font-semibold tracking-tight">{f.text}</h2>
+          <SpeakButton text={f.text} id={`dd:${f.id}`} className="mt-1.5 w-10 h-10" />
+        </div>
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
           <span className="flex items-center gap-3 text-sm text-text-tertiary"><YearSpark yearCounts={f.yearCounts} className="h-6" /> {t('dd.timeline')}</span>
           {(f.topicLabels || []).map((x) => <span key={x} className="text-xs font-semibold text-text-secondary rounded-full border border-border-default px-3 py-1">{x}</span>)}

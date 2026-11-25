@@ -8,6 +8,7 @@ import Button from './Button';
 import { TierBadge, SourceBadge, AskedLine } from './badges';
 import { gsap, useGSAP, prefersReducedMotion } from '../lib/motion';
 import { useT } from '../lib/i18n';
+import SpeakButton from './SpeakButton';
 import { usePrep } from '../lib/context';
 
 gsap.registerPlugin(Draggable, InertiaPlugin);
@@ -41,12 +42,18 @@ export default function Flashcards({ cards }) {
     const d = Draggable.create(card.current, {
       type: 'x',
       inertia: true,
+      // A tap on a button inside the card (the speaker) is the button's, not a drag or a flip.
+      dragClickables: false,
       onDrag() { gsap.set(this.target, { rotate: this.x / 22 }); },
       onDragEnd() {
         if (Math.abs(this.x) > 120) decide(this.x > 0 ? 1 : -1);
         else gsap.to(this.target, { x: 0, rotate: 0, duration: 0.5, ease: 'elastic.out(1, 0.6)' });
       },
-      onClick() { setFlipped((f) => !f); }
+      onClick(e) {
+        const target = e?.target || this.pointerEvent?.target;
+        if (target?.closest?.('button, a')) return;
+        setFlipped((f) => !f);
+      }
     })[0];
     return () => d.kill();
   }, { dependencies: [i, total] });
@@ -85,6 +92,7 @@ export default function Flashcards({ cards }) {
           <div className="flex flex-wrap items-center gap-2">
             <TierBadge tier={p.tier} size="sm" />
             <SourceBadge source={p.source} />
+            <span className="ml-auto"><SpeakButton text={p.question} id={`card:${p.id}`} /></span>
           </div>
           {!flipped ? (
             <p className="flex-1 flex items-center font-display text-[1.6rem] leading-[1.25] md:text-[2.1rem] md:leading-[1.2] tracking-tight">{p.question}</p>

@@ -5,22 +5,10 @@ import Icon from '../../../components/mcq/Icon';
 import { gsap, useGSAP, prefersReducedMotion } from '../../lib/motion';
 import { useT } from '../../lib/i18n';
 import { markTranscript } from '../../lib/voice';
+import SpeakButton from '../SpeakButton';
+import { stop as stopSpeaking } from '../../lib/speech';
 
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-
-// Reads the question aloud with the browser's voice (Indian English or Hindi when available).
-const speak = (text, lang) => {
-  const synth = window.speechSynthesis;
-  if (!synth) return;
-  synth.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  const want = lang === 'hi' ? 'hi' : 'en-IN';
-  const voices = synth.getVoices();
-  u.voice = voices.find((v) => v.lang === want || v.lang.startsWith(want)) || voices.find((v) => v.lang.startsWith(lang === 'hi' ? 'hi' : 'en')) || null;
-  u.lang = lang === 'hi' ? 'hi-IN' : 'en-IN';
-  u.rate = 0.95;
-  synth.speak(u);
-};
 
 function PaceNeedle({ wpm }) {
   const { t } = useT();
@@ -88,7 +76,8 @@ export default function Studio({ question, label, lang, recorder, onChange, time
     gsap.from('[data-q]', { y: 24, autoAlpha: 0, duration: 0.8 });
   }, { scope: root, dependencies: [question] });
 
-  const begin = () => (think ? setCount(10) : start({ lang }));
+  // The question stops being read once the student starts (or counts down to) answering.
+  const begin = () => { stopSpeaking(); if (think) setCount(10); else start({ lang }); };
 
   return (
     <section ref={root} className="relative overflow-hidden rounded-[2rem] bg-[#14110d] text-[#f3ede2] px-6 py-8 md:px-12 md:py-12 shadow-[0_30px_80px_-30px_rgba(20,17,13,0.6)]">
@@ -104,9 +93,7 @@ export default function Studio({ question, label, lang, recorder, onChange, time
 
         {!recording && !busy && !count && (
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button type="button" onClick={() => speak(question, lang)} className="prep-focus h-11 px-5 rounded-full border border-white/20 text-white/85 hover:border-white text-sm font-semibold inline-flex items-center gap-2 cursor-pointer">
-              <Icon name="volume" className="w-4 h-4" />{t('pr.hear')}
-            </button>
+            <SpeakButton text={question} id={`studio:${question}`} variant="pill" dark label={t('pr.hear')} />
             <label className="h-11 px-4 rounded-full border border-white/20 text-white/85 text-sm font-semibold inline-flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={think} onChange={(e) => setThink(e.target.checked)} className="accent-emerald-400 w-4 h-4" />
               {t('pr.think')}

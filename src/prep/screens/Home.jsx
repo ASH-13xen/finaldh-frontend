@@ -8,6 +8,7 @@ import { BoardStrip } from '../components/Boards';
 import { DafCheckCard } from '../components/DafCheck';
 import Button from '../components/Button';
 import Fold from '../components/Fold';
+import SpeakButton from '../components/SpeakButton';
 import { SplitHeading, CountUp, Highlight } from '../components/motion';
 import { gsap, useGSAP, useReveal, prefersReducedMotion } from '../lib/motion';
 import { useT, fmt, yearsRange } from '../lib/i18n';
@@ -336,6 +337,7 @@ function QuestionOfTheDay({ list, onOpen }) {
         <p className="mt-5 text-text-secondary">{tn('common.askedTimes', f.timesAsked)}</p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Button tone="ink" size="lg" icon="eye" onClick={() => onOpen(f.id)}>{t('home.qotdSee')}</Button>
+          <SpeakButton text={f.text} id={`qotd:${f.id}`} variant="pill" label={t('pr.hear')} />
         </div>
       </div>
     </div>

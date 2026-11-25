@@ -3,6 +3,7 @@
 import { YearSpark } from './badges';
 import { SaveToggle } from './PrepControls';
 import { useT, fmt } from '../lib/i18n';
+import SpeakButton from './SpeakButton';
 import { usePrep } from '../lib/context';
 
 export default function BankCard({ f, onOpen }) {
@@ -21,7 +22,7 @@ export default function BankCard({ f, onOpen }) {
           <button type="button" onClick={() => onOpen(f.id)} className="prep-focus flex-1 text-left cursor-pointer rounded-lg after:absolute after:inset-0 after:content-['']">
             <h3 className="font-display text-[1.2rem] leading-snug md:text-[1.45rem] font-medium tracking-tight text-text-primary">{f.text}</h3>
           </button>
-          <span className="relative z-10 shrink-0"><SaveToggle qkey={f.key} info={{ text: f.text, familyId: f.id, source: 'bank' }} /></span>
+          <span className="relative z-10 shrink-0 flex items-center gap-2"><SpeakButton text={f.text} id={`bank:${f.id}`} /><SaveToggle qkey={f.key} info={{ text: f.text, familyId: f.id, source: 'bank' }} /></span>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-text-tertiary">
           <span className="flex items-center gap-2"><YearSpark yearCounts={f.yearCounts} /></span>
