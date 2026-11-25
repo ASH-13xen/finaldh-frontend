@@ -214,6 +214,24 @@ function ThemeToggle() {
   );
 }
 
+// Admins, on every page: AI can't be used (say the Gemini account is out of credits) and/or uploaded DAFs are
+// waiting to be read - with Add credits and a way to DAF Checks' Redo with AI.
+function AdminAiAlert({ alert, onOpen }) {
+  const aiOff = !!(alert.ai?.configured && alert.ai.available === false);
+  if (!aiOff && !alert.unread) return null;
+  return (
+    <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-400/10 dark:border-rose-400/30 px-3 py-2.5 text-xs">
+      {aiOff && <p className="font-bold text-status-danger-text">AI is off{alert.ai.billingBlocked ? ' — Gemini needs credits' : ''}</p>}
+      {aiOff && <p className="mt-0.5 text-text-secondary leading-snug">DAF reading, AI answers and feedback don’t work until it’s back.</p>}
+      {alert.unread > 0 && <p className={`${aiOff ? 'mt-1.5 ' : ''}font-semibold text-text-primary`}>{alert.unread} DAF{alert.unread === 1 ? '' : 's'} waiting to be read</p>}
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {aiOff && <a href="https://ai.studio/spend" target="_blank" rel="noopener noreferrer" className="px-2.5 py-1 rounded-lg bg-brand text-text-on-accent font-bold">Add credits</a>}
+        {alert.unread > 0 && <button type="button" onClick={onOpen} className="px-2.5 py-1 rounded-lg border border-border-default bg-surface font-bold text-text-primary cursor-pointer">Redo with AI</button>}
+      </div>
+    </div>
+  );
+}
+
 export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
   // Admins see how many student question reports are waiting, as a badge on "Manage MCQ".
   const [pendingReports, setPendingReports] = useState(0);
@@ -231,19 +249,27 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
 
   // ...and how many uploaded DAFs are waiting for verification, on "DAF Checks".
   const [pendingDafs, setPendingDafs] = useState(0);
+  // ...and whether AI can be used, with how many uploads are waiting to be read (a warning on every page).
+  const [aiAlert, setAiAlert] = useState({ unread: 0, ai: null });
   useEffect(() => {
     if (!user?.isAdmin) return undefined;
     let cancelled = false;
     const load = () => fetch('/api/interview/admin/daf?status=pending', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (!cancelled && d) setPendingDafs(d.counts?.pending || 0); })
+      .then((d) => {
+        if (cancelled || !d) return;
+        setPendingDafs(d.counts?.pending || 0);
+        setAiAlert({ unread: d.counts?.unread || 0, ai: d.ai || null });
+      })
       .catch(() => {});
     load();
     const id = setInterval(load, 120000);
-    // The DAF Checks page announces the new count whenever it reloads its list.
+    // The DAF Checks page announces the new counts whenever it reloads its list.
     const onCount = (e) => setPendingDafs(Number(e.detail) || 0);
+    const onAi = (e) => setAiAlert({ unread: Number(e.detail?.unread) || 0, ai: e.detail?.ai || null });
     window.addEventListener('daf-pending', onCount);
-    return () => { cancelled = true; clearInterval(id); window.removeEventListener('daf-pending', onCount); };
+    window.addEventListener('daf-ai', onAi);
+    return () => { cancelled = true; clearInterval(id); window.removeEventListener('daf-pending', onCount); window.removeEventListener('daf-ai', onAi); };
   }, [user?.isAdmin, activeTab]);
 
   const links = getNavLinks(user, pendingReports, pendingDafs);
@@ -374,6 +400,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
                     Admin Mode Active
                   </div>
                 )}
+                {user.isAdmin && <AdminAiAlert alert={aiAlert} onOpen={() => { setActiveTab('admin_daf'); setMobileMenuOpen(false); }} />}
                 
                 <div className="flex flex-col gap-2">
                   {links.map((link) => (
@@ -439,6 +466,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
         aria-label="Admin menu"
       >
         <div className="p-3 flex flex-col gap-5">
+          <AdminAiAlert alert={aiAlert} onOpen={() => setActiveTab('admin_daf')} />
           {sideGroups.map(([title, items]) => (
             <div key={title}>
               <p className="px-3 mb-1.5 text-[10px] font-sans font-extrabold uppercase tracking-wider text-text-tertiary">{title}</p>

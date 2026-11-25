@@ -2,7 +2,7 @@
 // student's practice, 15 free AI uses and credit purchases unlock) or Reject with a reason (the student is
 // asked to send it again). Files stay viewable after review; Delete removes an entry (a waiting one can be sent
 // again).
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 
 const api = async (path, { method = 'GET', body } = {}) => {
   const headers = { Authorization: `Bearer ${localStorage.getItem('token') || ''}` };
@@ -11,6 +11,15 @@ const api = async (path, { method = 'GET', body } = {}) => {
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(data?.error || `Something went wrong (${res.status}).`);
   return data;
+};
+
+// Where the Gemini key's billing is managed (credits, the monthly spending cap).
+const AI_SPEND_URL = 'https://ai.studio/spend';
+
+// "Redo with AI": re-reads an upload AI couldn't read when it was sent. { ok, aiOff, data }.
+const redoRead = async (item) => {
+  const res = await fetch(`/api/interview/admin/daf/${item.id}/read`, { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` } });
+  return { ok: res.ok, aiOff: res.status === 503, data: await res.json().catch(() => null) };
 };
 
 const when = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '');
@@ -184,6 +193,113 @@ function Viewer({ item, onClose }) {
   );
 }
 
+// What AI read from an upload, collapsed by default so the list stays short. Fields AI wasn't sure of are
+// marked. Students never edit their DAF, so an admin corrects a missed or misread entry here (before or after
+// verifying) - or types the details in from the file when AI couldn't read it at all.
+const TEXT_FIELDS = [['homeState', 'Home state'], ['homeDistrict', 'Home district'], ['hometown', 'Hometown'], ['optional', 'Optional subject'], ['familyBackground', 'Family (parents’ occupations)']];
+const LIST_FIELDS = [['hobbies', 'Hobbies'], ['achievements', 'Achievements / ECA'], ['servicePreference', 'Service preferences'], ['languages', 'Languages']];
+const textLines = (text) => String(text || '').split('\n').map((l) => l.trim()).filter(Boolean);
+const parts = (l, n) => { const p = l.split('|').map((x) => x.trim()); return Array.from({ length: n }, (_, i) => p[i] || ''); };
+const eduText = (list) => (list || []).map((e) => [e.degree, e.discipline, e.institution, e.year].map((x) => x || '').join(' | ')).join('\n');
+const workText = (list) => (list || []).map((w) => [w.role, w.organization, w.duration].map((x) => x || '').join(' | ')).join('\n');
+
+function ReadDetails({ item, onSaved }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const f = item.fields || {};
+  const unsure = new Set(item.unsure || []);
+  const rows = [
+    ['homeState', 'Home state', f.homeState],
+    ['homeDistrict', 'Home district', f.homeDistrict],
+    ['hometown', 'Hometown', f.hometown],
+    ['education', 'Education', (f.education || []).map((e) => [[e.degree, e.discipline].filter(Boolean).join(', '), e.institution, e.year].filter(Boolean).join(' · ')).join('; ')],
+    ['work', 'Work', (f.work || []).map((w) => [w.role, w.organization, w.duration].filter(Boolean).join(' · ')).join('; ')],
+    ['optional', 'Optional subject', f.optional],
+    ['hobbies', 'Hobbies', (f.hobbies || []).join('; ')],
+    ['achievements', 'Achievements / ECA', (f.achievements || []).join('; ')],
+    ['servicePreference', 'Service preferences', (f.servicePreference || []).join(', ')],
+    ['familyBackground', 'Family', f.familyBackground],
+    ['languages', 'Languages', (f.languages || []).join(', ')],
+    ['rollNo', 'Roll number (read)', f.rollNo]
+  ].filter(([, , v]) => v);
+  const edit = () => setDraft({
+    ...Object.fromEntries(TEXT_FIELDS.map(([k]) => [k, f[k] || ''])),
+    education: eduText(f.education),
+    work: workText(f.work),
+    ...Object.fromEntries(LIST_FIELDS.map(([k]) => [k, (f[k] || []).join('\n')]))
+  });
+  const save = async () => {
+    const fields = {
+      ...Object.fromEntries(TEXT_FIELDS.map(([k]) => [k, draft[k]])),
+      education: textLines(draft.education).map((l) => { const [degree, discipline, institution, year] = parts(l, 4); return { degree, discipline, institution, year }; }),
+      work: textLines(draft.work).map((l) => { const [role, organization, duration] = parts(l, 3); return { role, organization, duration }; }),
+      ...Object.fromEntries(LIST_FIELDS.map(([k]) => [k, textLines(draft[k])]))
+    };
+    setSaving(true);
+    try {
+      await api(`/admin/daf/${item.id}/fields`, { method: 'PUT', body: { fields } });
+      setDraft(null);
+      onSaved();
+    } catch (e) {
+      window.alert(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const input = 'w-full rounded-lg border border-border-default bg-surface px-2.5 py-1.5 text-sm text-text-primary outline-none focus:border-text-primary';
+  return (
+    <div className="mt-2">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="text-xs font-semibold text-brand hover:underline cursor-pointer">
+        {open ? '▾' : '▸'} What AI read{unsure.size ? ` · ${unsure.size} unsure` : ''}
+      </button>
+      {open && (
+        <div className="mt-2 rounded-xl border border-border-default bg-sunken/40 px-4 py-3 text-sm">
+          {!draft ? (
+            <>
+              {rows.length ? (
+                <dl className="grid sm:grid-cols-[11rem_1fr] gap-x-4 gap-y-1.5">
+                  {rows.map(([k, label, value]) => (
+                    <Fragment key={k}>
+                      <dt className={unsure.has(k) ? 'font-semibold text-amber-700 dark:text-amber-300' : 'text-text-tertiary'}>{label}{unsure.has(k) ? ' · AI unsure' : ''}</dt>
+                      <dd className={`text-text-primary break-words ${unsure.has(k) ? 'rounded bg-amber-100 dark:bg-amber-400/15 px-1' : ''}`}>{value}</dd>
+                    </Fragment>
+                  ))}
+                </dl>
+              ) : <p className="text-text-tertiary">Nothing has been read from this DAF yet.</p>}
+              {item.status !== 'rejected' && (
+                <button type="button" onClick={edit} className="mt-3 px-3 py-1.5 rounded-lg border border-border-default text-xs font-semibold cursor-pointer hover:bg-sunken">
+                  {rows.length ? 'Correct details' : 'Type in the details from the file'}
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="grid gap-2.5">
+              {TEXT_FIELDS.map(([k, label]) => (
+                <label key={k} className="grid gap-0.5">
+                  <span className={`text-xs ${unsure.has(k) ? 'font-semibold text-amber-700 dark:text-amber-300' : 'text-text-tertiary'}`}>{label}{unsure.has(k) ? ' · AI unsure' : ''}</span>
+                  <input value={draft[k]} onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))} className={input} />
+                </label>
+              ))}
+              {[['education', 'Education — one per line: degree | subject | institution | year'], ['work', 'Work — one per line: role | organisation | duration'], ...LIST_FIELDS.map(([k, l]) => [k, `${l} — one per line`])].map(([k, label]) => (
+                <label key={k} className="grid gap-0.5">
+                  <span className={`text-xs ${unsure.has(k) ? 'font-semibold text-amber-700 dark:text-amber-300' : 'text-text-tertiary'}`}>{label}{unsure.has(k) ? ' · AI unsure' : ''}</span>
+                  <textarea rows={3} value={draft[k]} onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))} className={input} />
+                </label>
+              ))}
+              <p className="text-xs text-text-tertiary">{item.kind === 'change' && item.status === 'pending' ? 'These replace the student’s details when you verify this DAF.' : 'These become the student’s details now.'}</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={saving} onClick={save} className="px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-text-on-accent text-sm font-bold cursor-pointer disabled:opacity-50">{saving ? 'Saving…' : 'Save details'}</button>
+                <button type="button" disabled={saving} onClick={() => setDraft(null)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminDafVerification() {
   const [status, setStatus] = useState('pending');
   const [data, setData] = useState(null);
@@ -193,6 +309,8 @@ export default function AdminDafVerification() {
   const [details, setDetails] = useState(null); // a filled-in DAF's details
   const [tick, setTick] = useState(0);
   const [rolls, setRolls] = useState({}); // roll numbers the admin typed, by upload
+  const [note, setNote] = useState(''); // what the last Redo with AI did
+  const [redoingAll, setRedoingAll] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,6 +321,8 @@ export default function AdminDafVerification() {
         setError('');
         // Keeps the count on the navbar's "DAF Checks" link in step after a verify / reject.
         window.dispatchEvent(new CustomEvent('daf-pending', { detail: d.counts?.pending || 0 }));
+        // ...and the AI warning every admin page shows (AI off / DAFs waiting to be read).
+        window.dispatchEvent(new CustomEvent('daf-ai', { detail: { unread: d.counts?.unread || 0, ai: d.ai || null } }));
       })
       .catch((e) => { if (!cancelled) setError(e.message); });
     return () => { cancelled = true; };
@@ -264,31 +384,88 @@ export default function AdminDafVerification() {
     }
   }, [rolls]);
 
+  // Re-read one flagged upload with AI (once AI works again, say after adding credits).
+  const redo = useCallback(async (item) => {
+    setBusy(item.id);
+    setNote('');
+    try {
+      const r = await redoRead(item);
+      if (r.ok) {
+        const roll = r.data?.rollNo && item.status === 'pending' ? ` Roll number read: ${r.data.rollNo} — check it against the DAF before verifying.` : '';
+        setNote(`Read ${item.userName || item.userEmail}’s DAF: ${r.data?.applied ? 'their details are in place, for them to check once.' : 'done (they had already saved their details, so nothing was changed).'}${roll}`);
+      } else if (r.aiOff) {
+        setNote(r.data?.error || 'AI is still off.');
+      } else {
+        window.alert(r.data?.error || 'Could not read that DAF.');
+      }
+    } finally {
+      setBusy(null);
+      setTick((k) => k + 1);
+    }
+  }, []);
+
+  // Re-read every flagged upload, one by one; stops if AI is still off.
+  const redoAll = useCallback(async () => {
+    setRedoingAll(true);
+    setNote('');
+    let done = 0;
+    let failed = 0;
+    try {
+      const list = (await api('/admin/daf?status=unread')).items || [];
+      for (const item of list) {
+        setNote(`Reading ${done + failed + 1} of ${list.length}…`);
+        const r = await redoRead(item);
+        if (r.aiOff) { setNote(`${done ? `Read ${done}. ` : ''}${r.data?.error || 'AI is still off.'}`); return; }
+        if (r.ok) done++; else failed++;
+      }
+      setNote(`Read ${done} of ${list.length} DAFs${failed ? ` — ${failed} couldn’t be read (open them to check)` : ''}.`);
+    } catch (e) {
+      setNote(e.message);
+    } finally {
+      setRedoingAll(false);
+      setTick((k) => k + 1);
+    }
+  }, []);
+
   const counts = data?.counts || {};
+  const aiOff = !!(data?.ai?.configured && !data.ai.available);
+  const unread = counts.unread || 0;
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-12">
       <h1 className="font-display text-3xl md:text-4xl font-semibold text-text-primary tracking-tight">DAF Checks</h1>
-      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. Files stay here after you decide; Delete removes an entry. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details. Check the roll number against the DAF before verifying: it decides which interview date the student sees, and they can’t change it afterwards. A “Roll number” is a verified student adding a missing roll number with proof (free): approve it only if the proof shows that number. A DAF “Filled in” by hand has no file: check the details, and any roll number against its proof.</p>
+      <p className="mt-2 text-sm text-text-secondary max-w-2xl">Students upload their DAF in Abhivyakti (Interview Prep). Verify a genuine DAF to unlock their practice, the full question bank, 15 free credits and credit purchases; reject anything else with a reason. Files stay here after you decide; Delete removes an entry. A “Paid change” is a verified student’s new DAF (₹50): verifying it replaces their old details. Check the roll number against the DAF before verifying: it decides which interview date the student sees, and they can’t change it afterwards. A “Roll number” is a verified student adding a missing roll number with proof (free): approve it only if the proof shows that number. A DAF “Filled in” by hand has no file: check the details, and any roll number against its proof. If AI couldn’t read an upload (AI off or out of credits), it is flagged here and the student just waits: once AI works again, press Redo with AI.</p>
 
-      {data?.ai?.configured && !data.ai.available && (
-        // While AI is off, uploads aren't read: students type their details in and no roll number is read.
+      {(aiOff || unread > 0) && (
+        // Uploads AI couldn't read wait here; their students see "We're reading your DAF" until an admin re-reads them.
         <div className="mt-6 rounded-2xl border border-rose-300 bg-rose-50 dark:bg-rose-400/10 dark:border-rose-400/30 px-5 py-4" role="alert">
-          <p className="font-semibold text-status-danger-text">AI is off: uploaded DAFs aren’t being read automatically</p>
-          <p className="text-sm text-text-secondary mt-1">
-            Students are asked to type their details in, and no roll number is read from the file — open each DAF and type the roll number before verifying.
-            {data.ai.billingBlocked && <> Google is refusing requests for billing reasons: {/spending cap/i.test(data.ai.reason) ? 'the project’s monthly spending cap is reached' : 'the account needs credit'}. <a href="https://ai.studio/spend" target="_blank" rel="noopener noreferrer" className="font-semibold text-brand hover:underline">Open AI Studio spend settings</a>.</>}
-          </p>
-          {data.ai.reason && <p className="text-xs text-text-tertiary mt-1 break-words">Google: {data.ai.reason}</p>}
+          {aiOff && (
+            <>
+              <p className="font-semibold text-status-danger-text">AI is off: uploaded DAFs can’t be read automatically</p>
+              <p className="text-sm text-text-secondary mt-1">
+                Students whose DAF couldn’t be read see “We’re reading your DAF” and wait — there is nothing for them to do. AI answers and feedback don’t work either.
+                {data.ai.billingBlocked && <> Google is refusing requests for billing reasons: {/spending cap/i.test(data.ai.reason) ? 'the project’s monthly spending cap is reached' : 'the account needs credit'}.</>}
+                {' '}Add credits, then press Redo with AI.
+              </p>
+              {data.ai.reason && <p className="text-xs text-text-tertiary mt-1 break-words">Google: {data.ai.reason}</p>}
+            </>
+          )}
+          {unread > 0 && <p className={`${aiOff ? 'mt-3 ' : ''}font-semibold text-text-primary`}>{unread} DAF{unread === 1 ? '' : 's'} couldn’t be read by AI — {unread === 1 ? 'that student is' : 'those students are'} waiting for their details.</p>}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {aiOff && <a href={AI_SPEND_URL} target="_blank" rel="noopener noreferrer" className="px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-text-on-accent text-sm font-bold">Add credits in Google AI Studio</a>}
+            {unread > 0 && <button type="button" disabled={redoingAll} onClick={redoAll} className="px-4 py-2 rounded-xl border border-status-danger-text/40 text-status-danger-text text-sm font-bold cursor-pointer disabled:opacity-50">{redoingAll ? 'Reading…' : `Redo all with AI (${unread})`}</button>}
+            {unread > 0 && status !== 'unread' && <button type="button" onClick={() => setStatus('unread')} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">Show them</button>}
+          </div>
         </div>
       )}
+      {note && <p className="mt-3 text-sm font-semibold text-text-primary" role="status">{note}</p>}
 
       <ScheduleBox info={data?.schedule} onUploaded={() => setTick((k) => k + 1)} />
 
       <div className="mt-6 flex flex-wrap gap-2">
-        {['pending', 'verified', 'rejected'].map((s) => (
+        {['pending', 'verified', 'rejected', 'unread'].map((s) => (
           <button key={s} type="button" onClick={() => setStatus(s)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold border cursor-pointer ${status === s ? 'bg-brand text-text-on-accent border-brand' : 'border-border-default text-text-secondary hover:text-text-primary'}`}>
-            {s === 'pending' ? 'Waiting' : s === 'verified' ? 'Verified' : 'Rejected'} <span className="opacity-70">{counts[s] || 0}</span>
+            className={`px-4 py-2 rounded-xl text-sm font-semibold border cursor-pointer ${status === s ? 'bg-brand text-text-on-accent border-brand' : s === 'unread' && unread > 0 ? 'border-status-danger-text/40 text-status-danger-text' : 'border-border-default text-text-secondary hover:text-text-primary'}`}>
+            {s === 'pending' ? 'Waiting' : s === 'verified' ? 'Verified' : s === 'rejected' ? 'Rejected' : 'Couldn’t read'} <span className="opacity-70">{counts[s] || 0}</span>
           </button>
         ))}
       </div>
@@ -305,6 +482,7 @@ export default function AdminDafVerification() {
                 {item.userName || '—'} <span className="font-normal text-text-tertiary">· {item.userEmail}</span>
                 {item.kind === 'change' && <span className="ml-2 align-middle inline-flex px-2 py-0.5 rounded-full bg-accent-soft-bg border border-accent-soft-border text-brand text-[10px] font-extrabold uppercase tracking-wider">Paid change</span>}
                 {item.source === 'form' && <span className="ml-2 align-middle inline-flex px-2 py-0.5 rounded-full bg-amber-50 border border-amber-300 text-amber-800 dark:bg-amber-400/10 dark:border-amber-400/30 dark:text-amber-200 text-[10px] font-extrabold uppercase tracking-wider">Filled in</span>}
+                {item.detailsUpload && <span className="ml-2 align-middle inline-flex px-2 py-0.5 rounded-full bg-sunken border border-border-default text-text-secondary text-[10px] font-extrabold uppercase tracking-wider" title="A verified student who had no DAF details gave them once (verified before uploads were kept)">Details only</span>}
                 {item.kind === 'roll' && <span className="ml-2 align-middle inline-flex px-2 py-0.5 rounded-full bg-sky-50 border border-sky-300 text-sky-800 dark:bg-sky-400/10 dark:border-sky-400/30 dark:text-sky-200 text-[10px] font-extrabold uppercase tracking-wider">Roll number</span>}
               </p>
               <p className="text-xs text-text-tertiary mt-0.5">
@@ -315,11 +493,18 @@ export default function AdminDafVerification() {
                 <RollCheck item={item} roll={rolls[item.id] ?? item.rollNo ?? ''} onChange={(v) => setRolls((x) => ({ ...x, [item.id]: v }))} />
               )}
               {item.status === 'verified' && <ScheduleMatch item={item} />}
-              {item.detailsMissing && <p className="text-xs mt-1 font-semibold text-amber-700 dark:text-amber-300">The student hasn’t filled in their DAF details yet. Once verified, they can fill them in from My DAF.</p>}
+              {item.needsRead && (
+                <p className="text-xs mt-1 font-semibold text-status-danger-text">
+                  AI couldn’t read this DAF{item.readError ? ` (${item.readError.slice(0, 160)})` : ''}. The student is waiting for its details — press Redo with AI once AI works.
+                </p>
+              )}
+              {!item.needsRead && item.detailsMissing && <p className="text-xs mt-1 font-semibold text-amber-700 dark:text-amber-300">The student hasn’t filled in their DAF details yet. Once verified, they can fill them in from My DAF.</p>}
               {item.reason && <p className="text-xs text-status-danger-text mt-1">Reason: {item.reason}</p>}
+              {item.kind !== 'roll' && item.source !== 'form' && <ReadDetails item={item} onSaved={() => setTick((k) => k + 1)} />}
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
               {item.source === 'form' && <button type="button" onClick={() => setDetails(item)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">View details</button>}
+              {item.needsRead && <button type="button" disabled={busy === item.id || redoingAll} onClick={() => redo(item)} className="px-4 py-2 rounded-xl border border-status-danger-text/40 text-status-danger-text text-sm font-bold cursor-pointer disabled:opacity-50">{busy === item.id ? 'Reading…' : 'Redo with AI'}</button>}
               {item.hasFile && <button type="button" onClick={() => setViewing(item)} className="px-4 py-2 rounded-xl border border-border-default text-sm font-semibold cursor-pointer hover:bg-sunken">{item.kind === 'roll' || item.source === 'form' ? 'View proof' : 'View DAF'}</button>}
               {item.status === 'pending' && (
                 <>

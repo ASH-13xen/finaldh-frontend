@@ -28,6 +28,31 @@ export function AdminContact({ className = '' }) {
   );
 }
 
+// A verified student's new DAF (a paid re-upload) still with our team - being verified, or verified and being
+// read: a highlighted line at the top of every screen, since everything uses the current DAF until then.
+export function DafChangeBanner() {
+  const { t } = useT();
+  const check = useDafCheck();
+  if (check.loading || check.admin || !check.verified) return null;
+  const c = check.change?.status;
+  const key = c === 'pending' ? 'verifying' : c === 'verified' && check.reading ? 'reading' : null;
+  if (!key) return null;
+  return (
+    <div role="status" className="border-b-2 border-amber-400 bg-amber-100 dark:bg-amber-400/15 dark:border-amber-400/50">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-3.5 md:py-4">
+        <p className="flex items-start gap-2.5 font-display text-lg md:text-xl font-semibold text-text-primary">
+          <Icon name="clock" className="w-5 h-5 md:w-6 md:h-6 mt-0.5 shrink-0 text-amber-700 dark:text-amber-300" />
+          <span>{t(`dcb.${key}.title`)}</span>
+        </p>
+        <p className="mt-0.5 md:ml-8 text-sm md:text-[15px] text-text-secondary">
+          {t(`dcb.${key}.body`)}{' '}
+          <a href={ADMIN_TELEGRAM} target="_blank" rel="noopener noreferrer" className="font-bold text-brand hover:underline">{t('dv.contactLink')}</a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function DafCheckCard({ onUpload, showVerified = false, className = '' }) {
   const { t } = useT();
   const { go, screen, signIn } = usePrep();

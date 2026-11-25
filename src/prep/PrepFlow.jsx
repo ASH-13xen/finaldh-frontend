@@ -13,6 +13,7 @@ import { usePrepStore } from './lib/usePrepStore';
 import { api } from './lib/api';
 import CreditsSheet from './components/credits/CreditsSheet';
 import { GuestGate, SignInSheet } from './components/Gate';
+import { DafChangeBanner } from './components/DafCheck';
 
 const Predictions = lazy(() => import('./screens/Predictions'));
 const Daf = lazy(() => import('./screens/Daf'));
@@ -194,6 +195,7 @@ function Flow({ user, initialScreen, onLogout, onExit, onSignIn }) {
   return (
     <PrepContext.Provider value={ctx}>
       <Shell>
+        {!guest && <DafChangeBanner />}
         <Suspense fallback={<div className="min-h-[50vh]" />}>{body}</Suspense>
       </Shell>
       {creditsOpen && !guest && <CreditsSheet credits={credits} onClose={() => setCreditsOpen(false)} onPaid={refreshCredits} />}

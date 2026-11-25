@@ -240,23 +240,19 @@ export default function Daf() {
 
   const current = useMemo(() => ({ ...EMPTY_DAF, ...(profile?.profile || {}) }), [profile]);
 
-  // One call sends the file to our team for verification and has it read, so the student can check the
-  // details before saving them. If it can't be read, they fill in the form from it.
+  // One call sends the file to our team and has it read. Nothing to check or save: a first DAF's details are
+  // saved from it at once, a change's replace the current ones once it is verified, and if it can't be read
+  // the student just waits while our team reads it.
   const onFile = async (file) => {
     setMode('reading');
     try {
       const d = await api.dafSubmit(file);
+      toast.success(t(d?.waitingForRead ? 'daf.readingLater' : d?.change ? 'daf.changeSent' : 'daf.savedFromFile'));
       refreshCredits();
-      if (d?.fields) {
-        if (d.stored) toast.success(t('dv.sent'));
-        // Once verified the roll number stays the one our team checked (they check the new DAF's too).
-        setDraft({ fields: { ...EMPTY_DAF, ...d.fields, ...(lockedAfterVerify ? { rollNo: current.rollNo } : {}) }, unsure: d.unsure || [] });
-        setMode('review');
-      } else {
-        toast.info(t('daf.readFailed'));
-        setDraft({ fields: current, unsure: [] });
-        setMode('form');
-      }
+      daf.refresh();
+      setGroups(null);
+      setMode(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       toast.error(errorMessage(err));
       refreshCredits();
@@ -267,8 +263,8 @@ export default function Daf() {
   const save = async (fields) => {
     setSaving(true);
     try {
-      const r = await api.saveProfile(fields);
-      toast.success(t(r?.changePending ? 'daf.changeSent' : 'daf.saved'));
+      await api.saveProfile(fields);
+      toast.success(t('daf.saved'));
       refreshCredits();
       daf.refresh();
       setGroups(null);
@@ -305,22 +301,7 @@ export default function Daf() {
     setSaving(false);
   };
 
-  // No details yet, but the uploaded DAF can fill them in (say AI was off when it was sent): read it now and let
-  // the student check them. If it can't be read, they fill them in by hand.
-  const fillByHand = () => { setDraft({ fields: current, unsure: [] }); setMode('form'); };
-  const readFromFile = async () => {
-    setMode('reading');
-    try {
-      const d = await api.dafRead();
-      setDraft({ fields: { ...EMPTY_DAF, ...d.fields, ...(lockedAfterVerify ? { rollNo: current.rollNo } : {}) }, unsure: d.unsure || [] });
-      setMode('review');
-    } catch (err) {
-      toast.info(errorMessage(err));
-      refreshCredits();
-      fillByHand();
-    }
-  };
-
+  // Admins only (testing): a student's sent DAF changes only by uploading it again.
   const remove = async () => {
     if (!window.confirm(t('daf.deleteConfirm'))) return;
     try {
@@ -335,19 +316,10 @@ export default function Daf() {
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 pt-10 md:pt-16">
       <DafCheckCard className="mb-10" showVerified onUpload={() => setMode('start')} />
-      {lockedAfterVerify && (change.status === 'pending' || change.status === 'rejected') && (
-        <div className={`mb-10 -mt-6 rounded-[1.5rem] border px-5 py-5 md:px-7 ${change.status === 'pending' ? SKY : ROSE}`} role="status">
-          <p className="font-display text-xl md:text-2xl font-semibold text-text-primary">{t(`daf.change${change.status === 'pending' ? 'Pending' : 'Rejected'}.title`)}</p>
-          <p className="mt-1 text-[15px] text-text-secondary leading-relaxed">{t(`daf.change${change.status === 'pending' ? 'Pending' : 'Rejected'}.body`, { reason: change.reason || '' })}</p>
-          {change.status === 'pending' && <AdminContact className="mt-2" />}
-        </div>
-      )}
-      {/* The new DAF was verified before its details were saved: they were filled in from it - checked once here. */}
-      {lockedAfterVerify && view === 'view' && change.status === 'verified' && change.toCheck && (
-        <div className={`mb-10 -mt-6 rounded-[1.5rem] border px-5 py-5 md:px-7 ${SKY}`} role="status">
-          <p className="font-display text-xl md:text-2xl font-semibold text-text-primary">{t('daf.changeCheck.title')}</p>
-          <p className="mt-1 text-[15px] text-text-secondary leading-relaxed">{t('daf.changeCheck.body')}</p>
-          <Button className="mt-4" tone="primary" size="md" icon="edit" onClick={() => { setDraft({ fields: current, unsure: [] }); setMode('review'); }}>{t('daf.changeCheck.cta')}</Button>
+      {lockedAfterVerify && change.status === 'rejected' && (
+        <div className={`mb-10 -mt-6 rounded-[1.5rem] border px-5 py-5 md:px-7 ${ROSE}`} role="status">
+          <p className="font-display text-xl md:text-2xl font-semibold text-text-primary">{t('daf.changeRejected.title')}</p>
+          <p className="mt-1 text-[15px] text-text-secondary leading-relaxed">{t('daf.changeRejected.body', { reason: change.reason || '' })}</p>
         </div>
       )}
       {lockedAfterVerify && view === 'view' && check.roll && !check.roll.checked && <RollClaim roll={check.roll} onSent={refreshCredits} />}
@@ -362,7 +334,7 @@ export default function Daf() {
           </div>
           <div className="mt-12"><Heatmap items={profile.items || []} groups={groups} go={go} /></div>
           <div className="mt-8 text-right">
-            {!lockedAfterVerify && <Button tone="plain" size="sm" icon="trash" onClick={remove}>{t('daf.delete')}</Button>}
+            {user?.isAdmin && <Button tone="plain" size="sm" icon="trash" onClick={remove}>{t('daf.delete')}</Button>}
           </div>
         </>
       )}
@@ -373,33 +345,24 @@ export default function Daf() {
           <SplitHeading className={titleCls}>{t('daf.startTitle')}</SplitHeading>
           <p className="mt-6 text-lg md:text-xl text-text-secondary leading-relaxed max-w-2xl">{t('daf.startSub', { n: fmt(status.corpus?.transcripts || 0) })}</p>
           <div className="mt-10">
-            {lockedAfterVerify && !hasDaf ? (
-              // Verified, but the details were never filled in (the file couldn't be read automatically and the
-              // form was skipped): they fill them in now, free.
-              <div className="prep-card max-w-3xl p-6 md:p-10">
-                <span className="w-14 h-14 rounded-2xl bg-text-primary text-page flex items-center justify-center"><Icon name="edit" className="w-7 h-7" /></span>
-                <h2 className="mt-6 font-display text-3xl md:text-4xl font-semibold tracking-tight">{t('daf.needDetails.title')}</h2>
-                <p className="mt-2 text-lg text-text-secondary">{t(check.detailsFromFile ? 'daf.needDetails.bodyFile' : 'daf.needDetails.body')}</p>
-                <div className="mt-8 flex flex-wrap gap-3">
-                  {check.detailsFromFile && <Button tone="primary" size="lg" icon="sparkles" onClick={readFromFile}>{t('daf.readFromFile')}</Button>}
-                  <Button tone={check.detailsFromFile ? 'ghost' : 'primary'} size="lg" icon="edit" onClick={fillByHand}>{t(check.detailsFromFile ? 'daf.fillByHand' : 'daf.needDetails.cta')}</Button>
-                </div>
+            {!hasDaf && check.reading ? (
+              // Our team is reading the details from the DAF (AI couldn't when it was sent): just wait.
+              <div className="prep-card max-w-3xl p-6 md:p-10" role="status">
+                <span className="w-14 h-14 rounded-2xl bg-accent-soft-bg text-brand flex items-center justify-center"><Icon name="clock" className="w-7 h-7" /></span>
+                <h2 className="mt-6 font-display text-3xl md:text-4xl font-semibold tracking-tight">{t('daf.reading.title')}</h2>
+                <p className="mt-2 text-lg text-text-secondary">{t('daf.reading.body')}</p>
+                <AdminContact className="mt-4" />
               </div>
             ) : canUpload
-              ? <Start onFile={onFile} onFill={() => { setDraft({ fields: { ...current, rollNo: lockedAfterVerify ? current.rollNo : '' }, unsure: [], send: true }); setMode('form'); }} n={status.corpus?.transcripts || 0} />
+              ? <Start onFile={onFile} onFill={() => { setDraft({ fields: { ...current, rollNo: lockedAfterVerify ? current.rollNo : '' }, unsure: [], send: !(lockedAfterVerify && !hasDaf) }); setMode('form'); }} n={status.corpus?.transcripts || 0} />
               : (
                 <div className="prep-card max-w-3xl p-6 md:p-10">
                   <span className="w-14 h-14 rounded-2xl bg-accent-soft-bg text-brand flex items-center justify-center"><Icon name="check" className="w-7 h-7" /></span>
                   <h2 className="mt-6 font-display text-3xl md:text-4xl font-semibold tracking-tight">{t(needsPayment ? 'dc.title' : 'daf.uploadedTitle')}</h2>
-                  <p className="mt-2 text-lg text-text-secondary">{needsPayment ? t('dc.startBody', { price: check.changePrice || 50 }) : t(!hasDaf && check.detailsFromFile ? 'daf.uploadedRead' : 'daf.uploadedBody')}</p>
+                  <p className="mt-2 text-lg text-text-secondary">{needsPayment ? t('dc.startBody', { price: check.changePrice || 50 }) : t('daf.uploadedBody')}</p>
                   {needsPayment
                     ? <Button className="mt-8" tone="primary" size="lg" icon="upload" onClick={() => setPaying(true)}>{t('daf.reupload')}</Button>
-                    : !hasDaf && !lockedAfterVerify && (
-                      <div className="mt-8 flex flex-wrap gap-3">
-                        {check.detailsFromFile && <Button tone="primary" size="lg" icon="sparkles" onClick={readFromFile}>{t('daf.readFromFile')}</Button>}
-                        <Button tone={check.detailsFromFile ? 'ghost' : 'primary'} size="lg" icon="edit" onClick={fillByHand}>{t(check.detailsFromFile ? 'daf.fillByHand' : 'daf.fillFromFile')}</Button>
-                      </div>
-                    )}
+                    : <AdminContact className="mt-4" />}
                 </div>
               )}
           </div>
@@ -408,17 +371,6 @@ export default function Daf() {
       )}
 
       {view === 'reading' && <Reading />}
-
-      {view === 'review' && draft && (
-        <>
-          <p className="prep-eyebrow text-brand mb-5">{t('daf.eyebrow')}</p>
-          <h1 className={titleCls}>{t('daf.reviewTitle')}</h1>
-          <p className="mt-6 text-lg text-text-secondary max-w-2xl">{t('daf.reviewSub')}</p>
-          <div className="mt-10">
-            <DafForm mode="review" initial={draft.fields} unsure={draft.unsure} keywords={keywords} services={status.services} saving={saving} onSave={save} onCancel={() => setMode(null)} rollLocked={!user?.isAdmin} rollHint={rollHint} />
-          </div>
-        </>
-      )}
 
       {view === 'form' && draft && (
         <DafForm mode="steps" initial={draft.fields} keywords={keywords} services={status.services} saving={saving}
