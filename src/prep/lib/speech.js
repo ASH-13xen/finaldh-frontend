@@ -1,24 +1,28 @@
 // Reading questions aloud with the device's own voice (free - no AI). Devices differ a lot: Edge has natural
-// "Online (Natural)" voices, Chrome has Google voices, iPhones and Macs have Rishi / Veena and enhanced voices,
-// while Windows' old "Desktop" voices sound robotic. We pick the most natural English voice the device has
-// (Indian English first) and speak at a natural pace. One thing is spoken at a time, across the whole page.
+// "Online (Natural)" voices, Chrome has Google voices, iPhones and Macs have Samantha and premium voices,
+// while Windows' old "Desktop" voices sound robotic. We pick the warmest natural English voice the device has
+// (UK or US English - not an Indian accent) and speak calmly. One thing is spoken at a time, across the page.
 const synth = () => (typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null);
 export const speechSupported = () => !!synth() && typeof window.SpeechSynthesisUtterance === 'function';
 
 const NATURAL = /natural|neural|online|enhanced|premium|wavenet|studio/i;
 // Old or joke voices: robotic Windows "Desktop" (SAPI) voices, eSpeak, and macOS novelty voices.
 const ROBOTIC = /desktop|espeak|compact|\b(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|superstar|trinoids|whisper|wobble|zarvox)\b/i;
-const INDIAN_NAMES = /\b(rishi|veena|neerja|prabhat|aarav|ananya|kajal|isha|lekha)\b/i;
+// Voices known to sound warm and friendly: Microsoft's newest natural voices (Ava, Emma, Jenny, Aria, Sonia,
+// Libby), Apple's (Samantha, Serena, Karen, Zoe, Moira) and Chrome's "UK English Female".
+const WARM = /\b(ava|emma|jenny|aria|sonia|libby|samantha|serena|karen|zoe|moira|tessa|allison|susan)\b|uk english female/i;
 
 // How natural a voice will sound; -100 = not English. Higher is better.
 export const scoreVoice = (v) => {
   const lang = String(v?.lang || '').replace('_', '-').toLowerCase();
   if (!lang.startsWith('en')) return -100;
   const name = `${v.name || ''} ${v.voiceURI || ''}`;
-  let s = lang === 'en-in' ? 30 : ['en-gb', 'en-us', 'en-au', 'en-ie', 'en-ca', 'en-nz', 'en-za'].includes(lang) ? 10 : 5;
+  // UK and US English first (not an Indian accent), then the other native accents.
+  let s = ['en-gb', 'en-us'].includes(lang) ? 20 : ['en-au', 'en-ie', 'en-ca', 'en-nz', 'en-za'].includes(lang) ? 15 : lang === 'en-in' ? 0 : 5;
   if (NATURAL.test(name)) s += 45;
   if (/google/i.test(name)) s += 25;
-  if (INDIAN_NAMES.test(name)) s += 15;
+  if (WARM.test(name)) s += 20;
+  if (/multilingual/i.test(name)) s += 5; // Microsoft's most human-sounding voices
   if (ROBOTIC.test(name)) s -= 40;
   // Windows' own Microsoft voices are the old robotic ones unless they are the newer "Natural" ones.
   else if (/microsoft/i.test(name) && !NATURAL.test(name)) s -= 25;
@@ -84,8 +88,8 @@ export function speak(text, id) {
       if (i >= parts.length) { stop(); return; }
       const u = new window.SpeechSynthesisUtterance(parts[i++]);
       if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'en-IN';
-      // Natural voices sound right at normal speed; older ones are clearer a touch slower.
-      u.rate = voice && (NATURAL.test(voice.name) || /google/i.test(voice.name)) ? 1 : 0.95;
+      // A calm, unhurried pace: warmer, and easier to follow.
+      u.rate = voice && (NATURAL.test(voice.name) || /google/i.test(voice.name)) ? 0.95 : 0.92;
       u.pitch = 1;
       u.onstart = () => { started = true; };
       u.onend = next;
