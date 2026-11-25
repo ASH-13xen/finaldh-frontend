@@ -9,6 +9,7 @@ import { gsap, useGSAP, prefersReducedMotion } from '../lib/motion';
 import { useT, HINDI_ENABLED } from '../lib/i18n';
 import { usePrep, SCREENS, MOBILE_TABS } from '../lib/context';
 import { LOGO } from '../lib/notes';
+import { TourButton } from './Tour';
 import CreditsPill from './credits/CreditsPill';
 
 const NAV = SCREENS.filter((s) => s.nav);
@@ -209,6 +210,7 @@ export default function Shell({ children }) {
             </span>
           </button>
           <div className="flex-1 min-w-0"><DesktopTabs screen={screen} go={go} /></div>
+          <TourButton screen={screen} />
           <CreditsPill />
           <ThemeButton />
           {user && <AccountMenu />}{/* visitors get "Sign in" (CreditsPill) instead */}

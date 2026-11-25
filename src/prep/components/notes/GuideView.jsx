@@ -218,7 +218,7 @@ export default function GuideView() {
               <p className="mt-5 text-lg md:text-xl text-white/75 leading-relaxed">{t('guide.sub')}</p>
               {corpus?.interviews > 0 && <p className="mt-3 text-sm text-white/55">{t('guide.built', { n: fmt(corpus.interviews), years: yearsRange(corpus.years || []) })}</p>}
               <div className="mt-8 flex flex-wrap items-center gap-4">
-                <Button tone="primary" size="xl" icon="download" magnetic onClick={() => (preview ? askSignIn('guide', { n: fmt(count) }) : setPrinting(true))}>{t('guide.download')}</Button>
+                <Button data-tour="notes-download" tone="primary" size="xl" icon="download" magnetic onClick={() => (preview ? askSignIn('guide', { n: fmt(count) }) : setPrinting(true))}>{t('guide.download')}</Button>
                 <span className="text-sm text-white/60">{BRAND} · PDF</span>
               </div>
             </div>
@@ -243,7 +243,7 @@ export default function GuideView() {
           {shown.length === 0
             ? <p className="mt-10 text-lg text-text-secondary">{t('guide.empty')}</p>
             : (
-              <ol className="mt-6 border-t border-border-subtle">
+              <ol data-tour="notes-guide" className="mt-6 border-t border-border-subtle">
                 {shown.map((e) => (
                   <GuideItem key={e.key} e={e} n={rank.get(e.key)} open={open === e.key} onToggle={() => setOpen((o) => (o === e.key ? null : e.key))} onHide={working ? () => toggleHidden(e) : null} />
                 ))}

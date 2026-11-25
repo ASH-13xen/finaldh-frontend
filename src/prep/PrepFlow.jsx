@@ -14,6 +14,7 @@ import { api } from './lib/api';
 import CreditsSheet from './components/credits/CreditsSheet';
 import { GuestGate, SignInSheet } from './components/Gate';
 import { DafChangeBanner } from './components/DafCheck';
+import TourHost from './components/Tour';
 
 const Predictions = lazy(() => import('./screens/Predictions'));
 const Daf = lazy(() => import('./screens/Daf'));
@@ -198,6 +199,7 @@ function Flow({ user, initialScreen, onLogout, onExit, onSignIn }) {
         {!guest && <DafChangeBanner />}
         <Suspense fallback={<div className="min-h-[50vh]" />}>{body}</Suspense>
       </Shell>
+      <TourHost key={user ? String(user.id || user._id || user.email || 'user') : 'guest'} screen={view.screen} user={user} />
       {creditsOpen && !guest && <CreditsSheet credits={credits} onClose={() => setCreditsOpen(false)} onPaid={refreshCredits} />}
       {ask && <SignInSheet reason={ask.reason} vars={ask.vars} onClose={() => setAsk(null)} />}
     </PrepContext.Provider>

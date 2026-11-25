@@ -11,7 +11,7 @@ export default function BankCard({ f, onOpen }) {
   const status = prep.items.get(f.key)?.status;
   const labels = (f.hookLabels || []).map((l) => l.split(':').slice(1).join(':')).filter(Boolean).slice(0, 3);
   return (
-    <article data-card className="prep-card prep-card-hover relative grid grid-cols-[auto_1fr] gap-4 md:gap-6 p-4 md:p-6">
+    <article data-card data-tour="bank-card" className="prep-card prep-card-hover relative grid grid-cols-[auto_1fr] gap-4 md:gap-6 p-4 md:p-6">
       <div className={`prep-num self-start w-14 h-16 md:w-20 md:h-20 shrink-0 rounded-2xl flex flex-col items-center justify-center ${f.timesAsked >= 10 ? 'bg-brand text-text-on-accent' : f.timesAsked >= 2 ? 'bg-accent-soft-bg text-brand' : 'bg-sunken text-text-tertiary'}`}>
         <span className="font-display text-2xl md:text-3xl font-semibold leading-none">{fmt(f.timesAsked)}</span>
         <span className="mt-1 text-[10px] font-bold uppercase tracking-wider opacity-80">×</span>

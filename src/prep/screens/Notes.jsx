@@ -133,7 +133,7 @@ function Tabs({ tab }) {
     else gsap.to(pill.current, { ...to, duration: 0.55, ease: 'prep' });
   }, { dependencies: [tab, t] });
   return (
-    <div ref={bar} role="tablist" className="relative mt-10 inline-flex p-1.5 rounded-full border border-border-default bg-surface max-w-full overflow-x-auto">
+    <div ref={bar} role="tablist" data-tour="notes-tabs" className="relative mt-10 inline-flex p-1.5 rounded-full border border-border-default bg-surface max-w-full overflow-x-auto">
       <span ref={pill} className="absolute top-1.5 bottom-1.5 left-0 rounded-full bg-text-primary" aria-hidden="true" />
       {['topics', 'guide'].map((k) => (
         <button key={k} type="button" role="tab" data-tab={k} aria-selected={tab === k}

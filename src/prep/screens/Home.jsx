@@ -231,7 +231,7 @@ function InterviewCard() {
   if (!iv && noRoll) {
     const pending = noRoll === 'pending';
     return (
-      <div className="rounded-[1.75rem] border border-border-default bg-surface px-5 py-5 md:px-8 flex flex-col sm:flex-row sm:items-center gap-4">
+      <div data-tour="home-interview" className="rounded-[1.75rem] border border-border-default bg-surface px-5 py-5 md:px-8 flex flex-col sm:flex-row sm:items-center gap-4">
         <Icon name="calendar" className="w-6 h-6 text-brand shrink-0" />
         <p className="flex-1 text-[15px] md:text-base text-text-secondary leading-relaxed">{t(pending ? 'iv.rollPending' : 'iv.addRoll')}</p>
         {!pending && <Button tone="ghost" size="md" iconRight="arrowRight" onClick={() => go({ screen: 'daf' })}>{t('iv.addRollCta')}</Button>}
@@ -253,7 +253,7 @@ function InterviewCard() {
     [Math.floor(left / 1000) % 60, 'iv.sec']
   ];
   return (
-    <div className="rounded-[1.75rem] border border-accent-soft-border bg-accent-soft-bg/70 px-5 py-6 md:px-9 md:py-8 flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-10" role="timer" aria-live="off">
+    <div data-tour="home-interview" className="rounded-[1.75rem] border border-accent-soft-border bg-accent-soft-bg/70 px-5 py-6 md:px-9 md:py-8 flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-10" role="timer" aria-live="off">
       <div className="flex-1 min-w-0">
         <p className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-text-primary">{t('iv.hi', { name })}</p>
         <p className="mt-2 text-[15px] md:text-base text-text-secondary leading-relaxed">

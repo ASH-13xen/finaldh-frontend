@@ -12,9 +12,9 @@ import { api } from '../lib/api';
 const AREAS = ['work', 'hobby', 'home', 'education', 'optional'];
 
 // Each finding folds (the first starts open), so the page reads like a short list of what boards ask.
-function Section({ id, title, sub, children, defaultOpen = false }) {
+function Section({ id, title, sub, children, defaultOpen = false, tour }) {
   return (
-    <Fold id={`in.${id}`} title={title} summary={sub} defaultOpen={defaultOpen} size="lg" className="pt-3">
+    <Fold id={`in.${id}`} title={title} summary={sub} defaultOpen={defaultOpen} size="lg" className="pt-3" tour={tour}>
       <div className="pb-6">{children}</div>
     </Fold>
   );
@@ -90,7 +90,7 @@ export default function Insights() {
       </div>
 
       {kw?.areas && (
-        <Section id="areas" defaultOpen title={t('in.areas')} sub={t('in.areasSub')}>
+        <Section id="areas" tour="in-first" defaultOpen title={t('in.areas')} sub={t('in.areasSub')}>
           <Bars rows={AREAS.filter((a) => kw.areas[a]).map((a) => ({ label: t(`area.${a}`), value: kw.areas[a].pct, note: t('heat.questions', { q: kw.areas[a].avgQuestions }) }))} />
         </Section>
       )}
