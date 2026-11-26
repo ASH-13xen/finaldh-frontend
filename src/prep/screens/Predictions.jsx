@@ -10,7 +10,7 @@ import Flashcards from '../components/Flashcards';
 import { TierBadge, Chip } from '../components/badges';
 import { SplitHeading, CountUp, Highlight, Ring } from '../components/motion';
 import { gsap, useGSAP, useReveal, prefersReducedMotion } from '../lib/motion';
-import { useT, fmt, yearsRange } from '../lib/i18n';
+import { useT, fmt } from '../lib/i18n';
 import { usePrep } from '../lib/context';
 import { api } from '../lib/api';
 import { errorMessage } from '../../lib/interviewApi';
@@ -61,29 +61,6 @@ function Building({ corpus }) {
           <div className="mt-2 h-1.5 rounded-full bg-sunken overflow-hidden"><div data-bar className="h-full bg-brand" /></div>
         </div>
       ))}
-    </div>
-  );
-}
-
-function HowWePredict({ corpus }) {
-  const { t } = useT();
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="prep-card overflow-hidden">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="prep-focus w-full flex items-center justify-between gap-4 px-5 md:px-7 py-4 text-left cursor-pointer">
-        <span className="flex items-center gap-3 font-semibold"><Icon name="info" className="w-5 h-5 text-brand" />{t('pred.howTitle')}</span>
-        <Icon name="chevronDown" className={`w-5 h-5 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <ol className="px-5 md:px-7 pb-6 grid md:grid-cols-3 gap-4">
-          {[t('pred.how1', { n: fmt(corpus?.transcripts || 0), years: yearsRange(corpus?.years) }), t('pred.how2'), t('pred.how3')].map((s, i) => (
-            <li key={i} className="rounded-2xl bg-sunken/60 p-4">
-              <span className="prep-num font-display text-3xl text-brand">{i + 1}</span>
-              <p className="mt-2 text-[15px] leading-relaxed text-text-secondary">{s}</p>
-            </li>
-          ))}
-        </ol>
-      )}
     </div>
   );
 }
@@ -381,7 +358,6 @@ function PredictedQuestions() {
             </section>
           )}
 
-          <section className="max-w-7xl mx-auto px-4 md:px-8 pt-16"><HowWePredict corpus={data.corpus} /></section>
         </>
       )}
 
