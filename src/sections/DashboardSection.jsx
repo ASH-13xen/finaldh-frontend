@@ -27,6 +27,8 @@ const AdminContactUsers = lazyPage(() => import('./AdminContactUsers'));
 const PrepFlow = lazyPage(() => import('../prep/PrepFlow'));
 const AdminInterviewData = lazyPage(() => import('./AdminInterviewData'));
 const AdminDafVerification = lazyPage(() => import('./AdminDafVerification'));
+const TdhResearch = lazyPage(() => import('./TdhResearch'));
+const AdminTdhResearch = lazyPage(() => import('./AdminTdhResearch'));
 
 const PageLoading = () => <div className="py-24 flex justify-center"><LoadingSpinner text="Loading..." /></div>;
 
@@ -175,6 +177,14 @@ export default function DashboardSection({ user, onLogout, activeTab, setActiveT
 
         {activeTab === 'admin_mcq_data' && (
           <AdminMcqData />
+        )}
+
+        {activeTab === 'pyq_tdh' && (
+          <TdhResearch />
+        )}
+
+        {activeTab === 'admin_pyq_tdh' && user.isAdmin && (
+          <AdminTdhResearch />
         )}
 
         {/* Students before INTERVIEW_SECTION_LIVE (admins never get here: see the early return above). */}

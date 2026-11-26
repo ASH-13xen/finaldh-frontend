@@ -22,6 +22,8 @@ const KNOWN_TABS = [
   'admin_mcq_data',
   'admin_interview_data',
   'admin_daf',
+  'pyq_tdh',
+  'admin_pyq_tdh',
 ];
 
 export const DEFAULT_TAB = 'buy_pdfs';

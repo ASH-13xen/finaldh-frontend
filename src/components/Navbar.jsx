@@ -52,6 +52,12 @@ const getNavLinks = (user, pendingReports = 0, pendingDafs = 0) => {
           )}
         </>
       )
+    },
+    {
+      key: 'pyq_tdh',
+      target: 'pyq_tdh',
+      match: (t) => t === 'pyq_tdh',
+      label: <>PYQ &amp; TDH<span className="hidden 2xl:inline"> Research</span></>
     }
   ];
 
@@ -141,6 +147,13 @@ const getNavLinks = (user, pendingReports = 0, pendingDafs = 0) => {
             )}
           </>
         )
+      },
+      {
+        key: 'admin_pyq_tdh',
+        admin: true,
+        target: 'admin_pyq_tdh',
+        match: (t) => t === 'admin_pyq_tdh',
+        label: <>PYQ &amp; TDH<span className="hidden sm:inline"> Data</span></>
       },
       {
         key: 'requests',
