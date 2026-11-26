@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, X, Eye, ChevronDown, Lightbulb, BookOpenText, Target, ListChecks, CircleSlash, Sparkles, Lock, ArrowDown } from 'lucide-react';
+import { Check, X, Eye, ChevronDown, Lightbulb, BookOpenText, Target, ListChecks, CircleSlash, Sparkles, Lock, ArrowDown, RotateCcw } from 'lucide-react';
 import { cn } from '../ui/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 
@@ -171,8 +171,8 @@ export function AnswerOptions({ options, picked, answer, onPick, disabled, compa
               {isAnswer ? <Check className="size-3.5" strokeWidth={3} /> : isWrongPick ? <X className="size-3.5" strokeWidth={3} /> : o.key}
             </span>
             <span className={cn('min-w-0 flex-1 leading-relaxed', !muted && 'text-text-primary')}>{o.text}</span>
-            {isAnswer && !compact && <span className="hidden shrink-0 pt-0.5 text-[12px] font-medium text-emerald-700 sm:inline dark:text-emerald-300">Correct answer</span>}
-            {isWrongPick && !compact && <span className="hidden shrink-0 pt-0.5 text-[12px] font-medium text-rose-600 sm:inline dark:text-rose-300">Your answer</span>}
+            {isAnswer && !compact && !short && <span className="hidden shrink-0 pt-0.5 text-[12px] font-medium text-emerald-700 sm:inline dark:text-emerald-300">Correct answer</span>}
+            {isWrongPick && !compact && !short && <span className="hidden shrink-0 pt-0.5 text-[12px] font-medium text-rose-600 sm:inline dark:text-rose-300">Your answer</span>}
           </button>
         );
       })}
@@ -444,27 +444,131 @@ export function ResearchTeaser({ teaser, onSkip, busy }) {
 
 /* ------------------------------------------------------------- practice */
 
-function PracticeItem({ p, index }) {
+const TYPE_CHIP = {
+  Conceptual: 'bg-violet-50 text-violet-700 ring-violet-600/15 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-300/20',
+  Factual: 'bg-sky-50 text-sky-700 ring-sky-600/15 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-300/20',
+};
+
+/** The options for a practice MCQ: big tap targets, one column beside the question on wide screens. */
+function PracticeOptions({ options, picked, answer, onPick, beside }) {
+  const done = !!picked;
+  // Short options: two to a row on tablets, one column beside the question on laptops.
+  // Sentence-long options: one column on phones and tablets, two to a row under the question on laptops.
+  return (
+    <div role="radiogroup" aria-label="Options" className={cn('grid gap-2.5', beside ? 'sm:grid-cols-2 lg:grid-cols-1' : 'lg:grid-cols-2')}>
+      {options.map((o) => {
+        const isAnswer = done && o.key === answer;
+        const isWrongPick = done && o.key === picked && picked !== answer;
+        const muted = done && !isAnswer && !isWrongPick;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            role="radio"
+            aria-checked={o.key === picked}
+            disabled={done}
+            onClick={() => onPick(o.key)}
+            className={cn(
+              'group flex min-h-12 w-full min-w-0 items-center gap-3.5 rounded-xl border-2 px-4 py-3 text-left text-[length:calc(var(--tdh-fs)-2px)] leading-snug transition-all duration-150',
+              !done && 'cursor-pointer border-border-default bg-surface hover:-translate-y-px hover:border-teal-600/50 hover:bg-teal-50/50 hover:shadow-sm active:translate-y-0 dark:hover:bg-teal-950/30',
+              isAnswer && 'border-emerald-500 bg-emerald-50 dark:border-emerald-400/60 dark:bg-emerald-950/30',
+              isWrongPick && 'border-rose-400 bg-rose-50 dark:border-rose-400/50 dark:bg-rose-950/30',
+              muted && 'border-border-subtle bg-surface opacity-60',
+            )}
+          >
+            <span
+              className={cn(
+                'grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-bold uppercase transition-colors',
+                !done && 'bg-sunken text-text-secondary group-hover:bg-teal-700 group-hover:text-white',
+                isAnswer && 'bg-emerald-600 text-white',
+                isWrongPick && 'bg-rose-500 text-white',
+                muted && 'bg-sunken text-text-tertiary',
+              )}
+            >
+              {isAnswer ? <Check className="size-4" strokeWidth={3} /> : isWrongPick ? <X className="size-4" strokeWidth={3} /> : o.key}
+            </span>
+            <span className={cn('min-w-0 flex-1 font-medium', muted ? 'text-text-tertiary' : 'text-text-primary')}>{o.text}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PracticeCard({ p, index, total }) {
   const [picked, setPicked] = useState('');
   const right = picked && picked === p.answer;
+  // Short options ("1 and 2 only") sit beside the question on laptops; sentence-long ones go under it.
+  const beside = p.options.every((o) => String(o.text || '').length <= 48);
   return (
-    <div className="space-y-4 py-6 first:pt-0 last:pb-0">
-      <p className="flex items-center gap-3 text-[12px] font-medium text-text-tertiary">
-        <span className="font-semibold text-text-secondary">Practice {index + 1}</span>
-        <span className="text-border-default">/</span>
-        <TypeMark type={p.type} />
-      </p>
-      <PyqBody text={p.questionText} lines={p.statements} compact />
-      <AnswerOptions options={p.options} picked={picked} answer={picked ? p.answer : ''} onPick={setPicked} compact />
-      {picked && (
-        <p className={cn('border-l-2 pl-3.5 text-[length:calc(var(--tdh-fs)-3px)] leading-[1.65] [font-family:var(--tdh-read-font)]', MEASURE, right ? 'border-emerald-500 text-text-secondary' : 'border-rose-400 text-text-secondary')}>
-          <span className={cn('font-semibold', right ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300')}>
-            {right ? 'Correct. ' : `Answer (${p.answer}). `}
+    <article className="overflow-hidden rounded-2xl border border-border-default bg-surface shadow-[0_1px_2px_rgba(31,26,20,0.04),0_16px_40px_-28px_rgba(15,90,80,0.35)]">
+      {/* header */}
+      <div className="relative flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-subtle bg-teal-50/40 px-5 py-4 sm:px-7 dark:bg-teal-950/15">
+        <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-400" />
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-teal-700 text-white shadow-sm dark:bg-teal-600">
+          <Target className="size-5" strokeWidth={2} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
+            Test yourself{total > 1 && <> · {index + 1} of {total}</>}
+          </p>
+          <h2 id={index === 0 ? 'tdh-practice' : undefined} className="font-display text-[20px] font-semibold leading-tight tracking-[-0.01em] text-text-primary sm:text-[22px]">
+            Practice from TDH Research
+          </h2>
+        </div>
+        {p.type && (
+          <span className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold ring-1', TYPE_CHIP[p.type] || TYPE_CHIP.Factual)}>
+            <span className={cn('size-1.5 rounded-full', p.type === 'Conceptual' ? 'bg-violet-500' : 'bg-sky-500')} />
+            {p.type}
           </span>
-          {p.why}
-        </p>
+        )}
+      </div>
+
+      {/* question | options — side by side on laptops when the options are short, else stacked */}
+      <div className={cn('grid gap-6 p-5 sm:p-7', beside && 'lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-10')}>
+        <div className="min-w-0">
+          <PyqBody text={p.questionText} lines={p.statements} compact />
+        </div>
+        <div className={cn('min-w-0 space-y-3', beside && 'lg:border-l lg:border-border-subtle lg:pl-10')}>
+          <p className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+            {picked ? 'Your answer' : 'Choose one'}
+          </p>
+          <PracticeOptions options={p.options} picked={picked} answer={p.answer} onPick={setPicked} beside={beside} />
+        </div>
+      </div>
+
+      {/* result */}
+      {picked && (
+        <div
+          role="status"
+          className={cn(
+            'flex flex-col gap-4 border-t px-5 py-5 sm:flex-row sm:items-start sm:px-7',
+            right ? 'border-emerald-600/15 bg-emerald-50/70 dark:bg-emerald-950/20' : 'border-rose-600/15 bg-rose-50/70 dark:bg-rose-950/20',
+          )}
+        >
+          <span className={cn('grid size-9 shrink-0 place-items-center rounded-full text-white', right ? 'bg-emerald-600' : 'bg-rose-500')}>
+            {right ? <Check className="size-5" strokeWidth={3} /> : <X className="size-5" strokeWidth={3} />}
+          </span>
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <p className={cn('font-display text-[18px] font-semibold leading-snug', right ? 'text-emerald-800 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300')}>
+              {right ? 'Correct — well done!' : <>Not quite — the answer is ({p.answer}).</>}
+            </p>
+            {p.why && (
+              <p className={cn('text-text-secondary', READ, 'text-[length:calc(var(--tdh-fs)-2px)] leading-[1.65]', MEASURE)}>
+                <span className="font-semibold text-text-primary">Why: </span>{p.why}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setPicked('')}
+            className="inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 self-stretch rounded-lg border border-border-default bg-surface px-4 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-teal-600/50 hover:text-teal-800 sm:self-center dark:hover:text-teal-200"
+          >
+            <RotateCcw className="size-4" /> Try again
+          </button>
+        </div>
       )}
-    </div>
+    </article>
   );
 }
 
@@ -472,18 +576,7 @@ export function Practice({ items }) {
   if (!items.length) return null;
   return (
     <section id="tdh-sec-practice" aria-labelledby="tdh-practice" className="scroll-mt-[calc(var(--tdh-top,0px)+1.5rem)] space-y-5">
-      <header className="flex items-start gap-3.5">
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand text-text-on-accent">
-          <Target className="size-[18px]" strokeWidth={2} />
-        </span>
-        <div className="min-w-0">
-          <h2 id="tdh-practice" className="font-display text-[22px] sm:text-[24px] font-semibold leading-tight tracking-[-0.01em] text-text-primary">Practice from TDH Research</h2>
-          <p className="mt-0.5 text-[14px] text-text-tertiary">New questions written from the research above.</p>
-        </div>
-      </header>
-      <div className="divide-y divide-border-default rounded-xl border border-border-default bg-surface p-5 sm:p-7">
-        {items.map((p, i) => <PracticeItem key={p._id} p={p} index={i} />)}
-      </div>
+      {items.map((p, i) => <PracticeCard key={p._id} p={p} index={i} total={items.length} />)}
     </section>
   );
 }

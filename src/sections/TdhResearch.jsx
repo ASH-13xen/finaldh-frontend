@@ -66,14 +66,14 @@ export default function TdhResearch() {
           </h1>
           <p className="text-[16px] leading-7 text-text-secondary sm:text-[17px]">
             Every previous-year question opens up into TDH Research — the facts, figures and
-            concepts around it that the next paper can ask — with practice questions built from it.
+            concepts around it that the next paper can ask — with a practice question built from it.
           </p>
         </div>
         <ol className="mt-7 grid gap-2.5 sm:grid-cols-3">
           {[
             [Target, 'Attempt the PYQ', 'Answer or skip — the key is revealed.'],
             [BookOpenText, 'Read the TDH Research', 'Topics, insights and key terms around it.', true],
-            [Check, 'Practice from it', 'Fresh MCQs written from the research.'],
+            [Check, 'Practice from it', 'A fresh MCQ written from the research.'],
           ].map(([Icon, title, sub, star], i) => (
             <li key={title} className={cn('flex items-start gap-3 rounded-xl border px-4 py-3.5', star ? 'border-teal-600/40 bg-teal-50 dark:border-teal-400/40 dark:bg-teal-950/40' : 'border-border-default bg-surface')}>
               <span className={cn('grid size-8 shrink-0 place-items-center rounded-lg', star ? 'bg-teal-700 text-white' : 'bg-sunken text-text-secondary')}><Icon className="size-4" /></span>
@@ -575,7 +575,7 @@ function QuestionView({ q, position, total, busy, onPick }) {
         <ResearchTeaser teaser={q.teaser} onSkip={() => onPick('')} busy={busy} />
       ) : (
         <p className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border-default py-16 text-[13px] text-text-tertiary">
-          {r ? 'No TDH Research for this question yet.' : <><Lock className="size-3.5" /> Answer to unlock the practice questions.</>}
+          {r ? 'No TDH Research for this question yet.' : <><Lock className="size-3.5" /> Answer to unlock the practice question.</>}
         </p>
       )}
       </div>

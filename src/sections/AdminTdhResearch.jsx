@@ -198,7 +198,7 @@ function SetRow({ s, open, onToggle, onChanged }) {
       </div>
 
       <div className="px-4 pb-3 flex flex-wrap items-center gap-2 border-t border-border-default pt-3">
-        <span className="text-xs font-bold text-text-primary mr-1">Practice MCQs (AI, 2 per PYQ):</span>
+        <span className="text-xs font-bold text-text-primary mr-1">Practice MCQ (AI, 1 per PYQ):</span>
         {running ? (
           <button disabled={busy} onClick={() => act(() => adminStopPractice(s._id))} className={btnGhost}>Stop</button>
         ) : (
